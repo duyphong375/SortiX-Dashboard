@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hệ thống IoT phân loại sản phẩm băng tải - Bảng điều khiển</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- Thư viện MQTT qua WebSocket -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Thanh đầu trang -->
+    <header class="top-nav">
+      <div class="nav-left">
+        <div class="logo-badge">
+          <span class="logo-pulse"></span>
+          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+          </svg>
+        </div>
+        <div class="title-group">
+          <h1>Hệ thống phân loại IoT</h1>
+          <span class="sub-title">ESP32-C5 hai băng tần • Nhận diện YOLO • Trung tâm điều khiển MQTT</span>
+        </div>
+      </div>
+
+      <div class="nav-right">
+        <!-- Nhãn trạng thái kết nối trực tiếp -->
+        <div class="status-pill" id="mcu-status-pill">
+          <span class="dot dot-offline" id="mcu-dot"></span>
+          <span class="label">ESP32-C5: <strong id="mcu-status-text">NGOẠI TUYẾN</strong></span>
+        </div>
+        <div class="status-pill" id="mqtt-status-pill">
+          <span class="dot dot-offline" id="mqtt-dot"></span>
+          <span class="label">MQTT: <strong id="mqtt-status-text">ĐÃ NGẮT KẾT NỐI</strong></span>
+        </div>
+        <!-- Công tắc chế độ mô phỏng -->
+        <div class="sim-toggle-wrap">
+          <label class="switch">
+            <input type="checkbox" id="sim-toggle" checked>
+            <span class="slider round"></span>
+          </label>
+          <span class="sim-label">Chế độ mô phỏng</span>
+        </div>
+        <button class="btn-icon" id="settings-btn" title="Cài đặt kết nối MQTT">
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Lưới nội dung chính -->
+    <main class="dashboard-grid">
+      <!-- Cột trái: giám sát băng tải và camera -->
+      <section class="panel panel-visual">
+        <div class="panel-head">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+            </svg>
+            <h2>Mô Phỏng Trực Quan Băng Tải</h2>
+          </div>
+          <div class="panel-meta">
+            <span class="badge badge-pulse" id="conveyor-badge">Đang chạy</span>
+          </div>
+        </div>
+
+          <!-- Hoạt ảnh SVG mô phỏng băng tải -->
+        <div class="conveyor-stage" id="conveyor-stage">
+          <div class="stage-track">
+            <!-- Vạch phân chia các vùng -->
+            <div class="zone zone-cam">
+              <span class="zone-label">Vùng Camera (YOLO)</span>
+            </div>
+            <div class="zone zone-gate1">
+              <span class="zone-label">Gạt Khay 1 (Servo 1)</span>
+            </div>
+            <div class="zone zone-gate2">
+              <span class="zone-label">Gạt Khay 2 (Servo 2)</span>
+            </div>
+            <div class="zone zone-bin3">
+              <span class="zone-label">Khay 3 (Đi thẳng)</span>
+            </div>
+          </div>
+
+          <!-- Băng tải chuyển động -->
+          <div class="conveyor-belt" id="conveyor-belt"></div>
+
+          <!-- Tay gạt 1 và 2 -->
+          <div class="actuator-arm arm-1" id="arm-1" title="Tay gạt Khay 1"></div>
+          <div class="actuator-arm arm-2" id="arm-2" title="Tay gạt Khay 2"></div>
+
+          <!-- Sản phẩm đang chạy trên băng tải (được JS tạo động) -->
+          <div class="items-layer" id="items-layer"></div>
+        </div>
+
+        <!-- Thanh trạng thái các cảm biến và cơ cấu -->
+        <div class="sensor-dock">
+          <div class="sensor-card" id="card-s1">
+            <div class="s-icon">📷</div>
+            <div class="s-info">
+              <span class="s-name">Cảm biến 1 (Kích hoạt)</span>
+              <span class="s-val" id="val-s1">Sẵn sàng</span>
+            </div>
+          </div>
+          <div class="sensor-card" id="card-s2">
+            <div class="s-icon">🪓</div>
+            <div class="s-info">
+              <span class="s-name">Cảm biến 2 (Trước Khay 1)</span>
+              <span class="s-val" id="val-s2">Thông thoáng</span>
+            </div>
+          </div>
+          <div class="sensor-card" id="card-s3">
+            <div class="s-icon">🪓</div>
+            <div class="s-info">
+              <span class="s-name">Cảm biến 3 (Trước Khay 2)</span>
+              <span class="s-val" id="val-s3">Thông thoáng</span>
+            </div>
+          </div>
+          <div class="sensor-card" id="card-estop">
+            <div class="s-icon">🛑</div>
+            <div class="s-info">
+              <span class="s-name">Nút E-stop Khẩn Cấp</span>
+              <span class="s-val" id="val-estop">Bình thường</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bảng điều khiển vận hành băng tải -->
+        <div class="control-toolbar">
+          <div class="btn-group">
+            <button class="btn btn-start" id="btn-start">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              Khởi động
+            </button>
+            <button class="btn btn-pause" id="btn-pause">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+              Tạm dừng
+            </button>
+            <button class="btn btn-stop" id="btn-stop">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="6" y="6" width="12" height="12"></rect></svg>
+              Dừng
+            </button>
+          </div>
+
+          <div class="speed-slider-group">
+            <div class="speed-label">
+              <span>Tốc độ Băng tải (PWM):</span>
+              <strong id="speed-val">65%</strong>
+            </div>
+            <input type="range" id="speed-slider" min="0" max="100" value="65" class="slider-input">
+          </div>
+        </div>
+      </section>
+
+      <!-- Cột phải: cấu hình thương hiệu động và thống kê khay -->
+      <div class="right-stack">
+        <!-- Bảng cấu hình gán thương hiệu động -->
+        <section class="panel panel-config">
+          <div class="panel-head">
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                <path d="M12 20h9"></path>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+              </svg>
+              <h2>Cấu Hình Gán Khay Động</h2>
+            </div>
+            <div class="config-status-badge" id="config-status-badge">
+              Phiên bản: <strong id="cfg-version-num">v1</strong>
+            </div>
+          </div>
+
+          <p class="panel-desc">
+            Chọn thương hiệu cho từng khay. Thay đổi có hiệu lực ngay lập tức mà <strong>không cần sửa firmware ESP32</strong>.
+          </p>
+
+          <div class="bin-selector-grid">
+            <!-- Khay 1 -->
+            <div class="bin-box" id="bin-box-1">
+              <div class="bin-header">
+                <span class="bin-tag tag-blue">Khay 1 (Gạt 1)</span>
+                <span class="bin-count" id="count-bin-1">0 SP</span>
+              </div>
+              <label for="select-bin-1">Thương hiệu đích:</label>
+              <select id="select-bin-1" class="bin-select">
+                <option value="brand_c" selected>Coca-Cola (brand_c)</option>
+                <option value="brand_a">Pepsi (brand_a)</option>
+                <option value="brand_b">Red Bull (brand_b)</option>
+                <option value="brand_d">Aquafina (brand_d)</option>
+                <option value="none">-- Không gán --</option>
+              </select>
+            </div>
+
+            <!-- Nút hoán đổi nhanh khay 1 và khay 2 -->
+            <div class="swap-action">
+              <button class="btn-swap" id="btn-swap" title="Hoán đổi nhanh Khay 1 và Khay 2">
+                ⇄ Hoán Đổi
+              </button>
+            </div>
+
+            <!-- Khay 2 -->
+            <div class="bin-box" id="bin-box-2">
+              <div class="bin-header">
+                <span class="bin-tag tag-purple">Khay 2 (Gạt 2)</span>
+                <span class="bin-count" id="count-bin-2">0 SP</span>
+              </div>
+              <label for="select-bin-2">Thương hiệu đích:</label>
+              <select id="select-bin-2" class="bin-select">
+                <option value="brand_c">Coca-Cola (brand_c)</option>
+                <option value="brand_a" selected>Pepsi (brand_a)</option>
+                <option value="brand_b">Red Bull (brand_b)</option>
+                <option value="brand_d">Aquafina (brand_d)</option>
+                <option value="none">-- Không gán --</option>
+              </select>
+            </div>
+
+          <!-- Khay 3 (mặc định - đi thẳng) -->
+            <div class="bin-box bin-default" id="bin-box-3">
+              <div class="bin-header">
+                <span class="bin-tag tag-gray">Khay 3 (Mặc Định / Đi Thẳng)</span>
+                <span class="bin-count" id="count-bin-3">0 SP</span>
+              </div>
+              <p class="bin-note">
+                Tất cả sản phẩm chưa gán khay 1/2, hoặc ảnh không rõ sẽ <strong>đi thẳng vào khay này</strong> mà không cần kích hoạt tay gạt.
+              </p>
+            </div>
+          </div>
+
+          <!-- Nút áp dụng cấu hình và gửi MQTT -->
+          <div class="config-actions">
+            <button class="btn btn-primary" id="btn-save-config">
+              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+              </svg>
+              Lưu & Gửi Cấu Hình (MQTT JSON)
+            </button>
+            <span class="apply-status" id="apply-status-msg">Trạng thái: Sẵn sàng</span>
+          </div>
+
+          <!-- Xem trước gói JSON gửi xuống ESP32 -->
+          <details class="json-preview-wrap">
+            <summary>Xem trước gói tin JSON cấu hình gửi ESP32</summary>
+            <pre class="json-code" id="json-preview"></pre>
+          </details>
+        </section>
+
+        <!-- Bảng thống kê và lịch sử cảnh báo Telegram/email -->
+        <section class="panel panel-telemetry">
+          <div class="panel-head">
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+              </svg>
+              <h2>Giám Sát & Cảnh Báo</h2>
+            </div>
+            <button class="btn-sm" id="btn-reset-stats">Đặt lại số đếm</button>
+          </div>
+
+          <!-- Thẻ số lượng thống kê -->
+          <div class="stat-metrics">
+            <div class="metric-card">
+              <span class="m-label">Tổng đã phân loại</span>
+              <strong class="m-value" id="stat-total">0</strong>
+            </div>
+            <div class="metric-card">
+              <span class="m-label">Tốc độ hiện tại</span>
+              <strong class="m-value" id="stat-cpm">18 SP/phút</strong>
+            </div>
+            <div class="metric-card">
+              <span class="m-label">ESP32 Uptime</span>
+              <strong class="m-value" id="stat-uptime">00:00:00</strong>
+            </div>
+          </div>
+
+          <!-- Bảng sự kiện và cảnh báo Telegram -->
+          <div class="event-log-container">
+            <div class="log-header">
+              <span>Nhật ký Sự kiện & Cảnh báo (Telegram / Email)</span>
+              <button class="btn-text" id="btn-clear-log">Xóa log</button>
+            </div>
+            <div class="event-log-list" id="event-log-list">
+              <div class="log-item log-info">
+                <span class="log-time">17:45:00</span>
+                <span class="log-tag">THÔNG TIN</span>
+                <span class="log-text">Hệ thống Dashboard IoT đã khởi tạo thành công.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Hộp thoại cài đặt MQTT -->
+    <div class="modal-backdrop" id="settings-modal">
+      <div class="modal-box">
+        <div class="modal-head">
+          <h3>Cài đặt kết nối MQTT</h3>
+          <button class="btn-close" id="btn-close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-field">
+            <label>Địa chỉ broker WebSocket:</label>
+            <input type="text" id="mqtt-url" value="wss://broker.emqx.io:8084/mqtt" placeholder="wss://broker.emqx.io:8084/mqtt">
+            <small>Hoặc dùng Mosquitto nội bộ: <code>ws://localhost:9001</code></small>
+          </div>
+          <div class="form-field">
+            <label>Topic gửi cấu hình:</label>
+            <input type="text" id="mqtt-topic-config" value="sorter/sorter_01/config/set">
+          </div>
+          <div class="form-field">
+            <label>Topic nhận trạng thái:</label>
+            <input type="text" id="mqtt-topic-status" value="sorter/sorter_01/status">
+          </div>
+          <div class="form-field">
+            <label>Topic nhận kết quả camera:</label>
+            <input type="text" id="mqtt-topic-vision" value="sorter/sorter_01/vision/result">
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn btn-secondary" id="btn-modal-cancel">Hủy</button>
+          <button class="btn btn-primary" id="btn-modal-save">Lưu & Kết Nối</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
