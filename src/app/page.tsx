@@ -518,14 +518,23 @@ export default function DashboardPage() {
   const totalSorted = binCounts.bin1 + binCounts.bin2 + binCounts.bin3;
   const animatedTotal = useCountUp(totalSorted, 800);
 
+  // Xác định ESP32 có đang online thực sự hay không
+  const isEspConnected =
+    !isSimulation &&
+    mqttStatus === "connected" &&
+    telemetry.last_heartbeat !== "" &&
+    Date.now() - new Date(telemetry.last_heartbeat).getTime() < 15000;
+
   // Tính độ tin cậy AI trung bình thực tế từ danh sách records
   const avgConfidence =
-    records.length > 0
+    (!isEspConnected && !isSimulation)
+      ? "--%"
+      : records.length > 0
       ? (
           (records.reduce((acc, r) => acc + (r.confidence || 0.95), 0) / records.length) *
           100
         ).toFixed(1) + "%"
-      : "100%";
+      : "--%";
 
   // Lấy danh sách 5 bản ghi mới nhất cho trang tổng quan
   const recentRecords = records.slice(0, 5);
@@ -533,9 +542,6 @@ export default function DashboardPage() {
   // Nhãn phân loại theo từng máng
   const bin1Brands = sorterConfig?.bins?.[0]?.brand_ids || [];
   const bin2Brands = sorterConfig?.bins?.[1]?.brand_ids || [];
-  const bin3Brands = Object.keys(CATALOG_BRANDS).filter(
-    (bId) => !bin1Brands.includes(bId) && !bin2Brands.includes(bId)
-  );
 
   return (
     <div className="space-y-6 page-transition-enter pb-6">
@@ -557,7 +563,9 @@ export default function DashboardPage() {
           icon={Gauge}
           title="Trạng Thái Vận Hành"
           value={
-            telemetry.estop_pressed
+            (!isEspConnected && !isSimulation)
+              ? "MẤT KẾT NỐI"
+              : telemetry.estop_pressed
               ? "DỪNG KHẨN"
               : !isRunning
               ? "TẠM DỪNG"
@@ -565,12 +573,12 @@ export default function DashboardPage() {
               ? "ĐANG CHẠY"
               : "CHỜ PHÔI"
           }
-          subtitle={`Tốc độ: ${isRunning && !telemetry.estop_pressed ? conveyorSpeed : 0}% PWM • Encoder: ${telemetry.encoder_count}`}
+          subtitle={`Tốc độ: ${(!isEspConnected && !isSimulation) ? 0 : (isRunning && !telemetry.estop_pressed ? conveyorSpeed : 0)}% PWM • Encoder: ${(!isEspConnected && !isSimulation) ? 0 : telemetry.encoder_count}`}
           trend={{
-            value: telemetry.estop_pressed ? "E-Stop Bật" : isRunning ? "Băng Tải Sẵn Sàng" : "Chế Độ Chờ",
-            positive: isRunning && !telemetry.estop_pressed,
+            value: (!isEspConnected && !isSimulation) ? "Không có tín hiệu" : telemetry.estop_pressed ? "E-Stop Bật" : isRunning ? "Băng Tải Sẵn Sàng" : "Chế Độ Chờ",
+            positive: (!isEspConnected && !isSimulation) ? false : isRunning && !telemetry.estop_pressed,
           }}
-          color={telemetry.estop_pressed ? "rose" : !isRunning ? "amber" : "emerald"}
+          color={(!isEspConnected && !isSimulation) ? "rose" : telemetry.estop_pressed ? "rose" : !isRunning ? "amber" : "emerald"}
         />
 
         {/* KPI 3: Trạng Thái IoT ESP32-C5 */}
@@ -580,20 +588,20 @@ export default function DashboardPage() {
           value={
             isSimulation
               ? "Trực Tuyến (Mô Phỏng)"
-              : mqttStatus === "connected"
+              : isEspConnected
               ? "Trực Tuyến (ESP32)"
               : "Ngoại Tuyến / Mất kết nối"
           }
-          subtitle={`Uptime: ${formatUptime(telemetry.uptime)} • CPU: ${telemetry.cpu_temp}°C`}
+          subtitle={`Uptime: ${isEspConnected || isSimulation ? formatUptime(telemetry.uptime) : "00:00:00"} • CPU: ${isEspConnected || isSimulation ? telemetry.cpu_temp : "--"}°C`}
           trend={{
             value: isSimulation
               ? `${telemetry.wifi_band}`
-              : mqttStatus === "connected"
+              : isEspConnected
               ? `${telemetry.wifi_band}`
-              : "Đang chờ kết nối MQTT...",
-            positive: isSimulation ? true : mqttStatus === "connected",
+              : "Đang chờ dữ liệu từ ESP32...",
+            positive: isSimulation ? true : isEspConnected,
           }}
-          color={isSimulation ? "purple" : mqttStatus === "connected" ? "emerald" : "rose"}
+          color={isSimulation ? "purple" : isEspConnected ? "emerald" : "rose"}
         />
 
         {/* KPI 4: Hiệu Suất Nhận Diện AI - Độ chính xác thực tế & Ping MQTT */}
@@ -601,9 +609,12 @@ export default function DashboardPage() {
           icon={Sparkles}
           title="Hiệu Suất Nhận Diện AI"
           value={avgConfidence}
-          subtitle={`YOLOv8 Edge • Ping MQTT ${pingMs || 24}ms • 4 Nhãn Active`}
-          trend={{ value: "Tin cậy cao", positive: true }}
-          color="amber"
+          subtitle={`YOLOv8 Edge • Ping MQTT ${isEspConnected || isSimulation ? (pingMs || 24) : "--"}ms • 4 Nhãn Active`}
+          trend={{ 
+            value: (!isEspConnected && !isSimulation) ? "Chưa có tín hiệu" : "Tin cậy cao", 
+            positive: isEspConnected || isSimulation 
+          }}
+          color={(!isEspConnected && !isSimulation) ? "slate" : "amber"}
         />
       </div>
 
@@ -635,7 +646,9 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2">
                 <span
                   className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                    telemetry.estop_pressed
+                    (!isEspConnected && !isSimulation)
+                      ? "border-slate-500/30 bg-slate-500/10 text-slate-600 dark:text-slate-400"
+                      : telemetry.estop_pressed
                       ? "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400"
                       : isRunning
                       ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
@@ -645,12 +658,14 @@ export default function DashboardPage() {
                   <span className="relative flex h-2 w-2">
                     <span
                       className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                        isRunning && !telemetry.estop_pressed ? "animate-ping bg-emerald-400" : ""
+                        (isEspConnected || isSimulation) && isRunning && !telemetry.estop_pressed ? "animate-ping bg-emerald-400" : ""
                       }`}
                     />
                     <span
                       className={`relative inline-flex h-2 w-2 rounded-full ${
-                        telemetry.estop_pressed
+                        (!isEspConnected && !isSimulation)
+                          ? "bg-slate-500"
+                          : telemetry.estop_pressed
                           ? "bg-rose-500"
                           : isRunning
                           ? "bg-emerald-500"
@@ -658,7 +673,7 @@ export default function DashboardPage() {
                       }`}
                     />
                   </span>
-                  <span>{telemetry.estop_pressed ? "E-Stop Kích Hoạt" : isRunning ? "Đang Vận Hành" : "Tạm Dừng"}</span>
+                  <span>{(!isEspConnected && !isSimulation) ? "Chưa Kết Nối" : telemetry.estop_pressed ? "E-Stop Kích Hoạt" : isRunning ? "Đang Vận Hành" : "Tạm Dừng"}</span>
                 </span>
               </div>
             </div>
@@ -682,12 +697,12 @@ export default function DashboardPage() {
                     <div>
                       <span className="text-[11px] text-slate-500 dark:text-slate-400">Nhiệt độ CPU</span>
                       <p className="font-mono text-sm font-bold text-slate-900 dark:text-white">
-                        {telemetry.cpu_temp}°C
+                        {isEspConnected || isSimulation ? `${telemetry.cpu_temp}°C` : "--°C"}
                       </p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                    Bình thường
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${isEspConnected || isSimulation ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10" : "text-slate-500 bg-slate-500/10"}`}>
+                    {isEspConnected || isSimulation ? "Bình thường" : "N/A"}
                   </span>
                 </div>
 
@@ -700,12 +715,12 @@ export default function DashboardPage() {
                     <div>
                       <span className="text-[11px] text-slate-500 dark:text-slate-400">Sóng Wi-Fi 6</span>
                       <p className="font-mono text-sm font-bold text-slate-900 dark:text-white truncate max-w-[110px]" title={telemetry.wifi_band}>
-                        {telemetry.wifi_rssi} dBm
+                        {isEspConnected || isSimulation ? `${telemetry.wifi_rssi} dBm` : "-- dBm"}
                       </p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-semibold text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded font-mono">
-                    5.0 GHz
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded font-mono ${isEspConnected || isSimulation ? "text-cyan-600 dark:text-cyan-400 bg-cyan-500/10" : "text-slate-500 bg-slate-500/10"}`}>
+                    {isEspConnected || isSimulation ? "5.0 GHz" : "N/A"}
                   </span>
                 </div>
 
@@ -722,11 +737,11 @@ export default function DashboardPage() {
                     <div>
                       <span className="text-[11px] text-slate-500 dark:text-slate-400">Broker MQTT</span>
                       <p className="font-mono text-sm font-bold text-slate-900 dark:text-white">
-                        {mqttStatus === "connected" ? "Đã Kết Nối" : "Ngoại Tuyến"}
+                        {isSimulation ? "Mô Phỏng" : mqttStatus === "connected" ? "Đã Kết Nối" : "Ngoại Tuyến"}
                       </p>
                     </div>
                   </div>
-                  <span className={`h-2 w-2 rounded-full ${mqttStatus === "connected" ? "bg-emerald-500 shadow-[0_0_6px_#10b981]" : "bg-rose-500"}`} />
+                  <span className={`h-2 w-2 rounded-full ${isSimulation ? "bg-purple-500 shadow-[0_0_6px_#a855f7]" : mqttStatus === "connected" ? "bg-emerald-500 shadow-[0_0_6px_#10b981]" : "bg-rose-500"}`} />
                 </div>
               </div>
             </div>

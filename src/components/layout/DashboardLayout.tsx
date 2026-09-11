@@ -139,7 +139,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       estop_pressed: false,
       encoder_count: 0,
       active_config_version: initConfig?.config_version || 1,
-      last_heartbeat: new Date().toISOString(),
+      last_heartbeat: "",
     };
   });
   const telemetryRef = useRef<TelemetryData>(telemetry);
@@ -213,17 +213,22 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
 
       if (conveyor.isRunningRef.current && !telemetryRef.current.estop_pressed) {
         const isSimMode = sorterData.isSimulationRef.current;
-        setTelemetry((prev) => ({
-          ...prev,
-          uptime: prev.uptime + 1,
-          encoder_count:
-            prev.encoder_count +
-            (isBeltMoving ? Math.floor((conveyor.speedRef.current / 100) * 8) : 0),
-          ...(isSimMode
-            ? { cpu_temp: Number((42.5 + Math.sin(Date.now() / 10000) * 2.2).toFixed(1)) }
-            : {}),
-          conveyor_running: isBeltMoving,
-        }));
+        if (isSimMode) {
+          setTelemetry((prev) => ({
+            ...prev,
+            uptime: prev.uptime + 1,
+            encoder_count:
+              prev.encoder_count +
+              (isBeltMoving ? Math.floor((conveyor.speedRef.current / 100) * 8) : 0),
+            cpu_temp: Number((42.5 + Math.sin(Date.now() / 10000) * 2.2).toFixed(1)),
+            conveyor_running: isBeltMoving,
+          }));
+        } else {
+          setTelemetry((prev) => ({
+            ...prev,
+            conveyor_running: isBeltMoving,
+          }));
+        }
 
         const nowStr = new Date().toLocaleTimeString("vi-VN", {
           hour: "2-digit",

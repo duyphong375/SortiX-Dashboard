@@ -97,15 +97,24 @@ export function useConveyorPhysics({
   }, [onPublishCommand, setTelemetry]);
 
   const handleEmergencyStop = useCallback(() => {
-    industrialAudio.playEmergencyAlarm();
-    setIsRunning(false);
-    setTelemetry((prev) => ({
-      ...prev,
-      estop_pressed: true,
-      conveyor_running: false,
-    }));
-    onPublishCommand?.("ESTOP");
-  }, [onPublishCommand, setTelemetry]);
+    if (telemetryRef.current.estop_pressed) {
+      industrialAudio.playClick();
+      setTelemetry((prev) => ({
+        ...prev,
+        estop_pressed: false,
+      }));
+      onPublishCommand?.("ESTOP_RELEASE");
+    } else {
+      industrialAudio.playEmergencyAlarm();
+      setIsRunning(false);
+      setTelemetry((prev) => ({
+        ...prev,
+        estop_pressed: true,
+        conveyor_running: false,
+      }));
+      onPublishCommand?.("ESTOP");
+    }
+  }, [onPublishCommand, setTelemetry, telemetryRef]);
 
   const handleSpeedChange = useCallback(
     (newSpeed: number) => {
