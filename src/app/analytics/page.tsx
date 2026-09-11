@@ -38,22 +38,22 @@ export default function AnalyticsPage() {
     sorterConfig,
   } = useDashboard();
 
-  // Tổng số sản phẩm đã phân loại
+  // Tổng số sản phẩm đã phân loại (theo khay)
   const totalSorted = binCounts.bin1 + binCounts.bin2 + binCounts.bin3;
 
   // DỮ LIỆU BIỂU ĐỒ TRÒN CƠ CẤU SẢN PHẨM & KHAY CHỨA (BRAND SHARE DONUT CHART)
-  // Hiển thị tỷ trọng phần trăm của 4 loại sản phẩm:
-  // - Lon Coca-Cola (brand_c)
-  // - Lon Pepsi (brand_a)
-  // - Lon Red Bull (brand_b)
-  // - Chai Aquafina (brand_d)
-  const brandKeys = ["brand_c", "brand_a", "brand_b", "brand_d"];
+  const brandKeys = Object.keys(CATALOG_BRANDS);
+
+  // Tổng số sản phẩm đã phân loại (theo nhãn hàng) - Dùng cho biểu đồ cơ cấu để đảm bảo luôn = 100%
+  const totalBrands = useMemo(() => {
+    return brandKeys.reduce((sum, key) => sum + (brandCounts[key] || 0), 0);
+  }, [brandCounts, brandKeys]);
 
   const donutData = useMemo(() => {
     return brandKeys.map((key) => {
       const brand = CATALOG_BRANDS[key];
       const count = brandCounts[key] || 0;
-      const percent = totalSorted > 0 ? Number(((count / totalSorted) * 100).toFixed(1)) : 0;
+      const percent = totalBrands > 0 ? Number(((count / totalBrands) * 100).toFixed(1)) : 0;
       return {
         key,
         name: brand.name,
@@ -62,36 +62,38 @@ export default function AnalyticsPage() {
         percent,
         color: brand.color,
       };
-    });
-  }, [brandCounts, totalSorted]);
+    }).filter(item => item.count > 0 || brandKeys.length <= 4); // Hide empty brands if there are many
+  }, [brandCounts, totalBrands, brandKeys]);
 
   // 3. DỮ LIỆU BIỂU ĐỒ CỘT PHÂN BỐ THEO KHUNG GIỜ (HOURLY PRODUCTION BAR CHART)
-  // Khung giờ ca làm việc: 08:00, 09:00, 10:00, 11:00, 12:00, 13:00, 14:00, 15:00, 16:00
   const hourlyData = useMemo(() => {
-    const baseHours = [
-      "08:00",
-      "09:00",
-      "10:00",
-      "11:00",
-      "12:00",
-      "13:00",
-      "14:00",
-      "15:00",
-      "16:00",
-      "17:00",
-    ];
-
-    // Đếm số sản phẩm thực tế phân bổ từ records
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const shift = sorterConfig.shift || { start: "08:00", end: "17:00" };
+    const startHour = Number(shift.start.split(":")[0]);
+    const endHour = Number(shift.end.split(":")[0]);
+    
+    // Đếm số sản phẩm thực tế phân bổ từ records (chỉ lấy hôm nay)
     const hourMap: Record<string, number> = {};
     records.forEach((r) => {
+      if (r.status !== "success") return;
       const date = new Date(r.timestamp);
-      const hStr = `${String(date.getHours()).padStart(2, "0")}:00`;
-      hourMap[hStr] = (hourMap[hStr] || 0) + 1;
+      const h = date.getUTCHours();
+      if (date.toISOString().slice(0, 10) === todayStr && h >= startHour && h <= endHour) {
+        const hStr = `${String(h).padStart(2, "0")}:00`;
+        hourMap[hStr] = (hourMap[hStr] || 0) + 1;
+      }
     });
 
-    // Kết hợp khung giờ hành chính 08:00 - 17:00 và các giờ thực tế có trong records
-    const allHours = Array.from(new Set([...baseHours, ...Object.keys(hourMap)])).sort();
-    const nowHour = `${String(new Date().getHours()).padStart(2, "0")}:00`;
+    const activeHours = Object.keys(hourMap).map(h => parseInt(h));
+    const minHour = activeHours.length > 0 ? Math.min(...activeHours, startHour) : startHour;
+    const maxHour = activeHours.length > 0 ? Math.max(...activeHours) : endHour;
+    
+    const allHours = [];
+    for (let i = minHour; i <= maxHour; i++) {
+      allHours.push(`${String(i).padStart(2, "0")}:00`);
+    }
+
+    const nowHour = `${String(new Date().getUTCHours()).padStart(2, "0")}:00`;
 
     return allHours.map((hour) => {
       const count = hourMap[hour] || 0;
@@ -103,7 +105,7 @@ export default function AnalyticsPage() {
         isCurrentHour,
       };
     });
-  }, [records]);
+  }, [records, sorterConfig.shift]);
 
   // Tìm khung giờ đạt đỉnh sản lượng thực tế
   const peakHour = useMemo(() => {
@@ -112,33 +114,27 @@ export default function AnalyticsPage() {
   }, [hourlyData]);
 
   // 4. BẢNG MA TRẬN PHÂN BỐ SẢN PHẨM THEO KHAY (PRODUCT ALLOCATION MATRIX)
-  // Cột 1: Tên sản phẩm & Icon nhận diện
-  // Cột 2: Khay phân loại đích (Khay 1 - Gạt 1 / Khay 2 - Gạt 2 / Khay 3 - Đi thẳng)
-  // Cột 3: Số lượng đã phân loại thành công (SP)
-  // Cột 4: Tỷ lệ phần trăm trên tổng sản lượng (% progress bar)
-  // Cột 5: Độ tin cậy AI trung bình (VD: 99.2%)
-  const brandPackaging: Record<string, { type: string; icon: string }> = {
-    brand_c: { type: "Lon nhôm 330ml", icon: "🔴" },
-    brand_a: { type: "Lon nhôm 330ml", icon: "🔵" },
-    brand_b: { type: "Lon nhôm 250ml", icon: "🟡" },
-    brand_d: { type: "Chai nhựa PET 500ml", icon: "🔷" },
-  };
-
   const getBinDetails = (binId: number) => {
+    // Generate dynamic names based on configured brands for the bin
+    const binBrands = sorterConfig.bins.find((rule) => rule.bin_id === binId)?.brand_ids || [];
+    const brandNames = binBrands.length > 0 
+      ? binBrands.map(b => CATALOG_BRANDS[b]?.name).join(", ")
+      : "Trống";
+
     switch (binId) {
       case 1:
         return {
           binId: 1,
-          name: "Khay 1 (Gạt 1)",
-          route: "Servo IO23 • Góc 45°",
+          name: `Khay 1: ${brandNames}`,
+          route: `Servo ${sorterConfig.servo_routes?.["1"]?.io || "IO23"} • Góc ${sorterConfig.servo_routes?.["1"]?.angle ?? 45}°`,
           badgeStyle: "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400",
           dot: "bg-rose-500 shadow-[0_0_8px_#f43f5e]",
         };
       case 2:
         return {
           binId: 2,
-          name: "Khay 2 (Gạt 2)",
-          route: "Servo IO24 • Góc 45°",
+          name: `Khay 2: ${brandNames}`,
+          route: `Servo ${sorterConfig.servo_routes?.["2"]?.io || "IO24"} • Góc ${sorterConfig.servo_routes?.["2"]?.angle ?? 45}°`,
           badgeStyle: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
           dot: "bg-blue-500 shadow-[0_0_8px_#3b82f6]",
         };
@@ -146,7 +142,7 @@ export default function AnalyticsPage() {
       default:
         return {
           binId: 3,
-          name: "Khay 3 (Đi thẳng)",
+          name: "Khay 3 (Đi thẳng - Mặc định)",
           route: "Thoát tự do cuối line",
           badgeStyle: "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-400",
           dot: "bg-amber-500 shadow-[0_0_8px_#f59e0b]",
@@ -156,19 +152,12 @@ export default function AnalyticsPage() {
 
   // Tính độ tin cậy AI trung bình theo từng thương hiệu
   const getAverageConfidence = (brandKey: string) => {
-    const brandRecords = records.filter((r) => r.brand_id === brandKey);
+    const brandRecords = records.filter((r) => r.brand_id === brandKey && r.status === "success");
     if (brandRecords.length > 0) {
       const sum = brandRecords.reduce((acc, curr) => acc + curr.confidence, 0);
       return (sum / brandRecords.length) * 100;
     }
-    // Độ tin cậy mặc định của mô hình YOLOv8 Edge
-    const defaults: Record<string, number> = {
-      brand_c: 99.4,
-      brand_a: 99.2,
-      brand_b: 98.9,
-      brand_d: 99.5,
-    };
-    return defaults[brandKey] || 99.2;
+    return null; // Don't fake data
   };
 
   return (
@@ -222,12 +211,22 @@ export default function AnalyticsPage() {
                 </div>
               </div>
               <span className="rounded-md border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-purple-600 dark:text-purple-400">
-                4 Nhãn
+                {brandKeys.length} Nhãn
               </span>
             </div>
 
             {/* Donut Chart Container với tâm hiển thị tổng số sản phẩm */}
             <div className="relative mt-4 flex items-center justify-center h-[210px] w-full">
+              {/* Nhãn chính giữa tâm Donut: {totalBrands} Sản Phẩm */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-2xl sm:text-3xl font-black font-mono text-slate-900 dark:text-white tracking-tight">
+                  {totalBrands}
+                </span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                  Sản Phẩm
+                </span>
+              </div>
+
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <RechartsTooltip
@@ -283,16 +282,6 @@ export default function AnalyticsPage() {
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
-
-              {/* Nhãn chính giữa tâm Donut: {totalSorted} Sản Phẩm */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-2xl sm:text-3xl font-black font-mono text-slate-900 dark:text-white tracking-tight">
-                  {totalSorted}
-                </span>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
-                  Sản Phẩm
-                </span>
-              </div>
             </div>
 
             {/* Danh sách 4 loại sản phẩm chi tiết */}
@@ -322,7 +311,15 @@ export default function AnalyticsPage() {
           {/* Footer tóm tắt tỷ trọng khay */}
           <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
             <span>Khay 1 (Đỏ) • Khay 2 (Xanh)</span>
-            <span className="font-mono text-cyan-600 dark:text-cyan-400 font-bold">100% Cân Bằng</span>
+            <span className="font-mono text-cyan-600 dark:text-cyan-400 font-bold">
+              {(() => {
+                const b1 = binCounts.bin1 || 0;
+                const b2 = binCounts.bin2 || 0;
+                if (b1 === 0 && b2 === 0) return "-- Cân Bằng";
+                const balance = ((Math.min(b1, b2) / Math.max(b1, b2)) * 100).toFixed(0);
+                return `${balance}% Cân Bằng`;
+              })()}
+            </span>
           </div>
         </div>
       </div>
@@ -442,7 +439,7 @@ export default function AnalyticsPage() {
             </span>
           </div>
           <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-            Tổng sản lượng ghi nhận ca hôm nay: <strong className="text-cyan-600 dark:text-cyan-400 font-bold">{records.length} SP</strong>
+            Tổng sản lượng ghi nhận ca hôm nay: <strong className="text-cyan-600 dark:text-cyan-400 font-bold">{totalSorted} SP</strong>
           </span>
         </div>
       </div>
@@ -505,14 +502,24 @@ export default function AnalyticsPage() {
                 const brand = CATALOG_BRANDS[brandKey];
                 const targetBin = determineTargetBin(brandKey, sorterConfig);
                 const count = brandCounts[brandKey] || 0;
+                
+                // Hide if count is 0 and we have many brands
+                if (count === 0 && brandKeys.length > 4) return null;
+
                 const percentage =
-                  totalSorted > 0 ? ((count / totalSorted) * 100).toFixed(1) : "0.0";
+                  totalBrands > 0 ? ((count / totalBrands) * 100).toFixed(1) : "0.0";
                 const binInfo = getBinDetails(targetBin);
-                const packaging = brandPackaging[brandKey] || {
-                  type: "Lon tiêu chuẩn",
-                  icon: "📦",
+                const packaging = {
+                  type: brand.packaging || "Bao bì không xác định",
+                  icon: brand.icon || "📦",
                 };
-                const aiConfidence = getAverageConfidence(brandKey).toFixed(1);
+                /* const legacyPackaging = brandPackaging[brandKey] || {
+                  type: brand.name.includes("Chai") ? "Chai nhựa tiêu chuẩn" : "Lon tiêu chuẩn",
+                  icon: "📦",
+                }; */
+                
+                const rawConfidence = getAverageConfidence(brandKey);
+                const aiConfidence = rawConfidence !== null ? `${rawConfidence.toFixed(1)}%` : "--";
 
                 return (
                   <tr
@@ -591,7 +598,7 @@ export default function AnalyticsPage() {
                             {percentage}%
                           </span>
                           <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
-                            {count}/{totalSorted} SP
+                            {count}/{totalBrands} SP
                           </span>
                         </div>
                         <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-white/[0.06]">
@@ -611,7 +618,7 @@ export default function AnalyticsPage() {
                     <td className="py-3.5 px-4 text-right">
                       <div className="inline-flex flex-col items-end">
                         <span className="font-mono text-sm font-black text-emerald-600 dark:text-emerald-400">
-                          {aiConfidence}%
+                          {aiConfidence}
                         </span>
                         <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                           YOLOv8 Edge

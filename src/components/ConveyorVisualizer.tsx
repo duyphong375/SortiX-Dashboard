@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TelemetryData, SorterConfig, CATALOG_BRANDS, VisualItem } from "@/lib/types";
 import { determineTargetBin } from "@/lib/dataProcessor";
 import {
@@ -34,6 +35,8 @@ interface ConveyorVisualizerProps {
   brandCounts?: Record<string, number>;
   isSimulation?: boolean;
   onToggleSimulationMode?: () => void;
+  onGenerateDemoData?: () => void;
+  onClearBin?: (binIndex: 1 | 2 | 3) => void;
 }
 
 export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
@@ -52,7 +55,11 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
   brandCounts = {},
   isSimulation = true,
   onToggleSimulationMode,
+  onGenerateDemoData,
+  onClearBin,
 }) => {
+  const [confirmBinClear, setConfirmBinClear] = useState<1 | 2 | 3 | null>(null);
+
   const isBeltMoving = isRunning && !telemetry.estop_pressed && items.length > 0;
   const linearSpeedCms = isBeltMoving ? ((speed / 100) * 35).toFixed(1) : "0.0";
   const rollerRpm = isBeltMoving ? Math.floor((speed / 100) * 120) : 0;
@@ -331,11 +338,8 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
       )}
 
       {/* DẢI NÚT NẠP TỪNG LOẠI VẬT MẪU TRỰC TIẾP */}
-      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-2.5 rounded-xl border p-2.5 transition-all duration-300 ${
-        !isSimulation
-          ? "border-slate-200/60 bg-slate-100/40 dark:border-white/[0.04] dark:bg-[#111319]/40"
-          : "border-slate-200 bg-slate-50/80 dark:border-white/[0.06] dark:bg-[#111319]"
-      }`}>
+      {isSimulation && (
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 rounded-xl border border-slate-200 bg-slate-50/80 p-2.5 transition-all duration-300 dark:border-white/[0.06] dark:bg-[#111319]">
         <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">
           {!isSimulation ? (
             <>
@@ -350,9 +354,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           )}
         </div>
 
-        <div className={`flex flex-wrap items-center gap-2 transition-all duration-300 ${
-          !isSimulation ? "opacity-50 cursor-not-allowed pointer-events-none filter grayscale" : ""
-        }`}>
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => onSpawnPackage("brand_c")}
             disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
@@ -399,8 +401,19 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
             <Sparkles className="h-3.5 w-3.5 text-purple-500" />
             <span>🎲 Phôi ngẫu nhiên</span>
           </button>
+
+          {isSimulation && (
+            <button
+              onClick={onGenerateDemoData}
+              className="flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-bold text-emerald-700 transition-all hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-400 dark:hover:bg-emerald-500/25 shadow-xs active:scale-95"
+              title="Tạo dữ liệu lịch sử demo ngẫu nhiên"
+            >
+              <span>📊 Tạo dữ liệu demo</span>
+            </button>
+          )}
         </div>
       </div>
+      )}
 
       {/* THANH ĐIỀU TỐC BĂNG TẢI (PWM MCPWM IO4) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-2 dark:border-white/[0.06] dark:bg-[#111319]">
@@ -428,6 +441,9 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
             className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-teal-600 dark:bg-slate-800 dark:accent-cyan-500"
           />
           <span className="text-[11px] font-bold text-teal-600 dark:text-cyan-400">100%</span>
+          <span className="shrink-0 rounded-lg border border-teal-500/30 bg-teal-500/10 px-2 py-1 font-mono text-xs font-black text-teal-700 dark:text-cyan-300">
+            {speed}%
+          </span>
         </div>
       </div>
 
@@ -487,8 +503,18 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           </div>
         </div>
 
+        {/* Thông báo chế độ chờ khi không có phôi */}
+        {items.length === 0 && (
+          <div className="flex justify-center mt-3 mb-1">
+            <div className="rounded-full bg-slate-900/90 px-4 py-1.5 backdrop-blur border border-cyan-500/30 text-[10px] sm:text-xs font-semibold text-cyan-300 shadow-sm flex items-center gap-2 text-center w-fit mx-auto">
+              <span className="h-2 w-2 rounded-full bg-cyan-400 animate-ping shrink-0" />
+              <span>Băng tải đứng yên chờ phôi • Nhấn nút nạp nhanh vật mẫu phía trên để vận hành</span>
+            </div>
+          </div>
+        )}
+
         {/* DÂY ĐAI BĂNG TẢI CHÍNH & VẬT PHẨM CHẠY 2D */}
-        <div className="relative my-8 flex items-center">
+        <div className="relative my-6 flex items-center">
           {/* Rulo truyền động đầu băng (Drive Drum - Tiện CNC nhôm thép với bạc đạn đồng) */}
           <div className="relative z-20 flex h-32 w-14 shrink-0 flex-col items-center justify-between rounded-l-2xl border-y-4 border-l-4 border-slate-700 bg-gradient-to-r from-slate-600 via-slate-500 to-slate-700 shadow-xl overflow-hidden py-1">
             {/* Gờ giữ đai trên */}
@@ -531,16 +557,6 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
 
             {/* Vạch kẻ trung tâm dẫn hướng phôi */}
             <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-b border-dashed border-cyan-400/30 z-10 pointer-events-none" />
-
-            {/* Thông báo chế độ chờ khi không có phôi */}
-            {items.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 px-3">
-                <div className="rounded-full bg-slate-900/90 px-4 py-1.5 backdrop-blur border border-cyan-500/30 text-[10px] sm:text-xs font-semibold text-cyan-300 shadow-lg flex items-center gap-2 max-w-[92%] text-center">
-                  <span className="h-2 w-2 rounded-full bg-cyan-400 animate-ping shrink-0" />
-                  <span className="truncate">Băng tải đứng yên chờ phôi • Nhấn nút nạp nhanh vật mẫu phía trên để vận hành</span>
-                </div>
-              </div>
-            )}
 
             {/* 1. CỔNG VÒM CAMERA AI & TIA QUÉT LASER (INSPECTION GANTRY - 15%) */}
             <div className="absolute left-[15%] -top-7 bottom-0 z-30 flex flex-col items-center pointer-events-none">
@@ -720,7 +736,18 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
         {/* CÁC MÁNG HỨNG NGHIÊNG THEO TRỌNG LỰC (GRAVITY SLIDE CHUTES) BÊN DƯỚI BĂNG TẢI */}
         <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* MÁNG KHAY 1 (GẠT 1 - 45%) */}
-          <div className="relate-card relative overflow-hidden rounded-2xl border border-rose-500/30 bg-white p-3.5 shadow-sm dark:border-rose-500/20 dark:bg-[#161822] hover:border-rose-500/50 transition-colors flex flex-col justify-between gap-3">
+          <div 
+            onClick={() => {
+              if (binCounts.bin1 >= 50) {
+                setConfirmBinClear(1);
+              }
+            }}
+            className={`relate-card relative overflow-hidden rounded-2xl border p-3.5 shadow-sm transition-colors flex flex-col justify-between gap-3 ${
+              binCounts.bin1 >= 50 
+                ? "border-rose-500 bg-rose-500/10 cursor-pointer animate-pulse ring-2 ring-rose-500/50" 
+                : "border-rose-500/30 bg-white dark:bg-[#161822] dark:border-rose-500/20 hover:border-rose-500/50"
+            }`}
+          >
             <div>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-black tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5 truncate">
@@ -777,7 +804,18 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           </div>
 
           {/* MÁNG KHAY 2 (GẠT 2 - 72%) */}
-          <div className="relate-card relative overflow-hidden rounded-2xl border border-blue-500/30 bg-white p-3.5 shadow-sm dark:border-blue-500/20 dark:bg-[#161822] hover:border-blue-500/50 transition-colors flex flex-col justify-between gap-3">
+          <div 
+            onClick={() => {
+              if (binCounts.bin2 >= 50) {
+                setConfirmBinClear(2);
+              }
+            }}
+            className={`relate-card relative overflow-hidden rounded-2xl border p-3.5 shadow-sm transition-colors flex flex-col justify-between gap-3 ${
+              binCounts.bin2 >= 50 
+                ? "border-blue-500 bg-blue-500/10 cursor-pointer animate-pulse ring-2 ring-blue-500/50" 
+                : "border-blue-500/30 bg-white dark:bg-[#161822] dark:border-blue-500/20 hover:border-blue-500/50"
+            }`}
+          >
             <div>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-black tracking-wider text-blue-700 dark:text-blue-400 flex items-center gap-1.5 truncate">
@@ -834,7 +872,18 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           </div>
 
           {/* MÁNG KHAY 3 (ĐI THẲNG - 96%) */}
-          <div className="relate-card relative overflow-hidden rounded-2xl border border-amber-500/30 bg-white p-3.5 shadow-sm dark:border-amber-500/20 dark:bg-[#161822] hover:border-amber-500/50 transition-colors flex flex-col justify-between gap-3">
+          <div 
+            onClick={() => {
+              if (binCounts.bin3 >= 50) {
+                setConfirmBinClear(3);
+              }
+            }}
+            className={`relate-card relative overflow-hidden rounded-2xl border p-3.5 shadow-sm transition-colors flex flex-col justify-between gap-3 ${
+              binCounts.bin3 >= 50 
+                ? "border-amber-500 bg-amber-500/10 cursor-pointer animate-pulse ring-2 ring-amber-500/50" 
+                : "border-amber-500/30 bg-white dark:bg-[#161822] dark:border-amber-500/20 hover:border-amber-500/50"
+            }`}
+          >
             <div>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-black tracking-wider text-amber-800 dark:text-amber-400 flex items-center gap-1.5 truncate">
@@ -891,6 +940,21 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmBinClear !== null}
+        onCancel={() => setConfirmBinClear(null)}
+        onConfirm={() => {
+          if (confirmBinClear) {
+            onClearBin?.(confirmBinClear);
+          }
+          setConfirmBinClear(null);
+        }}
+        title="Dọn dẹp khay chứa"
+        message={`Khay ${confirmBinClear} đã đầy định mức. Bạn có chắc chắn muốn dọn dẹp và reset số đếm của khay này về 0 không?`}
+        confirmText="Xác nhận"
+        cancelText="Hủy"
+      />
     </div>
   );
 };

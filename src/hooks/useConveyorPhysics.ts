@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { VisualItem, TelemetryData, SorterConfig, CATALOG_BRANDS } from "@/lib/types";
 import { determineTargetBin } from "@/lib/dataProcessor";
 import { industrialAudio } from "@/lib/audioService";
+import { useToast } from "@/components/ui/Toast";
 
 export interface UseConveyorPhysicsProps {
   telemetryRef: React.MutableRefObject<TelemetryData>;
@@ -11,6 +12,8 @@ export interface UseConveyorPhysicsProps {
   configRef: React.MutableRefObject<SorterConfig>;
   isSimulationRef: React.MutableRefObject<boolean>;
   simRecordsRef: React.MutableRefObject<unknown[]>;
+  simBinCountsRef: React.MutableRefObject<{ bin1: number; bin2: number; bin3: number }>;
+  realBinCountsRef: React.MutableRefObject<{ bin1: number; bin2: number; bin3: number }>;
   onItemSorted: (item: VisualItem, actualBin: number) => void;
   onPublishCommand?: (cmd: string, value?: number) => void;
 }
@@ -21,20 +24,28 @@ export function useConveyorPhysics({
   configRef,
   isSimulationRef,
   simRecordsRef,
+  simBinCountsRef,
+  realBinCountsRef,
   onItemSorted,
   onPublishCommand,
 }: UseConveyorPhysicsProps) {
+  const toast = useToast();
   const [isRunning, setIsRunning] = useState(true);
   const [conveyorSpeed, setConveyorSpeed] = useState(65);
   const [arm1Active, setArm1Active] = useState(false);
   const [arm2Active, setArm2Active] = useState(false);
-  const [visualItems, setVisualItems] = useState<VisualItem[]>([]);
+  const [visualItems, _setVisualItems] = useState<VisualItem[]>([]);
 
   // Refs for requestAnimationFrame loop
   const animFrameRef = useRef<number | null>(null);
   const timeoutIdsRef = useRef<ReturnType<typeof setTimeout>[]>([]); // BUG-03: Track timeouts
-  const visualItemsRef = useRef<VisualItem[]>(visualItems);
-  visualItemsRef.current = visualItems;
+  const visualItemsRef = useRef<VisualItem[]>([]);
+  
+  const setVisualItems = useCallback((action: React.SetStateAction<VisualItem[]>) => {
+    const next = typeof action === "function" ? action(visualItemsRef.current) : action;
+    visualItemsRef.current = next;
+    _setVisualItems(next);
+  }, []);
   const isRunningRef = useRef<boolean>(isRunning);
   isRunningRef.current = isRunning;
   const speedRef = useRef<number>(conveyorSpeed);
@@ -148,8 +159,7 @@ export function useConveyorPhysics({
 
       const isBeltMoving =
         isRunningRef.current &&
-        !telemetryRef.current.estop_pressed &&
-        visualItemsRef.current.length > 0;
+        !telemetryRef.current.estop_pressed;
 
       if (isBeltMoving) {
         const moveStep = delta * (speedRef.current * 0.35);
@@ -171,6 +181,30 @@ export function useConveyorPhysics({
 
           // Sensor 1 Entry (14% - 17%)
           if (item.progress >= 14 && item.progress <= 17 && !item.s1Triggered) {
+            const currentCounts = isSimulationRef.current ? simBinCountsRef.current : realBinCountsRef.current;
+            const targetBinKey = `bin${item.targetBin}` as keyof typeof currentCounts;
+            const count = currentCounts[targetBinKey] || 0;
+            
+            // Đếm các vật phẩm ĐÃ qua S1 và ĐANG hướng tới khay này
+            const itemsOnBelt = updatedItems.filter(
+              (i) => i.targetBin === item.targetBin && i.s1Triggered && !i.sorted
+            ).length;
+            
+            if (count + itemsOnBelt >= 50) {
+              // BIN FULL: Stop the conveyor immediately
+              setIsRunning(false);
+              isRunningRef.current = false;
+              setTelemetry((prev) => ({ ...prev, conveyor_running: false }));
+              onPublishCommand?.("STOP");
+              industrialAudio.playEmergencyAlarm();
+              
+              if (typeof window !== "undefined") {
+                toast.error(`Khay ${item.targetBin} đã đầy (50 SP). Băng tải dừng khẩn cấp. Hãy dọn khay và bấm Chạy để tiếp tục!`);
+              }
+              // Skip processing further movement in this frame to simulate immediate stop
+              break; 
+            }
+
             item.s1Triggered = true;
             setTelemetry((prev) => ({ ...prev, s1_entry: true }));
             industrialAudio.playSensorBeep();

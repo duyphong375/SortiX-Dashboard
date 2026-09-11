@@ -71,9 +71,10 @@ export class SorterMQTTService {
       });
 
       return this.client;
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("[MQTT] Không thể khởi tạo:", e);
-      if (this.callbacks.onError) this.callbacks.onError(e);
+      const error = e instanceof Error ? e : new Error(String(e));
+      if (this.callbacks.onError) this.callbacks.onError(error);
       return null;
     }
   }

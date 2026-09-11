@@ -67,6 +67,12 @@ export const ConfigAndDiagnostics: React.FC<ConfigAndDiagnosticsProps> = ({
   };
 
   const handleSave = async () => {
+    if (bin1Brand === bin2Brand && bin1Brand !== "none") {
+      setStatusMsg("Lỗi: Khay 1 và Khay 2 không được cấu hình cùng một loại sản phẩm!");
+      toast.error("Khay 1 và Khay 2 không được cấu hình cùng một loại sản phẩm!", "Lỗi cấu hình");
+      return;
+    }
+
     setIsApplying(true);
     setStatusMsg("");
     const updatedConfig: SorterConfig = {

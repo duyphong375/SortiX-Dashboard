@@ -23,6 +23,8 @@ export default function ConveyorPage() {
     brandCounts,
     isSimulation,
     toggleSimulationMode,
+    generateSimulationDemoData,
+    handleClearBin,
   } = useDashboard();
 
   const canEstop = usePermission("conveyor.estop");
@@ -59,6 +61,8 @@ export default function ConveyorPage() {
         brandCounts={brandCounts}
         isSimulation={isSimulation}
         onToggleSimulationMode={toggleSimulationMode}
+        onGenerateDemoData={generateSimulationDemoData}
+        onClearBin={handleClearBin}
       />
     </div>
   );

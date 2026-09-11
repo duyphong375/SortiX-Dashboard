@@ -108,6 +108,12 @@ export const MOCK_USERS: AuthUser[] = [
   },
 ];
 
+// Chỉ dùng cho màn hình demo cục bộ; xác thực production phải thực hiện ở server.
+export const DEMO_PASSWORDS: Record<string, string> = {
+  "admin@pbl3.local": "admin123",
+  "operator@pbl3.local": "operator123",
+};
+
 // Sidebar menu items cấu hình
 export interface SidebarMenuItem {
   id: string;

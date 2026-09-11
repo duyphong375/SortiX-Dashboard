@@ -3,6 +3,10 @@
 import { AlertEvent } from "./types";
 import { saveAlertHistory } from "./history";
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 // Bảng lưu thời gian gửi gần nhất theo từng loại sự kiện
 const lastSentTimestamps: Record<string, number> = {};
 const COOLDOWN_MS = 30000; // 30 giây chờ giữa các thông báo cùng loại
@@ -42,8 +46,8 @@ export async function sendTelegramAlert(
         message: data.message || "Không thể gửi cảnh báo Telegram (chưa cấu hình Bot/ChatID)",
       };
     }
-  } catch (err: any) {
-    return { success: false, message: `Lỗi mạng khi gọi Telegram API: ${err.message}` };
+  } catch (err: unknown) {
+    return { success: false, message: `Lỗi mạng khi gọi Telegram API: ${getErrorMessage(err)}` };
   }
 }
 
@@ -82,8 +86,8 @@ export async function sendEmailAlert(
         message: data.message || "Không thể gửi email (chưa cấu hình SMTP credentials)",
       };
     }
-  } catch (err: any) {
-    return { success: false, message: `Lỗi mạng khi gọi Email API: ${err.message}` };
+  } catch (err: unknown) {
+    return { success: false, message: `Lỗi mạng khi gọi Email API: ${getErrorMessage(err)}` };
   }
 }
 

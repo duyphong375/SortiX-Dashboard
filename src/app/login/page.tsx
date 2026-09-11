@@ -13,7 +13,7 @@ import {
   Sparkles,
   AlertCircle,
 } from "lucide-react";
-import { UserRole, MOCK_USERS } from "@/lib/permissions";
+import { UserRole, MOCK_USERS, DEMO_PASSWORDS } from "@/lib/permissions";
 import { useToast } from "@/components/ui/Toast";
 
 /**
@@ -156,10 +156,11 @@ export default function LoginPage() {
     }
 
     const matchedUser = MOCK_USERS.find((u) => u.email.toLowerCase() === trimmedEmail);
-    if (matchedUser) {
+    const expectedPassword = DEMO_PASSWORDS[trimmedEmail];
+    if (matchedUser && expectedPassword === password) {
       handleRoleLogin(matchedUser.role);
     } else {
-      setErrorMsg("Tài khoản hoặc mật khẩu không chính xác. Thử 'admin@pbl3.local' hoặc 'operator@pbl3.local'.");
+      setErrorMsg("Tài khoản hoặc mật khẩu không chính xác.");
     }
   };
 

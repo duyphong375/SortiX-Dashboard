@@ -15,12 +15,14 @@ import {
   BinCounts,
   loadClassificationHistory,
   saveClassificationRecord,
+  saveClassificationRecordsLocal,
   clearClassificationHistory,
   loadBinCountsLocal,
   updateBinCountsLocal,
   loadBrandCountsLocal,
   loadOperatingMode,
   saveOperatingMode,
+  saveBinCountsLocal,
   loadAlertHistory,
   clearAlertHistory,
 } from "@/lib/history";
@@ -31,13 +33,13 @@ import { useToast } from "@/components/ui/Toast";
 export interface UseSorterDataProps {
   configRef: React.MutableRefObject<SorterConfig>;
   onSpawnRealVisualItem?: (item: VisualItem) => void;
-  telemetryRef?: React.MutableRefObject<any>;
+  onPublishCommand?: (cmd: string, value?: number) => void;
 }
 
-export function useSorterData({ configRef, onSpawnRealVisualItem, telemetryRef }: UseSorterDataProps) {
+export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishCommand }: UseSorterDataProps) {
   const [isClient, setIsClient] = useState(false);
   const [isSimulation, setIsSimulation] = useState<boolean>(true);
-  const toast = useToast();
+  const { error: showToastError, success: showToastSuccess } = useToast();
 
   // Simulation mode states
   const [simRecords, setSimRecords] = useState<ClassificationRecord[]>([]);
@@ -136,37 +138,79 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, telemetryRef }
     });
   }, []);
 
+  // Tạo một bộ dữ liệu demo ngẫu nhiên khi người dùng chủ động yêu cầu.
+  // Không gọi hàm này trong lúc khởi tạo để chế độ mô phỏng mặc định luôn rỗng.
+  const generateSimulationDemoData = useCallback(() => {
+    if (!isClient || !isSimulationRef.current) return;
+
+    const brands = Object.keys(CATALOG_BRANDS);
+    const count = 18 + Math.floor(Math.random() * 13);
+    const now = Date.now();
+    const generated: ClassificationRecord[] = Array.from({ length: count }, (_, index) => {
+      const brandKey = brands[Math.floor(Math.random() * brands.length)];
+      const targetBin = determineTargetBin(brandKey, configRef.current);
+      const timestamp = new Date(now - Math.floor(Math.random() * 72 * 60 * 60 * 1000));
+      const brand = CATALOG_BRANDS[brandKey];
+
+      return {
+        id: `demo_${now}_${index}_${Math.random().toString(16).slice(2, 6)}`,
+        product_id: `#DEMO-${index + 1}`,
+        brand_id: brandKey,
+        brand_name: brand.name,
+        confidence: Number((0.9 + Math.random() * 0.09).toFixed(2)),
+        target_bin: targetBin,
+        actual_bin: targetBin,
+        status: "success",
+        timestamp: timestamp.toISOString(),
+      };
+    });
+
+    const updatedRecords = saveClassificationRecordsLocal(generated, true);
+    const addedCounts = generated.reduce<BinCounts>(
+      (counts, record) => {
+        const key = `bin${record.actual_bin}` as keyof BinCounts;
+        counts[key] += 1;
+        return counts;
+      },
+      { bin1: 0, bin2: 0, bin3: 0 }
+    );
+    const nextCounts: BinCounts = {
+      bin1: Math.min(simBinCountsRef.current.bin1 + addedCounts.bin1, 50),
+      bin2: Math.min(simBinCountsRef.current.bin2 + addedCounts.bin2, 50),
+      bin3: Math.min(simBinCountsRef.current.bin3 + addedCounts.bin3, 50),
+    };
+
+    saveBinCountsLocal(nextCounts, true);
+    setSimRecords(updatedRecords);
+    setSimBinCounts(nextCounts);
+    setSimBrandCounts((previous) => {
+      const next = { ...previous };
+      generated.forEach((record) => {
+        next[record.brand_id] = (next[record.brand_id] || 0) + 1;
+      });
+      return next;
+    });
+    setSimThroughput((previous) => [
+      ...previous.slice(1),
+      {
+        time: new Date().toLocaleTimeString("vi-VN", { hour12: false }),
+        ppm: 0,
+        total: updatedRecords.length,
+        bin1: nextCounts.bin1,
+        bin2: nextCounts.bin2,
+        bin3: nextCounts.bin3,
+        speed: 0,
+      },
+    ]);
+    showToastSuccess(`Đã tạo ${generated.length} bản ghi demo ngẫu nhiên.`);
+  }, [configRef, isClient, isSimulationRef, showToastSuccess, simBinCountsRef]);
+
   // Record Real Detection from MQTT Vision Camera (YOLOv8)
   const handleRealHardwareDetection = useCallback(
     (detection: VisionDetection) => {
       const targetBin = determineTargetBin(detection.brand_id, configRef.current);
-      const brand = CATALOG_BRANDS[detection.brand_id];
-      const record: ClassificationRecord = {
-        id: `real_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
-        product_id: detection.product_id,
-        brand_id: detection.brand_id,
-        brand_name: brand?.name || getBrandName(detection.brand_id),
-        confidence: detection.confidence,
-        target_bin: targetBin,
-        actual_bin: targetBin,
-        status: "success",
-        timestamp: detection.timestamp || new Date().toISOString(),
-      };
-
-      recentSortTimesRealRef.current.push(Date.now());
-      saveClassificationRecord(record, false);
-      updateBinCountsLocal(targetBin, false);
-      setRealRecords((prev) => [record, ...prev].slice(0, 500));
-      setRealBinCounts((prev: BinCounts) => {
-        const binKey = `bin${targetBin}` as "bin1" | "bin2" | "bin3";
-        return { ...prev, [binKey]: (prev[binKey] || 0) + 1 };
-      });
-      setRealBrandCounts((prev) => ({
-        ...prev,
-        [detection.brand_id]: (prev[detection.brand_id] || 0) + 1,
-      }));
-
-      // Direct visualization on belt if in Real Mode (BUG-04: marked as preRecorded)
+      
+      // Direct visualization on belt if in Real Mode
       if (!isSimulationRef.current && onSpawnRealVisualItem) {
         const newItem: VisualItem = {
           id: detection.product_id,
@@ -177,8 +221,10 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, telemetryRef }
           opacity: 1,
           deflected: false,
           sorted: false,
+          s1Triggered: true, // We assume it's detected at S1
           isSim: false,
-          preRecorded: true,
+          confidence: detection.confidence,
+          timestamp: detection.timestamp || new Date().toISOString(),
         };
         onSpawnRealVisualItem(newItem);
       }
@@ -188,25 +234,24 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, telemetryRef }
 
   // Record sorted item from conveyor physics loop
   const handleItemSorted = useCallback((item: VisualItem, actualBin: number) => {
-    // BUG-04: If preRecorded, only play sound, don't re-record
-    if (item.preRecorded) {
-      industrialAudio.playSortSuccess();
-      return;
-    }
-
     const isSim = item.isSim;
     const isCorrect = item.targetBin === actualBin;
     const brand = CATALOG_BRANDS[item.brandKey];
+    
+    // Use stored confidence and timestamp if from real hardware, else simulate
+    const confidence = item.confidence ?? (0.94 + Math.random() * 0.05);
+    const timestamp = item.timestamp ?? new Date().toISOString();
+    
     const record: ClassificationRecord = {
       id: `${isSim ? "sim" : "real"}_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
       product_id: item.id,
       brand_id: item.brandKey,
       brand_name: brand?.name || getBrandName(item.brandKey),
-      confidence: 0.94 + Math.random() * 0.05,
+      confidence: confidence,
       target_bin: item.targetBin,
       actual_bin: actualBin,
       status: isCorrect ? "success" : "diverted_default",
-      timestamp: new Date().toISOString(),
+      timestamp: timestamp,
     };
 
     const currentCount = isSim
@@ -229,7 +274,7 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, telemetryRef }
       setAlerts((prev) => [alert, ...prev].slice(0, 100));
       triggerAlertDispatch(alert);
       // Wait for UI to mount or just show toast
-      setTimeout(() => toast.error(alert.description), 0);
+      setTimeout(() => showToastError(alert.description), 0);
     }
 
     if (isSim) {
@@ -239,6 +284,7 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, telemetryRef }
       setSimRecords((prev) => [record, ...prev].slice(0, 500));
       setSimBinCounts((prev: BinCounts) => {
         const binKey = `bin${actualBin}` as "bin1" | "bin2" | "bin3";
+        if ((prev[binKey] || 0) >= 50) return prev;
         return { ...prev, [binKey]: (prev[binKey] || 0) + 1 };
       });
       setSimBrandCounts((prev) => ({
@@ -252,6 +298,7 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, telemetryRef }
       setRealRecords((prev) => [record, ...prev].slice(0, 500));
       setRealBinCounts((prev: BinCounts) => {
         const binKey = `bin${actualBin}` as "bin1" | "bin2" | "bin3";
+        if ((prev[binKey] || 0) >= 50) return prev;
         return { ...prev, [binKey]: (prev[binKey] || 0) + 1 };
       });
       setRealBrandCounts((prev) => ({
@@ -261,7 +308,7 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, telemetryRef }
     }
 
     industrialAudio.playSortSuccess();
-  }, []);
+  }, [showToastError]);
 
   // Clear history action
   const executeClearHistory = useCallback(() => {
@@ -303,6 +350,27 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, telemetryRef }
       setRealThroughput(resetPoints);
     }
   }, []);
+
+  // Clear specific bin
+  const handleClearBin = useCallback((binIndex: 1 | 2 | 3) => {
+    industrialAudio.playClick();
+    
+    // Luôn luôn gửi lệnh xuống phần cứng nếu có kết nối MQTT,
+    // phòng trường hợp đang ở mode Thực tế hoặc hệ thống bị lệch đồng bộ
+    if (onPublishCommand) {
+      onPublishCommand("reset_bin", binIndex);
+    }
+
+    const isSim = isSimulationRef.current;
+    const current = isSim ? simBinCountsRef.current : realBinCountsRef.current;
+    const next = { ...current, [`bin${binIndex}`]: 0 } as BinCounts;
+    saveBinCountsLocal(next, isSim);
+    if (isSim) {
+      setSimBinCounts(next);
+    } else {
+      setRealBinCounts(next);
+    }
+  }, [onPublishCommand, simBinCountsRef, realBinCountsRef]);
 
   // Clear alerts
   const handleClearAlerts = useCallback(() => {
@@ -358,6 +426,7 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, telemetryRef }
     isSimulation,
     setIsSimulation,
     toggleSimulationMode,
+    generateSimulationDemoData,
     isSimulationRef,
     simRecordsRef,
     realRecordsRef,
@@ -377,6 +446,7 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, telemetryRef }
     alerts,
     setAlerts,
     handleClearAlerts,
+    handleClearBin,
     unresolvedAlertCount,
     handleRealHardwareDetection,
     handleItemSorted,

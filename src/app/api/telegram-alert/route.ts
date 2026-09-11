@@ -104,10 +104,11 @@ export async function POST(req: NextRequest) {
         { status: 502 }
       );
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Lỗi cảnh báo Telegram]:", error);
+    const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { success: false, message: `Lỗi máy chủ nội bộ: ${error.message}` },
+      { success: false, message: `Lỗi máy chủ nội bộ: ${message}` },
       { status: 500 }
     );
   }

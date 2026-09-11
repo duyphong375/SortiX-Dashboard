@@ -115,10 +115,11 @@ export async function POST(req: NextRequest) {
       message: "Đã gửi email cảnh báo thành công",
       messageId: info.messageId,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Lỗi cảnh báo email]:", error);
+    const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { success: false, message: `Lỗi gửi email: ${error.message}` },
+      { success: false, message: `Lỗi gửi email: ${message}` },
       { status: 500 }
     );
   }

@@ -11,13 +11,7 @@ interface AuthContextType {
   checkPermission: (action: PermissionAction) => boolean;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  isAuthenticated: false,
-  login: () => {},
-  logout: () => {},
-  checkPermission: () => false,
-});
+const AuthContext = createContext<AuthContextType | null>(null);
 
 const STORAGE_KEY = "pbl3_auth_user";
 

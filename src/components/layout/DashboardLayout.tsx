@@ -41,6 +41,7 @@ export interface DashboardState {
   isSimulation: boolean;
   setIsSimulation: React.Dispatch<React.SetStateAction<boolean>>;
   toggleSimulationMode: () => void;
+  generateSimulationDemoData: () => void;
 
   // Conveyor
   isRunning: boolean;
@@ -80,6 +81,7 @@ export interface DashboardState {
   spawnVisualPackage: (brandKey?: string, productId?: string) => void;
   handleClearHistory: () => void;
   handleClearAlerts: () => void;
+  handleClearBin: (binIndex: 1 | 2 | 3) => void;
   handleResetConfigToDefault: () => void;
   handleResetActuatorStates: () => void;
 
@@ -155,6 +157,9 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     onSpawnRealVisualItem: (item) => {
       spawnRealItemRef.current(item);
     },
+    onPublishCommand: (cmd, value) => {
+      publishCommandRef.current(cmd, value);
+    },
   });
 
   // Hook 3: Conveyor Physics & Controls
@@ -164,6 +169,8 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     configRef,
     isSimulationRef: sorterData.isSimulationRef,
     simRecordsRef: sorterData.simRecordsRef,
+    simBinCountsRef: sorterData.simBinCountsRef,
+    realBinCountsRef: sorterData.realBinCountsRef,
     onItemSorted: sorterData.handleItemSorted,
     onPublishCommand: (cmd, value) => {
       publishCommandRef.current(cmd, value);
@@ -203,97 +210,132 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [isAuthenticated, pathname, router]);
 
+  // Stable refs and setters for the interval
+  const { isRunningRef, speedRef } = conveyor;
+  const {
+    isSimulationRef,
+    recentSortTimesSimRef,
+    recentSortTimesRealRef,
+    setSimThroughput,
+    setRealThroughput,
+    simRecordsRef,
+    simBinCountsRef,
+    realRecordsRef,
+    realBinCountsRef,
+  } = sorterData;
+  const { setPingMs } = mqtt;
+
   // Heartbeat & Throughput Chart update (every 1s)
   useEffect(() => {
     const interval = setInterval(() => {
+      const isSimMode = isSimulationRef.current;
+      const hasItems = conveyor.visualItemsRef.current.length > 0;
+      
+      // In simulation, belt only moves if there are items. In reality, it depends on actual hardware status, but we simulate it similarly.
       const isBeltMoving =
-        conveyor.isRunningRef.current &&
+        isRunningRef.current &&
         !telemetryRef.current.estop_pressed &&
-        conveyor.visualItemsRef.current.length > 0;
+        (!isSimMode || hasItems);
 
-      if (conveyor.isRunningRef.current && !telemetryRef.current.estop_pressed) {
-        const isSimMode = sorterData.isSimulationRef.current;
+      if (isBeltMoving) {
         if (isSimMode) {
           setTelemetry((prev) => ({
             ...prev,
             uptime: prev.uptime + 1,
             encoder_count:
-              prev.encoder_count +
-              (isBeltMoving ? Math.floor((conveyor.speedRef.current / 100) * 8) : 0),
+              prev.encoder_count + Math.floor((speedRef.current / 100) * 8),
             cpu_temp: Number((42.5 + Math.sin(Date.now() / 10000) * 2.2).toFixed(1)),
-            conveyor_running: isBeltMoving,
+            conveyor_running: true,
           }));
         } else {
           setTelemetry((prev) => ({
             ...prev,
-            conveyor_running: isBeltMoving,
+            conveyor_running: true,
           }));
         }
+      } else {
+        setTelemetry((prev) => ({
+            ...prev,
+            conveyor_running: false,
+        }));
+      }
 
-        const nowStr = new Date().toLocaleTimeString("vi-VN", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: false,
-        });
+      const nowStr = new Date().toLocaleTimeString("vi-VN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      });
 
-        // 1. Lưu lượng Mô Phỏng (Simulation PPM)
-        const now = Date.now();
-        sorterData.recentSortTimesSimRef.current = sorterData.recentSortTimesSimRef.current.filter(
-          (t) => now - t < 60000
-        );
-        const simSorts = sorterData.recentSortTimesSimRef.current.length;
+      // 1. Lưu lượng Mô Phỏng (Simulation PPM)
+      const now = Date.now();
+      recentSortTimesSimRef.current = recentSortTimesSimRef.current.filter(
+        (t) => now - t < 60000
+      );
+      const simSorts = recentSortTimesSimRef.current.length;
 
-        let simPPM = 0;
-        if (isBeltMoving) {
-          const baseRate = Math.round((conveyor.speedRef.current / 100) * 20);
-          simPPM = baseRate + (simSorts > 0 ? Math.min(simSorts * 2, 8) : 0);
-        } else if (simSorts > 0) {
-          simPPM = simSorts;
-        }
+      let simPPM = 0;
+      if (isBeltMoving) {
+        const baseRate = Math.round((speedRef.current / 100) * 20);
+        simPPM = baseRate + (simSorts > 0 ? Math.min(simSorts * 2, 8) : 0);
+      } else if (simSorts > 0) {
+        simPPM = simSorts;
+      }
 
-        sorterData.setSimThroughput((prev) => [
-          ...prev.slice(1),
-          {
-            time: nowStr,
-            ppm: simPPM,
-            total: sorterData.simRecordsRef.current.length,
-            bin1: sorterData.simBinCountsRef.current.bin1,
-            bin2: sorterData.simBinCountsRef.current.bin2,
-            bin3: sorterData.simBinCountsRef.current.bin3,
-            speed: isBeltMoving ? conveyor.speedRef.current : 0,
-          },
-        ]);
+      setSimThroughput((prev) => [
+        ...prev.slice(1),
+        {
+          time: nowStr,
+          ppm: simPPM,
+          total: simRecordsRef.current.length,
+          bin1: simBinCountsRef.current.bin1,
+          bin2: simBinCountsRef.current.bin2,
+          bin3: simBinCountsRef.current.bin3,
+          speed: isBeltMoving ? speedRef.current : 0,
+        },
+      ]);
 
-        // 2. Lưu lượng Thực Tế (Real Hardware PPM)
-        sorterData.recentSortTimesRealRef.current = sorterData.recentSortTimesRealRef.current.filter(
-          (t) => now - t < 60000
-        );
-        const realSorts = sorterData.recentSortTimesRealRef.current.length;
-        const realPPM = realSorts;
+      // 2. Lưu lượng Thực Tế (Real Hardware PPM)
+      recentSortTimesRealRef.current = recentSortTimesRealRef.current.filter(
+        (t) => now - t < 60000
+      );
+      const realSorts = recentSortTimesRealRef.current.length;
+      const realPPM = realSorts;
 
-        sorterData.setRealThroughput((prev) => [
-          ...prev.slice(1),
-          {
-            time: nowStr,
-            ppm: realPPM,
-            total: sorterData.realRecordsRef.current.length,
-            bin1: sorterData.realBinCountsRef.current.bin1,
-            bin2: sorterData.realBinCountsRef.current.bin2,
-            bin3: sorterData.realBinCountsRef.current.bin3,
-            speed: telemetryRef.current.conveyor_running ? telemetryRef.current.conveyor_speed : 0,
-          },
-        ]);
+      setRealThroughput((prev) => [
+        ...prev.slice(1),
+        {
+          time: nowStr,
+          ppm: realPPM,
+          total: realRecordsRef.current.length,
+          bin1: realBinCountsRef.current.bin1,
+          bin2: realBinCountsRef.current.bin2,
+          bin3: realBinCountsRef.current.bin3,
+          speed: telemetryRef.current.conveyor_running ? telemetryRef.current.conveyor_speed : 0,
+        },
+      ]);
 
-        // FLAW-03: Chỉ fake ping khi ở Simulation mode
-        if (isSimMode) {
-          mqtt.setPingMs(Math.floor(20 + Math.random() * 10));
-        }
+      // FLAW-03: Chỉ fake ping khi ở Simulation mode
+      if (isSimMode) {
+        setPingMs(Math.floor(20 + Math.random() * 10));
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [conveyor, mqtt, sorterData]);
+  }, [
+    isRunningRef,
+    speedRef,
+    isSimulationRef,
+    recentSortTimesSimRef,
+    recentSortTimesRealRef,
+    setSimThroughput,
+    setRealThroughput,
+    simRecordsRef,
+    simBinCountsRef,
+    realRecordsRef,
+    realBinCountsRef,
+    setPingMs,
+  ]);
 
   // Config Actions
   const handleSaveAndPublishConfig = useCallback(
@@ -366,6 +408,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     isSimulation: sorterData.isSimulation,
     setIsSimulation: sorterData.setIsSimulation,
     toggleSimulationMode: sorterData.toggleSimulationMode,
+    generateSimulationDemoData: sorterData.generateSimulationDemoData,
     isRunning: conveyor.isRunning,
     setIsRunning: conveyor.setIsRunning,
     conveyorSpeed: conveyor.conveyorSpeed,
@@ -393,6 +436,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     spawnVisualPackage: conveyor.spawnVisualPackage,
     handleClearHistory,
     handleClearAlerts: sorterData.handleClearAlerts,
+    handleClearBin: sorterData.handleClearBin,
     handleResetConfigToDefault,
     handleResetActuatorStates,
     themeMode,

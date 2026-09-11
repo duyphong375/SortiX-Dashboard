@@ -2,8 +2,12 @@
 import { TelemetryData, VisionDetection, SorterConfig, AlertEvent, CATALOG_BRANDS } from "./types";
 import { TelemetrySchema, VisionDetectionSchema } from "./schemas";
 
-export function cleanTelemetryPayload(raw: any, prev: TelemetryData): TelemetryData {
-  if (!raw || typeof raw !== "object") return prev;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+export function cleanTelemetryPayload(raw: unknown, prev: TelemetryData): TelemetryData {
+  if (!isRecord(raw)) return prev;
   
   const parsed = TelemetrySchema.safeParse(raw);
   if (parsed.success) {
@@ -13,7 +17,8 @@ export function cleanTelemetryPayload(raw: any, prev: TelemetryData): TelemetryD
       uptime: parsed.data.uptime ?? prev.uptime,
       cpu_temp: parsed.data.cpu_temp ?? prev.cpu_temp,
       wifi_rssi: parsed.data.wifi_rssi ?? prev.wifi_rssi,
-      conveyor_running: raw.conveyor_running !== undefined ? raw.conveyor_running : prev.conveyor_running,
+      conveyor_running:
+        typeof raw.conveyor_running === "boolean" ? raw.conveyor_running : prev.conveyor_running,
       conveyor_speed: parsed.data.conveyor_speed ?? prev.conveyor_speed,
       encoder_count: parsed.data.encoder_count ?? prev.encoder_count,
       active_config_version: parsed.data.active_config_version ?? prev.active_config_version,
@@ -33,10 +38,12 @@ export function normalizeBrandId(rawBrand: string): string {
   return lower;
 }
 
-export function cleanVisionPayload(raw: any): VisionDetection | null {
-  if (!raw || typeof raw !== "object") return null;
+export function cleanVisionPayload(raw: unknown): VisionDetection | null {
+  if (!isRecord(raw)) return null;
 
-  const rawBrand = String(raw.brand_id || raw.brand || raw.itemType || raw.item_type || raw.class_name || "");
+  const rawBrand = String(
+    raw.brand_id || raw.brand || raw.itemType || raw.item_type || raw.class_name || ""
+  );
   if (!rawBrand) return null;
   const brandId = normalizeBrandId(rawBrand);
 

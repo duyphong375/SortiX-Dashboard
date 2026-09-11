@@ -32,6 +32,20 @@ import {
   Zap,
 } from "lucide-react";
 
+const BUSINESS_TIME_ZONE = "Asia/Ho_Chi_Minh";
+const MAX_BIN_CAPACITY = 50;
+
+function getDateKeyInBusinessTimeZone(timestamp: string | Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(timestamp));
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 // Count-up animation hook
 function useCountUp(target: number, duration = 800) {
   const [count, setCount] = useState(0);
@@ -120,12 +134,15 @@ function StatCard({
 // Calendar widget - BỘ LỌC THỐNG KÊ THEO NGÀY
 interface CalendarWidgetProps {
   records: ClassificationRecord[];
+  bin1Brands: string[];
+  bin2Brands: string[];
 }
 
 const CalendarWidget = React.memo(function CalendarWidget({
   records,
+  bin1Brands,
+  bin2Brands,
 }: CalendarWidgetProps) {
-  const now = new Date();
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -137,10 +154,7 @@ const CalendarWidget = React.memo(function CalendarWidget({
 
   // Khởi tạo ngày đang chọn: mặc định là Hôm nay
   const todayKey = useMemo(() => {
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, "0");
-    const d = String(now.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
+    return getDateKeyInBusinessTimeZone(new Date());
   }, []);
 
   const [selectedDateKey, setSelectedDateKey] = useState<string>(todayKey);
@@ -160,7 +174,7 @@ const CalendarWidget = React.memo(function CalendarWidget({
 
     for (const r of records) {
       if (!r.timestamp) continue;
-      const dKey = r.timestamp.slice(0, 10);
+      const dKey = getDateKeyInBusinessTimeZone(r.timestamp);
       if (!map[dKey]) {
         map[dKey] = {
           total: 0,
@@ -410,7 +424,9 @@ const CalendarWidget = React.memo(function CalendarWidget({
             {/* 3 Khay */}
             <div className="grid grid-cols-3 gap-1.5 text-center text-[10px]">
               <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 p-1.5 dark:bg-rose-950/20">
-                <div className="text-slate-500 dark:text-slate-400 font-medium">Khay 1 (Coca)</div>
+                <div className="text-slate-500 dark:text-slate-400 font-medium">
+                  Khay 1 ({bin1Brands.length > 0 ? bin1Brands.map((b) => CATALOG_BRANDS[b]?.name || b).join(", ") : "Trống"})
+                </div>
                 <div className="font-mono font-bold text-rose-600 dark:text-rose-400 text-xs mt-0.5">
                   {selectedStats.bin1} SP
                 </div>
@@ -420,7 +436,9 @@ const CalendarWidget = React.memo(function CalendarWidget({
               </div>
 
               <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-1.5 dark:bg-blue-950/20">
-                <div className="text-slate-500 dark:text-slate-400 font-medium">Khay 2 (Pepsi)</div>
+                <div className="text-slate-500 dark:text-slate-400 font-medium">
+                  Khay 2 ({bin2Brands.length > 0 ? bin2Brands.map((b) => CATALOG_BRANDS[b]?.name || b).join(", ") : "Trống"})
+                </div>
                 <div className="font-mono font-bold text-blue-600 dark:text-blue-400 text-xs mt-0.5">
                   {selectedStats.bin2} SP
                 </div>
@@ -553,7 +571,7 @@ export default function DashboardPage() {
           title="Sản Lượng Ca Hiện Tại"
           value={`${animatedTotal.toLocaleString()} SP`}
           subtitle={`Khay 1: ${binCounts.bin1} | Khay 2: ${binCounts.bin2} | Khay 3: ${binCounts.bin3}`}
-          trend={{ value: `+${records.length} trong ca`, positive: true }}
+          trend={{ value: `+${totalSorted} trong ca`, positive: true }}
           color="cyan"
           highlight
         />
@@ -749,44 +767,44 @@ export default function DashboardPage() {
             {/* THANH TIẾN ĐỘ DUNG LƯỢNG 3 KHAY CHỨA TỨC THỜI */}
             <div className="mt-5 space-y-3.5">
               <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                <span>Dung Lượng 3 Khay Chứa (Định mức 50 SP / Khay)</span>
+                <span>Dung Lượng 3 Khay Chứa (Định mức {MAX_BIN_CAPACITY} SP / Khay)</span>
                 <span>Tỉ lệ đầy khay</span>
               </div>
 
-              {/* Khay 1 (Coca / Gạt 1) */}
+              {/* Khay 1 (Gạt 1) */}
               <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 dark:border-rose-500/20 dark:bg-rose-950/15">
                 <div className="flex items-center justify-between text-xs mb-1.5">
                   <div className="flex items-center gap-2 font-bold text-rose-600 dark:text-rose-400">
                     <span className="h-2.5 w-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]" />
-                    <span>Khay 1 (Coca / Gạt 1)</span>
+                    <span>Khay 1 ({bin1Brands.length > 0 ? bin1Brands.map((b: string) => CATALOG_BRANDS[b]?.name).join(", ") : "Trống"} / Gạt 1)</span>
                   </div>
                   <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                    {binCounts.bin1}/50 SP ({Math.min(100, Math.round((binCounts.bin1 / 50) * 100))}%)
+                    {binCounts.bin1}/{MAX_BIN_CAPACITY} SP ({Math.min(100, Math.round((binCounts.bin1 / MAX_BIN_CAPACITY) * 100))}%)
                   </span>
                 </div>
                 <div className="h-2.5 w-full rounded-full bg-slate-200/80 dark:bg-white/[0.08] overflow-hidden">
                   <div
                     className="h-full rounded-full bg-rose-500 transition-all duration-500 shadow-[0_0_8px_#f43f5e]"
-                    style={{ width: `${Math.min(100, (binCounts.bin1 / 50) * 100)}%` }}
+                    style={{ width: `${Math.min(100, (binCounts.bin1 / MAX_BIN_CAPACITY) * 100)}%` }}
                   />
                 </div>
               </div>
 
-              {/* Khay 2 (Pepsi / Gạt 2) */}
+              {/* Khay 2 (Gạt 2) */}
               <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 dark:border-blue-500/20 dark:bg-blue-950/15">
                 <div className="flex items-center justify-between text-xs mb-1.5">
                   <div className="flex items-center gap-2 font-bold text-blue-600 dark:text-blue-400">
                     <span className="h-2.5 w-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]" />
-                    <span>Khay 2 (Pepsi / Gạt 2)</span>
+                    <span>Khay 2 ({bin2Brands.length > 0 ? bin2Brands.map((b: string) => CATALOG_BRANDS[b]?.name).join(", ") : "Trống"} / Gạt 2)</span>
                   </div>
                   <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                    {binCounts.bin2}/50 SP ({Math.min(100, Math.round((binCounts.bin2 / 50) * 100))}%)
+                    {binCounts.bin2}/{MAX_BIN_CAPACITY} SP ({Math.min(100, Math.round((binCounts.bin2 / MAX_BIN_CAPACITY) * 100))}%)
                   </span>
                 </div>
                 <div className="h-2.5 w-full rounded-full bg-slate-200/80 dark:bg-white/[0.08] overflow-hidden">
                   <div
                     className="h-full rounded-full bg-blue-500 transition-all duration-500 shadow-[0_0_8px_#3b82f6]"
-                    style={{ width: `${Math.min(100, (binCounts.bin2 / 50) * 100)}%` }}
+                    style={{ width: `${Math.min(100, (binCounts.bin2 / MAX_BIN_CAPACITY) * 100)}%` }}
                   />
                 </div>
               </div>
@@ -799,13 +817,13 @@ export default function DashboardPage() {
                     <span>Khay 3 (Mặc định)</span>
                   </div>
                   <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                    {binCounts.bin3}/50 SP ({Math.min(100, Math.round((binCounts.bin3 / 50) * 100))}%)
+                    {binCounts.bin3}/{MAX_BIN_CAPACITY} SP ({Math.min(100, Math.round((binCounts.bin3 / MAX_BIN_CAPACITY) * 100))}%)
                   </span>
                 </div>
                 <div className="h-2.5 w-full rounded-full bg-slate-200/80 dark:bg-white/[0.08] overflow-hidden">
                   <div
                     className="h-full rounded-full bg-amber-500 transition-all duration-500 shadow-[0_0_8px_#f59e0b]"
-                    style={{ width: `${Math.min(100, (binCounts.bin3 / 50) * 100)}%` }}
+                    style={{ width: `${Math.min(100, (binCounts.bin3 / MAX_BIN_CAPACITY) * 100)}%` }}
                   />
                 </div>
               </div>
@@ -849,7 +867,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Cột 2 (1/3 chiều rộng): Bộ Lọc Thống Kê Theo Ngày */}
-        <CalendarWidget records={records} />
+        <CalendarWidget records={records} bin1Brands={bin1Brands} bin2Brands={bin2Brands} />
       </div>
 
       {/* HÀNG 3: NHẬT KÝ HOẠT ĐỘNG MỚI NHẤT (5 BẢN GHI TÓM TẮT) */}
@@ -900,13 +918,9 @@ export default function DashboardPage() {
               ) : (
                 recentRecords.map((rec, idx) => {
                   const brand = CATALOG_BRANDS[rec.brand_id];
-                  const recIndex = records.indexOf(rec);
-                  const displayId =
-                    recIndex !== -1
-                      ? `#${records.length - recIndex}`
-                      : rec.product_id?.startsWith("#")
-                      ? rec.product_id
-                      : `#${rec.product_id}`;
+                  const displayId = rec.product_id?.startsWith("#")
+                    ? rec.product_id
+                    : `#${rec.product_id}`;
 
                   return (
                     <tr

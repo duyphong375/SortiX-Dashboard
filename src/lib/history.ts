@@ -60,71 +60,17 @@ export function saveOperatingMode(isSim: boolean): void {
   }
 }
 
-function generateInitialSeedRecords(): ClassificationRecord[] {
-  const brands = [
-    { id: "brand_c", name: "Coca-Cola", bin: 1 },
-    { id: "brand_a", name: "Pepsi", bin: 2 },
-    { id: "brand_b", name: "Red Bull", bin: 3 },
-    { id: "brand_d", name: "Aquafina", bin: 3 },
-  ];
-
-  const records: ClassificationRecord[] = [];
-  const now = new Date();
-
-  // Tạo dữ liệu mẫu ngày Hôm nay (8 sản phẩm)
-  for (let i = 8; i >= 1; i--) {
-    const b = brands[(i - 1) % brands.length];
-    const ts = new Date(now.getTime() - (8 - i) * 15 * 60 * 1000);
-    records.push({
-      id: `seed_today_${i}`,
-      product_id: `#${i}`,
-      brand_id: b.id,
-      brand_name: b.name,
-      confidence: Number((0.94 + ((i * 7) % 5) * 0.01).toFixed(2)),
-      target_bin: b.bin,
-      actual_bin: b.bin,
-      status: "success",
-      timestamp: ts.toISOString(),
-    });
-  }
-
-  // Tạo dữ liệu mẫu ngày Hôm qua (15 sản phẩm)
-  const yesterday = new Date(now.getTime() - 24 * 3600 * 1000);
-  for (let i = 15; i >= 1; i--) {
-    const b = brands[(i * 3) % brands.length];
-    const ts = new Date(yesterday.getTime() - (15 - i) * 20 * 60 * 1000);
-    records.push({
-      id: `seed_yest_${i}`,
-      product_id: `#${i}`,
-      brand_id: b.id,
-      brand_name: b.name,
-      confidence: Number((0.95 + ((i * 3) % 4) * 0.01).toFixed(2)),
-      target_bin: b.bin,
-      actual_bin: b.bin,
-      status: "success",
-      timestamp: ts.toISOString(),
-    });
-  }
-
-  // Tạo dữ liệu mẫu 2 ngày trước (12 sản phẩm)
-  const twoDaysAgo = new Date(now.getTime() - 48 * 3600 * 1000);
-  for (let i = 12; i >= 1; i--) {
-    const b = brands[(i * 2) % brands.length];
-    const ts = new Date(twoDaysAgo.getTime() - (12 - i) * 25 * 60 * 1000);
-    records.push({
-      id: `seed_2days_${i}`,
-      product_id: `#${i}`,
-      brand_id: b.id,
-      brand_name: b.name,
-      confidence: Number((0.93 + ((i * 5) % 6) * 0.01).toFixed(2)),
-      target_bin: b.bin,
-      actual_bin: b.bin,
-      status: "success",
-      timestamp: ts.toISOString(),
-    });
-  }
-
-  return records;
+function countRecordsByBin(records: ClassificationRecord[]): BinCounts {
+  const counts: BinCounts = { bin1: 0, bin2: 0, bin3: 0 };
+  records.forEach((record) => {
+    if (record.actual_bin === 1) counts.bin1++;
+    else if (record.actual_bin === 2) counts.bin2++;
+    else counts.bin3++;
+  });
+  counts.bin1 = Math.min(counts.bin1, 50);
+  counts.bin2 = Math.min(counts.bin2, 50);
+  counts.bin3 = Math.min(counts.bin3, 50);
+  return counts;
 }
 
 /**
@@ -134,24 +80,40 @@ export function loadClassificationHistory(isSim: boolean = true): Classification
   if (typeof window === "undefined") return [];
   try {
     const key = isSim ? STORAGE_KEYS.SIM_RECORDS : STORAGE_KEYS.REAL_RECORDS;
-    const raw = localStorage.getItem(key);
-    if (raw) return JSON.parse(raw);
-
+    let raw = localStorage.getItem(key);
+    const isLegacy = isSim && raw === null;
     // Nếu là chế độ Mô phỏng và chưa có key sim mới, kiểm tra key cũ để tương thích ngược
-    if (isSim) {
-      const legacy = localStorage.getItem(STORAGE_KEYS.LEGACY_RECORDS);
-      if (legacy) {
-        const parsed = JSON.parse(legacy);
-        localStorage.setItem(STORAGE_KEYS.SIM_RECORDS, legacy);
-        return parsed;
-      }
+    if (isLegacy) raw = localStorage.getItem(STORAGE_KEYS.LEGACY_RECORDS);
+    if (!raw) return [];
 
-      // Khởi tạo bộ dữ liệu mẫu mẫu phong phú có sẵn các ngày trước để người dùng trải nghiệm ngay
-      const seed = generateInitialSeedRecords();
-      localStorage.setItem(STORAGE_KEYS.SIM_RECORDS, JSON.stringify(seed));
-      return seed;
+    const records: ClassificationRecord[] = JSON.parse(raw);
+    if (!Array.isArray(records)) return [];
+    if (!isSim) return records;
+
+    // Loại dữ liệu mẫu được phiên bản cũ tự tạo, giữ lịch sử người dùng đã chạy.
+    const retained = records.filter((record) => !/^seed_(today|yest|2days)_\d+$/.test(record.id));
+    if (retained.length !== records.length) {
+      const counts = countRecordsByBin(retained);
+      const cached = localStorage.getItem(STORAGE_KEYS.SIM_BIN_COUNTS);
+      if (cached) {
+        try {
+          const previous = JSON.parse(cached) as Partial<BinCounts>;
+          // Không tăng lại bộ đếm của khay mà người dùng đã dọn trước đó.
+          for (const bin of ["bin1", "bin2", "bin3"] as const) {
+            const value = Number(previous?.[bin]);
+            if (Number.isFinite(value)) counts[bin] = Math.max(0, Math.min(value, counts[bin]));
+          }
+        } catch {
+          // Cache hỏng: dùng bộ đếm tính từ lịch sử còn hợp lệ.
+        }
+      }
+      localStorage.setItem(STORAGE_KEYS.SIM_BIN_COUNTS, JSON.stringify(counts));
     }
-    return [];
+    if (isLegacy || retained.length !== records.length) {
+      localStorage.setItem(STORAGE_KEYS.SIM_RECORDS, JSON.stringify(retained));
+      if (isLegacy) localStorage.removeItem(STORAGE_KEYS.LEGACY_RECORDS);
+    }
+    return retained;
   } catch (err) {
     console.warn("Lỗi đọc LocalStorage records:", err);
     return [];
@@ -178,6 +140,26 @@ export function saveClassificationRecord(
   }
 }
 
+/** Lưu nhiều bản ghi cùng lúc, dùng cho thao tác tạo dữ liệu demo. */
+export function saveClassificationRecordsLocal(
+  records: ClassificationRecord[],
+  isSim: boolean = true
+): ClassificationRecord[] {
+  if (typeof window === "undefined") return [];
+  if (records.length === 0) return loadClassificationHistory(isSim);
+
+  try {
+    const key = isSim ? STORAGE_KEYS.SIM_RECORDS : STORAGE_KEYS.REAL_RECORDS;
+    const existing = loadClassificationHistory(isSim);
+    const updated = [...records, ...existing].slice(0, MAX_RECORDS);
+    localStorage.setItem(key, JSON.stringify(updated));
+    return updated;
+  } catch (err) {
+    console.warn("Lỗi ghi danh sách LocalStorage records:", err);
+    return [];
+  }
+}
+
 /**
  * Lấy số lượng từng khay theo chế độ độc lập
  */
@@ -187,24 +169,21 @@ export function loadBinCountsLocal(isSim: boolean = true): BinCounts {
 
   try {
     const key = isSim ? STORAGE_KEYS.SIM_BIN_COUNTS : STORAGE_KEYS.REAL_BIN_COUNTS;
+    // Dọn dữ liệu mẫu cũ trước khi đọc bộ đếm đã lưu.
+    const records = loadClassificationHistory(isSim);
     const raw = localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw);
       return {
-        bin1: Number(parsed.bin1 || 0),
-        bin2: Number(parsed.bin2 || 0),
-        bin3: Number(parsed.bin3 || 0),
+        bin1: Math.min(Number(parsed.bin1 || 0), 50),
+        bin2: Math.min(Number(parsed.bin2 || 0), 50),
+        bin3: Math.min(Number(parsed.bin3 || 0), 50),
       };
     }
 
     // Nếu chưa có cache số lượng khay, tự động tính từ lịch sử của chế độ đó
-    const records = loadClassificationHistory(isSim);
-    const computed: BinCounts = { bin1: 0, bin2: 0, bin3: 0 };
-    records.forEach((r) => {
-      if (r.actual_bin === 1) computed.bin1++;
-      else if (r.actual_bin === 2) computed.bin2++;
-      else computed.bin3++;
-    });
+    // Đảm bảo không quá 50 khi tính từ lịch sử
+    const computed = countRecordsByBin(records);
     localStorage.setItem(key, JSON.stringify(computed));
     return computed;
   } catch (err) {
@@ -232,9 +211,9 @@ export function saveBinCountsLocal(counts: BinCounts, isSim: boolean = true): vo
 export function updateBinCountsLocal(actualBin: number, isSim: boolean = true): BinCounts {
   const current = loadBinCountsLocal(isSim);
   const updated: BinCounts = {
-    bin1: actualBin === 1 ? current.bin1 + 1 : current.bin1,
-    bin2: actualBin === 2 ? current.bin2 + 1 : current.bin2,
-    bin3: actualBin === 3 ? current.bin3 + 1 : current.bin3,
+    bin1: actualBin === 1 ? Math.min(current.bin1 + 1, 50) : current.bin1,
+    bin2: actualBin === 2 ? Math.min(current.bin2 + 1, 50) : current.bin2,
+    bin3: actualBin === 3 ? Math.min(current.bin3 + 1, 50) : current.bin3,
   };
   saveBinCountsLocal(updated, isSim);
   return updated;

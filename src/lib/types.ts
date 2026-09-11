@@ -15,7 +15,8 @@ export interface VisualItem {
   sorted?: boolean;
   s1Triggered?: boolean;
   isSim: boolean; // true = phôi mô phỏng, false = phôi thực từ Camera AI
-  preRecorded?: boolean; // true = đã ghi record khi nhận MQTT vision (tránh đếm 2 lần)
+  confidence?: number;
+  timestamp?: string;
 }
 
 export interface BrandInfo {
@@ -26,6 +27,8 @@ export interface BrandInfo {
   badgeBg: string;
   borderColor: string;
   textColor: string;
+  packaging?: string;
+  icon?: string;
 }
 
 export const CATALOG_BRANDS: Record<string, BrandInfo> = {
@@ -37,6 +40,7 @@ export const CATALOG_BRANDS: Record<string, BrandInfo> = {
     badgeBg: "bg-red-500/20",
     borderColor: "border-red-500/50",
     textColor: "text-red-400",
+    packaging: "Lon nhôm 330ml", icon: "🔴",
   },
   brand_a: {
     id: "brand_a",
@@ -46,6 +50,7 @@ export const CATALOG_BRANDS: Record<string, BrandInfo> = {
     badgeBg: "bg-blue-500/20",
     borderColor: "border-blue-500/50",
     textColor: "text-blue-400",
+    packaging: "Lon nhôm 330ml", icon: "🔵",
   },
   brand_b: {
     id: "brand_b",
@@ -55,6 +60,7 @@ export const CATALOG_BRANDS: Record<string, BrandInfo> = {
     badgeBg: "bg-amber-500/20",
     borderColor: "border-amber-500/50",
     textColor: "text-amber-400",
+    packaging: "Lon nhôm 250ml", icon: "🟡",
   },
   brand_d: {
     id: "brand_d",
@@ -64,6 +70,7 @@ export const CATALOG_BRANDS: Record<string, BrandInfo> = {
     badgeBg: "bg-cyan-500/20",
     borderColor: "border-cyan-500/50",
     textColor: "text-cyan-400",
+    packaging: "Chai nhựa PET 500ml", icon: "🔷",
   },
 };
 
@@ -81,6 +88,9 @@ export interface SorterConfig {
   default_bin: 3;
   apply_mode: "when_line_empty" | "immediate";
   timestamp: string;
+  timezone?: string;
+  shift?: { start: string; end: string };
+  servo_routes?: Record<string, { io: string; angle: number }>;
 }
 
 export interface TelemetryData {
