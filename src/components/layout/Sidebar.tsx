@@ -38,9 +38,17 @@ interface SidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
   alertCount?: number;
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggleCollapse, alertCount = 0 }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  collapsed,
+  onToggleCollapse,
+  alertCount = 0,
+  mobileOpen = false,
+  onCloseMobile,
+}) => {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
@@ -66,6 +74,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggleCollapse, a
     <aside
       className={`fixed left-0 top-0 z-40 flex h-screen flex-col border-r transition-all duration-300 ${
         collapsed ? "w-[72px]" : "w-[260px]"
+      } ${
+        mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       } border-slate-200/80 bg-white/95 dark:border-white/[0.06] dark:bg-[#111319] backdrop-blur-xl`}
     >
       {/* Logo Area */}
@@ -114,6 +124,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggleCollapse, a
                     <Link
                       key={item.id}
                       href={item.href}
+                      onClick={() => onCloseMobile?.()}
                       title={collapsed ? item.label : undefined}
                       className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs transition-all duration-150 border ${
                         active

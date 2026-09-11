@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { SorterConfig, TelemetryData, AlertEvent, CATALOG_BRANDS } from "@/lib/types";
 import { sendTelegramAlert, sendEmailAlert } from "@/lib/alertService";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useToast } from "@/components/ui/Toast";
 import {
   SlidersHorizontal,
   ArrowLeftRight,
@@ -51,6 +53,8 @@ export const ConfigAndDiagnostics: React.FC<ConfigAndDiagnosticsProps> = ({
   );
   const [isApplying, setIsApplying] = useState(false);
   const [statusMsg, setStatusMsg] = useState(applyStatusText || "");
+  const toast = useToast();
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [isSendingAlert, setIsSendingAlert] = useState(false);
   const [alertResult, setAlertResult] = useState<{ success: boolean; message: string } | null>(null);
 
@@ -82,15 +86,23 @@ export const ConfigAndDiagnostics: React.FC<ConfigAndDiagnosticsProps> = ({
     const res = await onSaveConfig(updatedConfig);
     setIsApplying(false);
     setStatusMsg(res.message);
+    if (res.success) {
+      toast.success(res.message, "Cập nhật cấu hình");
+    } else {
+      toast.error(res.message, "Lỗi áp dụng cấu hình");
+    }
+  };
+
+  const executeResetDefault = () => {
+    setBin1Brand("brand_c");
+    setBin2Brand("brand_a");
+    setStatusMsg("Đã khôi phục cấu hình v1 mặc định thành công!");
+    onResetDefaultConfig?.();
+    toast.success("Đã khôi phục cấu hình v1 mặc định thành công!");
   };
 
   const handleResetDefault = () => {
-    if (confirm("Bạn có chắc muốn đưa phiên bản cấu hình về v1 ban đầu?")) {
-      setBin1Brand("brand_c");
-      setBin2Brand("brand_a");
-      setStatusMsg("Đã khôi phục cấu hình v1 mặc định thành công!");
-      onResetDefaultConfig?.();
-    }
+    setResetDialogOpen(true);
   };
 
   const handleTestTelegram = async () => {
@@ -419,6 +431,20 @@ export const ConfigAndDiagnostics: React.FC<ConfigAndDiagnosticsProps> = ({
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={resetDialogOpen}
+        title="Khôi phục cấu hình mặc định"
+        message="Bạn có chắc chắn muốn đưa phiên bản cấu hình phân loại về phiên bản v1 ban đầu? Mọi thay đổi gán khay sẽ được đặt lại."
+        confirmText="Khôi phục v1"
+        cancelText="Hủy bỏ"
+        type="warning"
+        onConfirm={() => {
+          setResetDialogOpen(false);
+          executeResetDefault();
+        }}
+        onCancel={() => setResetDialogOpen(false)}
+      />
     </div>
   );
 };

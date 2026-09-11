@@ -52,7 +52,7 @@ function DiagCard({
 }
 
 export default function DevicesPage() {
-  const { telemetry, mqttStatus, pingMs, handleResetActuatorStates } = useDashboard();
+  const { telemetry, mqttStatus, pingMs, handleResetActuatorStates, sorterConfig } = useDashboard();
   const [resetFeedback, setResetFeedback] = useState<string | null>(null);
   const canView = usePermission("devices.view");
   const router = useRouter();
@@ -197,7 +197,9 @@ export default function DevicesPage() {
         </div>
         <div className="relate-card rounded-2xl border border-slate-200/80 bg-white/95 p-5 dark:border-white/[0.07] dark:bg-[#161822]">
           <h3 className="mb-3 text-sm font-bold tracking-tight text-slate-900 dark:text-white">Phiên Bản Cấu Hình</h3>
-          <p className="text-3xl font-mono font-bold text-cyan-600 dark:text-cyan-400">v{telemetry.active_config_version}</p>
+          <p className="text-3xl font-mono font-bold text-cyan-600 dark:text-cyan-400">
+            v{sorterConfig?.config_version || telemetry.active_config_version || 1}
+          </p>
           <p className="text-xs font-normal text-slate-500 dark:text-slate-400">Đang áp dụng trên ESP32-C5</p>
         </div>
       </div>

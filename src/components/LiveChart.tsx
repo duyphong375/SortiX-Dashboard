@@ -123,15 +123,6 @@ export const LiveChart: React.FC<LiveChartProps> = ({
               {currentSpeed}% PWM
             </span>
           </div>
-
-          {/* Badge 3: Tổng tích lũy */}
-          <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-100/80 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-            <Boxes className="h-3.5 w-3.5 text-slate-500" />
-            <span>Tổng ca:</span>
-            <span className="font-mono font-bold text-slate-900 dark:text-white">
-              {totalSorted} SP
-            </span>
-          </div>
         </div>
       </div>
 

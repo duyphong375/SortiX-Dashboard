@@ -1,8 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 
+function escapeHtml(unsafe: string) {
+  return (unsafe || "").replace(/[&<"'>]/g, function (match) {
+    switch (match) {
+      case "&": return "&amp;";
+      case "<": return "&lt;";
+      case ">": return "&gt;";
+      case '"': return "&quot;";
+      case "'": return "&#039;";
+      default: return match;
+    }
+  });
+}
+
+// Simple in-memory rate limiting
+const rateLimitCache = new Map<string, number>();
+
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    const now = Date.now();
+    const lastRequest = rateLimitCache.get(ip) || 0;
+    if (now - lastRequest < 5000) {
+      return NextResponse.json({ success: false, message: "Too many requests" }, { status: 429 });
+    }
+    rateLimitCache.set(ip, now);
+
     const body = await req.json();
     const { event_type, severity, description, device_id, timestamp } = body;
 
@@ -38,6 +62,11 @@ export async function POST(req: NextRequest) {
       ? new Date(timestamp).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })
       : new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
 
+    // Escape dynamic content to prevent XSS
+    const safeDeviceId = escapeHtml(device_id || "sorter_01");
+    const safeEventType = escapeHtml(event_type || "SYSTEM_EVENT");
+    const safeDescription = escapeHtml(description || "Chưa có mô tả");
+
     const htmlContent = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #0f172a; border-radius: 12px; overflow: hidden; border: 1px solid #334155; color: #f8fafc;">
         <div style="background: ${statusColor}; padding: 18px 24px; text-align: center;">
@@ -51,15 +80,15 @@ export async function POST(req: NextRequest) {
             <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
               <tr>
                 <td style="padding: 6px 0; color: #94a3b8; width: 140px;">Mã Thiết Bị:</td>
-                <td style="padding: 6px 0; font-weight: 600; color: #38bdf8;">${device_id || "sorter_01"}</td>
+                <td style="padding: 6px 0; font-weight: 600; color: #38bdf8;">${safeDeviceId}</td>
               </tr>
               <tr>
                 <td style="padding: 6px 0; color: #94a3b8;">Loại Sự Kiện:</td>
-                <td style="padding: 6px 0; font-weight: 600; color: #f8fafc;">${event_type || "SYSTEM_EVENT"}</td>
+                <td style="padding: 6px 0; font-weight: 600; color: #f8fafc;">${safeEventType}</td>
               </tr>
               <tr>
                 <td style="padding: 6px 0; color: #94a3b8;">Mô Tả Chi Tiết:</td>
-                <td style="padding: 6px 0; color: #f8fafc;">${description || "Chưa có mô tả"}</td>
+                <td style="padding: 6px 0; color: #f8fafc;">${safeDescription}</td>
               </tr>
               <tr>
                 <td style="padding: 6px 0; color: #94a3b8;">Thời Gian:</td>

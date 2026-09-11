@@ -14,6 +14,8 @@ export interface VisualItem {
   deflected?: boolean;
   sorted?: boolean;
   s1Triggered?: boolean;
+  isSim: boolean; // true = phôi mô phỏng, false = phôi thực từ Camera AI
+  preRecorded?: boolean; // true = đã ghi record khi nhận MQTT vision (tránh đếm 2 lần)
 }
 
 export interface BrandInfo {
@@ -135,7 +137,8 @@ export interface AlertEvent {
     | "config_rejected"
     | "mqtt_disconnected"
     | "device_offline"
-    | "temperature_warning";
+    | "temperature_warning"
+    | "bin_full";
   severity: AlertSeverity;
   device_id: string;
   description: string;

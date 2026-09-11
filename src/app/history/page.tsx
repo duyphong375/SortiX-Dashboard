@@ -1,14 +1,17 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useDashboard } from "@/components/layout/DashboardLayout";
 import { usePermission } from "@/contexts/AuthContext";
 import { HistoryTable } from "@/components/HistoryTable";
 import { ShieldAlert } from "lucide-react";
 
-export default function HistoryPage() {
+function HistoryPageContent() {
   const { records, handleClearHistory } = useDashboard();
   const canDelete = usePermission("history.delete");
+  const searchParams = useSearchParams();
+  const dateParam = searchParams.get("date") || undefined;
 
   const wrappedClear = () => {
     if (!canDelete) return;
@@ -23,7 +26,25 @@ export default function HistoryPage() {
           <span>Bạn chỉ có quyền xem và xuất CSV — Xóa lịch sử cần quyền Admin</span>
         </div>
       )}
-      <HistoryTable records={records} onClear={wrappedClear} />
+      <HistoryTable
+        records={records}
+        onClear={wrappedClear}
+        initialDateFilter={dateParam}
+      />
     </div>
+  );
+}
+
+export default function HistoryPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[300px] flex items-center justify-center text-xs font-medium text-slate-400">
+          Đang tải nhật ký lịch sử phân loại...
+        </div>
+      }
+    >
+      <HistoryPageContent />
+    </Suspense>
   );
 }

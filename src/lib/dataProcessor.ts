@@ -1,43 +1,58 @@
 // Bộ chuẩn hóa dữ liệu thô và phát hiện cảnh báo từ IoT / nhận diện ảnh
 import { TelemetryData, VisionDetection, SorterConfig, AlertEvent, CATALOG_BRANDS } from "./types";
+import { TelemetrySchema, VisionDetectionSchema } from "./schemas";
 
 export function cleanTelemetryPayload(raw: any, prev: TelemetryData): TelemetryData {
   if (!raw || typeof raw !== "object") return prev;
+  
+  const parsed = TelemetrySchema.safeParse(raw);
+  if (parsed.success) {
+    return {
+      ...parsed.data,
+      device_id: parsed.data.device_id || prev.device_id,
+      uptime: parsed.data.uptime ?? prev.uptime,
+      cpu_temp: parsed.data.cpu_temp ?? prev.cpu_temp,
+      wifi_rssi: parsed.data.wifi_rssi ?? prev.wifi_rssi,
+      conveyor_running: raw.conveyor_running !== undefined ? raw.conveyor_running : prev.conveyor_running,
+      conveyor_speed: parsed.data.conveyor_speed ?? prev.conveyor_speed,
+      encoder_count: parsed.data.encoder_count ?? prev.encoder_count,
+      active_config_version: parsed.data.active_config_version ?? prev.active_config_version,
+      last_heartbeat: new Date().toISOString(),
+    } as TelemetryData;
+  }
+  
+  return prev;
+}
 
-  return {
-    device_id: String(raw.device_id || prev.device_id || "sorter_01"),
-    online: typeof raw.online === "boolean" ? raw.online : true,
-    uptime: Number(raw.uptime ?? prev.uptime ?? 0),
-    cpu_temp: Number(raw.cpu_temp ?? prev.cpu_temp ?? 42.5),
-    wifi_rssi: Number(raw.wifi_rssi ?? prev.wifi_rssi ?? -58),
-    wifi_band: raw.wifi_band === "5.0 GHz (Wi-Fi 6)" ? "5.0 GHz (Wi-Fi 6)" : "2.4 GHz",
-    conveyor_running: typeof raw.conveyor_running === "boolean" ? raw.conveyor_running : prev.conveyor_running,
-    conveyor_speed: Number(raw.conveyor_speed ?? prev.conveyor_speed ?? 60),
-    s1_entry: Boolean(raw.s1_entry),
-    s2_sorter1: Boolean(raw.s2_sorter1),
-    s3_sorter2: Boolean(raw.s3_sorter2),
-    arm1_active: Boolean(raw.arm1_active),
-    arm2_active: Boolean(raw.arm2_active),
-    estop_pressed: Boolean(raw.estop_pressed),
-    encoder_count: Number(raw.encoder_count ?? prev.encoder_count ?? 0),
-    active_config_version: Number(raw.active_config_version ?? prev.active_config_version ?? 1),
-    last_heartbeat: new Date().toISOString(),
-  };
+export function normalizeBrandId(rawBrand: string): string {
+  const lower = String(rawBrand || "").toLowerCase().trim();
+  if (lower.includes("coca") || lower === "brand_c") return "brand_c";
+  if (lower.includes("pepsi") || lower === "brand_a") return "brand_a";
+  if (lower.includes("red") || lower.includes("bull") || lower === "brand_b") return "brand_b";
+  if (lower.includes("aqua") || lower === "brand_d") return "brand_d";
+  return lower;
 }
 
 export function cleanVisionPayload(raw: any): VisionDetection | null {
   if (!raw || typeof raw !== "object") return null;
 
-  const brandId = String(raw.brand_id || "");
-  if (!brandId) return null;
+  const rawBrand = String(raw.brand_id || raw.brand || raw.itemType || raw.item_type || raw.class_name || "");
+  if (!rawBrand) return null;
+  const brandId = normalizeBrandId(rawBrand);
 
-  return {
-    product_id: String(raw.product_id || `pkg_${Math.floor(1000 + Math.random() * 9000)}`),
+  const payload = {
+    product_id: String(raw.product_id || raw.id || `pkg_${Math.floor(1000 + Math.random() * 9000)}`),
     brand_id: brandId,
     confidence: Number(raw.confidence ?? 0.95),
     catalog_version: raw.catalog_version || "catalog_01",
     timestamp: raw.timestamp || new Date().toISOString(),
   };
+
+  const parsed = VisionDetectionSchema.safeParse(payload);
+  if (parsed.success) {
+    return parsed.data as VisionDetection;
+  }
+  return null;
 }
 
 export function determineTargetBin(brandId: string, config: SorterConfig): number {

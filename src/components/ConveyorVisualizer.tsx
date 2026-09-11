@@ -11,6 +11,11 @@ import {
   Camera,
   Box,
   Cpu,
+  Lock,
+  ShieldAlert,
+  FlaskConical,
+  Radio,
+  Sparkles,
 } from "lucide-react";
 
 interface ConveyorVisualizerProps {
@@ -27,6 +32,8 @@ interface ConveyorVisualizerProps {
   arm2Active: boolean;
   binCounts: { bin1: number; bin2: number; bin3: number };
   brandCounts?: Record<string, number>;
+  isSimulation?: boolean;
+  onToggleSimulationMode?: () => void;
 }
 
 export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
@@ -43,6 +50,8 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
   arm2Active,
   binCounts,
   brandCounts = {},
+  isSimulation = true,
+  onToggleSimulationMode,
 }) => {
   const isBeltMoving = isRunning && !telemetry.estop_pressed && items.length > 0;
   const linearSpeedCms = isBeltMoving ? ((speed / 100) * 35).toFixed(1) : "0.0";
@@ -249,8 +258,25 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           </div>
         </div>
 
-        {/* NÚT THAO TÁC CƠ KHÍ & ĐIỀU KHIỂN CHÍNH */}
-        <div className="flex items-center gap-2 shrink-0 self-end lg:self-auto">
+        {/* NÚT THAO TÁC CƠ KHÍ, CHUYỂN ĐỔI CHẾ ĐỘ & ĐIỀU KHIỂN CHÍNH */}
+        <div className="flex flex-wrap items-center gap-2 shrink-0 self-end lg:self-auto">
+          {/* HUY HIỆU CHỈ THỊ TRẠNG THÁI CHẾ ĐỘ (READ-ONLY) */}
+          {isSimulation ? (
+            <div className="flex items-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-2 text-xs font-bold text-purple-700 dark:border-purple-500/30 dark:bg-purple-950/40 dark:text-purple-300 shadow-xs select-none">
+              <FlaskConical className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400 animate-pulse" />
+              <span>Chế độ: <span className="text-purple-600 dark:text-purple-300 font-extrabold">🧪 Mô phỏng ảo</span></span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-300 shadow-xs select-none">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
+              </span>
+              <Radio className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Chế độ: <span className="text-emerald-600 dark:text-emerald-300 font-extrabold">🟢 Máy thật (Live ESP32)</span></span>
+            </div>
+          )}
+
           {/* Nút Start/Pause */}
           <button
             onClick={onToggleRun}
@@ -287,44 +313,91 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
         </div>
       </div>
 
+      {/* CẢNH BÁO CHẾ ĐỘ THỰC TẾ (REAL HARDWARE MODE BANNER) */}
+      {!isSimulation ? (
+        <div className="flex items-center gap-2.5 rounded-xl border border-emerald-300 bg-emerald-50/90 px-3.5 py-2 text-xs text-emerald-900 shadow-xs dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-200">
+          <ShieldAlert className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 animate-pulse" />
+          <span className="leading-relaxed">
+            <strong className="font-bold text-emerald-950 dark:text-emerald-100 uppercase tracking-wide">Chế độ máy thật:</strong> Đang chờ sản phẩm thực tế trên băng chuyền từ cảm biến & Camera ESP32. Toàn bộ nút thả phôi ảo đã bị khóa để đảm bảo số liệu thu thập hoàn toàn từ phần cứng thực tế.
+          </span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2.5 rounded-xl border border-purple-300 bg-purple-50/90 px-3.5 py-2 text-xs text-purple-900 shadow-xs dark:border-purple-500/30 dark:bg-purple-950/40 dark:text-purple-200">
+          <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400 shrink-0" />
+          <span className="leading-relaxed">
+            <strong className="font-bold text-purple-950 dark:text-purple-100">Chế độ mô phỏng tương tác:</strong> Bạn có thể nhấn các nút bên dưới để thả phôi mẫu thử nghiệm trên băng tải số (Coca, Pepsi, Red Bull, Aquafina hoặc Phôi ngẫu nhiên).
+          </span>
+        </div>
+      )}
+
       {/* DẢI NÚT NẠP TỪNG LOẠI VẬT MẪU TRỰC TIẾP */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 rounded-xl border border-slate-200 bg-slate-50/80 p-2.5 dark:border-white/[0.06] dark:bg-[#111319]">
+      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-2.5 rounded-xl border p-2.5 transition-all duration-300 ${
+        !isSimulation
+          ? "border-slate-200/60 bg-slate-100/40 dark:border-white/[0.04] dark:bg-[#111319]/40"
+          : "border-slate-200 bg-slate-50/80 dark:border-white/[0.06] dark:bg-[#111319]"
+      }`}>
         <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">
-          <Box className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
-          <span>Nạp nhanh vật mẫu lên băng tải:</span>
+          {!isSimulation ? (
+            <>
+              <Lock className="h-4 w-4 text-amber-500 shrink-0" />
+              <span className="text-amber-600 dark:text-amber-400">Nút thả mẫu phôi bị vô hiệu hóa (Khóa ở Chế độ Máy thật):</span>
+            </>
+          ) : (
+            <>
+              <Box className="h-4 w-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
+              <span>Nạp nhanh vật mẫu lên băng tải (Mô phỏng):</span>
+            </>
+          )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={`flex flex-wrap items-center gap-2 transition-all duration-300 ${
+          !isSimulation ? "opacity-50 cursor-not-allowed pointer-events-none filter grayscale" : ""
+        }`}>
           <button
             onClick={() => onSpawnPackage("brand_c")}
-            disabled={!isRunning || telemetry.estop_pressed}
-            className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-1.5 text-xs font-bold text-red-700 transition-all hover:bg-red-100 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/25 disabled:opacity-40 shrink-0 shadow-xs active:scale-95"
+            disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
+            className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-1.5 text-xs font-bold text-red-700 transition-all hover:bg-red-100 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
+            title={!isSimulation ? "Nút bị khóa ở chế độ máy thật" : "Thả Lon Coca-Cola (Khay 1)"}
           >
             <span>🔴 Lon Coca-Cola</span>
           </button>
 
           <button
             onClick={() => onSpawnPackage("brand_a")}
-            disabled={!isRunning || telemetry.estop_pressed}
-            className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-1.5 text-xs font-bold text-blue-700 transition-all hover:bg-blue-100 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-400 dark:hover:bg-blue-500/25 disabled:opacity-40 shrink-0 shadow-xs active:scale-95"
+            disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
+            className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-1.5 text-xs font-bold text-blue-700 transition-all hover:bg-blue-100 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-400 dark:hover:bg-blue-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
+            title={!isSimulation ? "Nút bị khóa ở chế độ máy thật" : "Thả Lon Pepsi (Khay 2)"}
           >
             <span>🔵 Lon Pepsi</span>
           </button>
 
           <button
             onClick={() => onSpawnPackage("brand_b")}
-            disabled={!isRunning || telemetry.estop_pressed}
-            className="flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-1.5 text-xs font-bold text-amber-800 transition-all hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-400 dark:hover:bg-amber-500/25 disabled:opacity-40 shrink-0 shadow-xs active:scale-95"
+            disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
+            className="flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-1.5 text-xs font-bold text-amber-800 transition-all hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-400 dark:hover:bg-amber-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
+            title={!isSimulation ? "Nút bị khóa ở chế độ máy thật" : "Thả Lon Red Bull (Khay 3)"}
           >
             <span>🟡 Lon Red Bull</span>
           </button>
 
           <button
             onClick={() => onSpawnPackage("brand_d")}
-            disabled={!isRunning || telemetry.estop_pressed}
-            className="flex items-center gap-1.5 rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-1.5 text-xs font-bold text-cyan-700 transition-all hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/15 dark:text-cyan-400 dark:hover:bg-cyan-500/25 disabled:opacity-40 shrink-0 shadow-xs active:scale-95"
+            disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
+            className="flex items-center gap-1.5 rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-1.5 text-xs font-bold text-cyan-700 transition-all hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/15 dark:text-cyan-400 dark:hover:bg-cyan-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
+            title={!isSimulation ? "Nút bị khóa ở chế độ máy thật" : "Thả Chai Aquafina (Khay 3)"}
           >
             <span>🔷 Chai Aquafina</span>
+          </button>
+
+          {/* Nút thả phôi ngẫu nhiên */}
+          <button
+            onClick={() => onSpawnPackage()}
+            disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
+            className="flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-1.5 text-xs font-bold text-purple-700 transition-all hover:bg-purple-100 dark:border-purple-500/40 dark:bg-purple-500/15 dark:text-purple-400 dark:hover:bg-purple-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
+            title={!isSimulation ? "Nút bị khóa ở chế độ máy thật" : "Thả ngẫu nhiên một phôi"}
+          >
+            <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+            <span>🎲 Phôi ngẫu nhiên</span>
           </button>
         </div>
       </div>

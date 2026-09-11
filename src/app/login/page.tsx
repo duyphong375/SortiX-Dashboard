@@ -11,8 +11,10 @@ import {
   Shield,
   Wrench,
   Sparkles,
+  AlertCircle,
 } from "lucide-react";
-import { UserRole } from "@/lib/permissions";
+import { UserRole, MOCK_USERS } from "@/lib/permissions";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * Modern Vector SVG Logo: Circular IoT / EcoSort Automation
@@ -117,11 +119,13 @@ function CircularIoTLogo({ className = "h-10 w-10" }: { className?: string }) {
 export default function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const router = useRouter();
+  const toast = useToast();
 
   const [email, setEmail] = useState("admin@pbl3.local");
-  const [password, setPassword] = useState("••••••••");
+  const [password, setPassword] = useState("admin123");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   React.useEffect(() => {
     if (isAuthenticated) {
@@ -130,14 +134,33 @@ export default function LoginPage() {
   }, [isAuthenticated, router]);
 
   const handleRoleLogin = (role: UserRole) => {
+    setErrorMsg(null);
     login(role);
+    toast.success(`Đăng nhập thành công với quyền ${role === "admin" ? "Quản trị viên (Admin)" : "Kỹ thuật viên (User)"}`);
     router.push("/");
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Default form submit logs in as Admin
-    handleRoleLogin("admin");
+    setErrorMsg(null);
+
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail) {
+      setErrorMsg("Vui lòng nhập địa chỉ email.");
+      return;
+    }
+
+    if (!password || password.length < 4) {
+      setErrorMsg("Mật khẩu phải chứa ít nhất 4 ký tự.");
+      return;
+    }
+
+    const matchedUser = MOCK_USERS.find((u) => u.email.toLowerCase() === trimmedEmail);
+    if (matchedUser) {
+      handleRoleLogin(matchedUser.role);
+    } else {
+      setErrorMsg("Tài khoản hoặc mật khẩu không chính xác. Thử 'admin@pbl3.local' hoặc 'operator@pbl3.local'.");
+    }
   };
 
   return (
@@ -184,6 +207,13 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleFormSubmit} className="space-y-4">
+            {errorMsg && (
+              <div className="flex items-center gap-2 p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl animate-in fade-in duration-200">
+                <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
             {/* Email Field */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -196,7 +226,10 @@ export default function LoginPage() {
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (errorMsg) setErrorMsg(null);
+                  }}
                   className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 shadow-2xs transition-all focus:border-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
                   placeholder="admin@pbl3.local"
                   required
@@ -218,7 +251,10 @@ export default function LoginPage() {
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (errorMsg) setErrorMsg(null);
+                  }}
                   className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-11 text-sm text-slate-900 placeholder:text-slate-400 shadow-2xs transition-all focus:border-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
                   placeholder="••••••••"
                   required
@@ -247,7 +283,7 @@ export default function LoginPage() {
               </label>
               <button
                 type="button"
-                onClick={() => alert("Vui lòng liên hệ Quản trị viên hệ thống để khôi phục quyền truy cập.")}
+                onClick={() => toast.info("Vui lòng liên hệ Quản trị viên hệ thống để khôi phục quyền truy cập.", "Hỗ trợ tài khoản")}
                 className="text-xs font-medium text-slate-500 hover:text-slate-800 hover:underline cursor-pointer"
               >
                 Quên mật khẩu?
@@ -275,7 +311,11 @@ export default function LoginPage() {
             <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
-                onClick={() => handleRoleLogin("admin")}
+                onClick={() => {
+                  setEmail("admin@pbl3.local");
+                  setPassword("admin123");
+                  handleRoleLogin("admin");
+                }}
                 className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-100/80 py-2.5 px-3 text-xs font-semibold text-slate-800 transition-all hover:bg-slate-200 active:scale-[0.99] cursor-pointer"
               >
                 <Shield className="h-3.5 w-3.5 text-purple-600" />
@@ -284,7 +324,11 @@ export default function LoginPage() {
 
               <button
                 type="button"
-                onClick={() => handleRoleLogin("user")}
+                onClick={() => {
+                  setEmail("operator@pbl3.local");
+                  setPassword("operator123");
+                  handleRoleLogin("user");
+                }}
                 className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-100/80 py-2.5 px-3 text-xs font-semibold text-slate-800 transition-all hover:bg-slate-200 active:scale-[0.99] cursor-pointer"
               >
                 <Wrench className="h-3.5 w-3.5 text-emerald-600" />

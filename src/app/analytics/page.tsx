@@ -68,7 +68,7 @@ export default function AnalyticsPage() {
   // 3. DỮ LIỆU BIỂU ĐỒ CỘT PHÂN BỐ THEO KHUNG GIỜ (HOURLY PRODUCTION BAR CHART)
   // Khung giờ ca làm việc: 08:00, 09:00, 10:00, 11:00, 12:00, 13:00, 14:00, 15:00, 16:00
   const hourlyData = useMemo(() => {
-    const shiftHours = [
+    const baseHours = [
       "08:00",
       "09:00",
       "10:00",
@@ -78,6 +78,7 @@ export default function AnalyticsPage() {
       "14:00",
       "15:00",
       "16:00",
+      "17:00",
     ];
 
     // Đếm số sản phẩm thực tế phân bổ từ records
@@ -88,40 +89,25 @@ export default function AnalyticsPage() {
       hourMap[hStr] = (hourMap[hStr] || 0) + 1;
     });
 
+    // Kết hợp khung giờ hành chính 08:00 - 17:00 và các giờ thực tế có trong records
+    const allHours = Array.from(new Set([...baseHours, ...Object.keys(hourMap)])).sort();
     const nowHour = `${String(new Date().getHours()).padStart(2, "0")}:00`;
 
-    // Baseline mẫu ca công nghiệp chuẩn kết hợp records thời gian thực
-    const baseline: Record<string, number> = {
-      "08:00": 34,
-      "09:00": 46,
-      "10:00": 52,
-      "11:00": 41,
-      "12:00": 20, // Giờ nghỉ giữa ca
-      "13:00": 38,
-      "14:00": 49,
-      "15:00": 44,
-      "16:00": 36,
-    };
-
-    return shiftHours.map((hour) => {
-      // Số lượng thực tế từ records trong phiên này
-      const recorded = hourMap[hour] || 0;
-      // Tổng sản lượng khung giờ = baseline định mức ca + số lon phân loại phiên hiện tại
-      const count = (baseline[hour] || 30) + recorded;
+    return allHours.map((hour) => {
+      const count = hourMap[hour] || 0;
       const isCurrentHour = hour === nowHour;
 
       return {
         hour,
         count,
-        recorded,
         isCurrentHour,
       };
     });
   }, [records]);
 
-  // Tìm khung giờ đạt đỉnh sản lượng
+  // Tìm khung giờ đạt đỉnh sản lượng thực tế
   const peakHour = useMemo(() => {
-    if (hourlyData.length === 0) return { hour: "10:00", count: 52 };
+    if (hourlyData.length === 0) return { hour: "08:00", count: 0 };
     return [...hourlyData].sort((a, b) => b.count - a.count)[0];
   }, [hourlyData]);
 
@@ -201,14 +187,6 @@ export default function AnalyticsPage() {
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Giám sát chuyên sâu lưu lượng phân loại PPM, phân bổ theo khung giờ và ma trận liên kết trạm servo ESP32-C5
           </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-xs dark:border-white/10 dark:bg-[#161822] dark:text-slate-300">
-            <Calendar className="h-3.5 w-3.5 text-cyan-500" />
-            <span>Ca Sản Xuất:</span>
-            <span className="font-mono font-bold text-slate-900 dark:text-white">Ca 1 (08:00 - 16:30)</span>
-          </div>
         </div>
       </div>
 
@@ -408,7 +386,7 @@ export default function AnalyticsPage() {
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
                     const item = payload[0].payload;
-                    const isPeak = item.hour === peakHour.hour;
+                    const isPeak = peakHour.count > 0 && item.hour === peakHour.hour;
                     return (
                       <div className="rounded-xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur-md dark:border-white/10 dark:bg-[#161822]/95 min-w-[160px]">
                         <div className="flex items-center justify-between border-b border-slate-200/80 pb-1 mb-1.5 dark:border-white/[0.08]">
@@ -423,16 +401,11 @@ export default function AnalyticsPage() {
                         </div>
                         <div className="text-xs space-y-1">
                           <p className="text-slate-600 dark:text-slate-300 flex items-center justify-between">
-                            <span>Sản lượng:</span>
+                            <span>Sản lượng thực tế:</span>
                             <strong className="font-mono text-sm text-cyan-600 dark:text-cyan-400">
                               {item.count} SP
                             </strong>
                           </p>
-                          {item.recorded > 0 && (
-                            <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
-                              + {item.recorded} SP trong phiên này
-                            </p>
-                          )}
                         </div>
                       </div>
                     );
@@ -442,7 +415,7 @@ export default function AnalyticsPage() {
               />
               <Bar dataKey="count" name="Sản lượng (SP)" radius={[6, 6, 0, 0]}>
                 {hourlyData.map((entry) => {
-                  const isPeak = entry.hour === peakHour.hour;
+                  const isPeak = peakHour.count > 0 && entry.hour === peakHour.hour;
                   return (
                     <Cell
                       key={`bar-${entry.hour}`}
@@ -465,11 +438,11 @@ export default function AnalyticsPage() {
             </span>
             <span className="flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-sm bg-indigo-500 opacity-75" />
-              <span>Sản lượng định mức giờ</span>
+              <span>Sản lượng theo giờ</span>
             </span>
           </div>
-          <span className="text-[11px] font-mono text-slate-400">
-            Tổng sản lượng ghi nhận ca hôm nay: {hourlyData.reduce((a, b) => a + b.count, 0)} SP
+          <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+            Tổng sản lượng ghi nhận ca hôm nay: <strong className="text-cyan-600 dark:text-cyan-400 font-bold">{records.length} SP</strong>
           </span>
         </div>
       </div>

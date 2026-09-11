@@ -3,16 +3,32 @@ import { ClassificationRecord, AlertEvent } from "./types";
 
 export function exportClassificationToCSV(
   records: ClassificationRecord[],
-  filename = "iot_sorter_history.csv"
-) {
+  filename = "SortiX_LichSu_ToanBo.csv"
+): boolean {
   if (!records || records.length === 0) {
-    alert("Không có dữ liệu lịch sử để xuất file!");
-    return;
+    return false;
+  }
+
+  // Nhóm và tính toán số thứ tự theo từng ngày (#1, #2, #3...)
+  // Sắp xếp theo thời gian tăng dần để đánh số thứ tự chuẩn xác cho từng ngày
+  const sorted = [...records].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  );
+
+  const dayCounters: Record<string, number> = {};
+  const recordDaySeq: Record<string, number> = {};
+
+  for (const r of sorted) {
+    const dKey = r.timestamp ? r.timestamp.slice(0, 10) : "unknown";
+    dayCounters[dKey] = (dayCounters[dKey] || 0) + 1;
+    recordDaySeq[r.id] = dayCounters[dKey];
   }
 
   const headers = [
     "STT",
     "Mã Sản Phẩm",
+    "Ngày",
+    "Giờ",
     "Thương Hiệu",
     "Mã Nhãn",
     "Độ Tin Cậy (%)",
@@ -29,29 +45,39 @@ export function exportClassificationToCSV(
     jammed: "Sự cố kẹt phôi",
   };
 
-  const rows = records.map((r, idx) => [
-    idx + 1,
-    `"${r.product_id}"`,
-    `"${r.brand_name}"`,
-    `"${r.brand_id}"`,
-    (r.confidence * 100).toFixed(1),
-    `Khay ${r.target_bin}`,
-    `Khay ${r.actual_bin}`,
-    `"${statusMap[r.status] || r.status}"`,
-    `"${new Date(r.timestamp).toLocaleString("vi-VN")}"`,
-  ]);
+  const rows = records.map((r, idx) => {
+    const d = new Date(r.timestamp);
+    const dayStr = !isNaN(d.getTime()) ? d.toLocaleDateString("vi-VN") : "";
+    const timeStr = !isNaN(d.getTime()) ? d.toLocaleTimeString("vi-VN") : "";
+    const seq = recordDaySeq[r.id] || idx + 1;
+    const dayId = `#${seq}`;
+
+    return [
+      idx + 1,
+      `"${dayId}"`,
+      `"${dayStr}"`,
+      `"${timeStr}"`,
+      `"${r.brand_name}"`,
+      `"${r.brand_id}"`,
+      (r.confidence * 100).toFixed(1),
+      `Khay ${r.target_bin}`,
+      `Khay ${r.actual_bin}`,
+      `"${statusMap[r.status] || r.status}"`,
+      `"${!isNaN(d.getTime()) ? d.toLocaleString("vi-VN") : r.timestamp}"`,
+    ];
+  });
 
   const csvContent = [headers.join(","), ...rows.map((row) => row.join(","))].join("\r\n");
 
-  // UTF-8 BOM (\uFEFF) giúp Excel tự nhận dạng font UTF-8
+  // UTF-8 BOM (\uFEFF) giúp Excel tự nhận dạng font UTF-8 tiếng Việt
   const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
   triggerDownload(blob, filename);
+  return true;
 }
 
-export function exportAlertsToCSV(alerts: AlertEvent[], filename = "iot_sorter_alerts.csv") {
+export function exportAlertsToCSV(alerts: AlertEvent[], filename = "iot_sorter_alerts.csv"): boolean {
   if (!alerts || alerts.length === 0) {
-    alert("Không có sự cố nào để xuất file!");
-    return;
+    return false;
   }
 
   const headers = ["STT", "Mã Sự Kiện", "Loại Sự Kiện", "Mức Độ", "Mô Tả", "Thời Gian"];
@@ -67,6 +93,7 @@ export function exportAlertsToCSV(alerts: AlertEvent[], filename = "iot_sorter_a
   const csvContent = [headers.join(","), ...rows.map((row) => row.join(","))].join("\r\n");
   const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
   triggerDownload(blob, filename);
+  return true;
 }
 
 function triggerDownload(blob: Blob, filename: string) {

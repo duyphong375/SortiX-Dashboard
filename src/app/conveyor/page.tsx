@@ -21,6 +21,8 @@ export default function ConveyorPage() {
     arm2Active,
     binCounts,
     brandCounts,
+    isSimulation,
+    toggleSimulationMode,
   } = useDashboard();
 
   const canEstop = usePermission("conveyor.estop");
@@ -55,6 +57,8 @@ export default function ConveyorPage() {
         arm2Active={arm2Active}
         binCounts={binCounts}
         brandCounts={brandCounts}
+        isSimulation={isSimulation}
+        onToggleSimulationMode={toggleSimulationMode}
       />
     </div>
   );

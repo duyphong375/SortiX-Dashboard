@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useDashboard } from "@/components/layout/DashboardLayout";
-import { CATALOG_BRANDS } from "@/lib/types";
+import { CATALOG_BRANDS, ClassificationRecord } from "@/lib/types";
 import { formatUptime, determineTargetBin } from "@/lib/dataProcessor";
 import {
   Boxes,
@@ -27,6 +27,8 @@ import {
   Thermometer,
   Wifi,
   BarChart2,
+  Calendar,
+  History,
   Zap,
 } from "lucide-react";
 
@@ -115,145 +117,386 @@ function StatCard({
   );
 }
 
-// Calendar widget
-function CalendarWidget() {
+// Calendar widget - BỘ LỌC THỐNG KÊ THEO NGÀY
+interface CalendarWidgetProps {
+  records: ClassificationRecord[];
+}
+
+const CalendarWidget = React.memo(function CalendarWidget({
+  records,
+}: CalendarWidgetProps) {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const today = now.getDate();
+  const [currentDate, setCurrentDate] = useState(() => new Date());
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
 
   const monthNames = [
     "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
     "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12",
   ];
 
+  // Khởi tạo ngày đang chọn: mặc định là Hôm nay
+  const todayKey = useMemo(() => {
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }, []);
+
+  const [selectedDateKey, setSelectedDateKey] = useState<string>(todayKey);
+
+  // Tổng hợp thống kê theo từng ngày từ danh sách records
+  const dateStatsMap = useMemo(() => {
+    const map: Record<
+      string,
+      {
+        total: number;
+        bin1: number;
+        bin2: number;
+        bin3: number;
+        brands: Record<string, number>;
+      }
+    > = {};
+
+    for (const r of records) {
+      if (!r.timestamp) continue;
+      const dKey = r.timestamp.slice(0, 10);
+      if (!map[dKey]) {
+        map[dKey] = {
+          total: 0,
+          bin1: 0,
+          bin2: 0,
+          bin3: 0,
+          brands: {},
+        };
+      }
+      const st = map[dKey];
+      st.total++;
+      if (r.actual_bin === 1) st.bin1++;
+      else if (r.actual_bin === 2) st.bin2++;
+      else st.bin3++;
+
+      const bId = r.brand_id || "brand_c";
+      st.brands[bId] = (st.brands[bId] || 0) + 1;
+    }
+    return map;
+  }, [records]);
+
+  const handlePrevMonth = () => {
+    setCurrentDate(new Date(year, month - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(new Date(year, month + 1, 1));
+  };
+
+  const handleToday = () => {
+    const today = new Date();
+    setCurrentDate(new Date(today.getFullYear(), today.getMonth(), 1));
+    setSelectedDateKey(todayKey);
+  };
+
   const firstDay = new Date(year, month, 1).getDay();
+  // Điều chỉnh để Thứ Hai là ngày đầu tuần (0: CN -> 6, 1: T2 -> 0)
+  const adjustedFirstDay = firstDay === 0 ? 6 : firstDay - 1;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const daysInPrevMonth = new Date(year, month, 0).getDate();
 
-  const cells: { day: number; current: boolean; isToday: boolean; hasEvent?: string }[] = [];
+  const cells: {
+    day: number;
+    month: number;
+    year: number;
+    current: boolean;
+    isToday: boolean;
+    dateKey: string;
+    stats?: {
+      total: number;
+      bin1: number;
+      bin2: number;
+      bin3: number;
+      brands: Record<string, number>;
+    };
+  }[] = [];
 
-  // Fill previous month's trailing days
-  for (let i = firstDay - 1; i >= 0; i--) {
-    cells.push({ day: daysInPrevMonth - i, current: false, isToday: false });
+  // Ô của tháng trước
+  for (let i = adjustedFirstDay - 1; i >= 0; i--) {
+    const d = daysInPrevMonth - i;
+    const prevM = month === 0 ? 11 : month - 1;
+    const prevY = month === 0 ? year - 1 : year;
+    const dKey = `${prevY}-${String(prevM + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    cells.push({
+      day: d,
+      month: prevM,
+      year: prevY,
+      current: false,
+      isToday: false,
+      dateKey: dKey,
+      stats: dateStatsMap[dKey],
+    });
   }
 
-  // Fill current month
-  const eventDays: Record<number, string> = { 4: "appointment", 6: "maintenance", 13: "incident", 25: "maintenance", 30: "incident" };
+  // Ô của tháng hiện tại
   for (let d = 1; d <= daysInMonth; d++) {
-    cells.push({ day: d, current: true, isToday: d === today, hasEvent: eventDays[d] });
+    const dKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const isToday = dKey === todayKey;
+    cells.push({
+      day: d,
+      month,
+      year,
+      current: true,
+      isToday,
+      dateKey: dKey,
+      stats: dateStatsMap[dKey],
+    });
   }
 
-  // Fill remaining
-  const remaining = 42 - cells.length;
-  for (let d = 1; d <= remaining; d++) {
-    cells.push({ day: d, current: false, isToday: false });
+  // Ô của tháng kế tiếp (lấp đầy đủ 35 hoặc 42 ô)
+  const totalCellsSoFar = cells.length;
+  const targetTotalCells = totalCellsSoFar <= 35 ? 35 : 42;
+  const nextMonthDaysToAdd = targetTotalCells - totalCellsSoFar;
+  for (let d = 1; d <= nextMonthDaysToAdd; d++) {
+    const nextM = month === 11 ? 0 : month + 1;
+    const nextY = month === 11 ? year + 1 : year;
+    const dKey = `${nextY}-${String(nextM + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    cells.push({
+      day: d,
+      month: nextM,
+      year: nextY,
+      current: false,
+      isToday: false,
+      dateKey: dKey,
+      stats: dateStatsMap[dKey],
+    });
   }
+
+  // Thống kê ngày đang được chọn
+  const selectedStats = dateStatsMap[selectedDateKey] || {
+    total: 0,
+    bin1: 0,
+    bin2: 0,
+    bin3: 0,
+    brands: {},
+  };
+
+  const selectedDayParts = selectedDateKey.split("-");
+  const selectedDisplay =
+    selectedDayParts.length === 3
+      ? `${selectedDayParts[2]}/${selectedDayParts[1]}/${selectedDayParts[0]}`
+      : selectedDateKey;
+  const isSelectedToday = selectedDateKey === todayKey;
 
   return (
-    <div className="relate-card flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm dark:border-white/[0.07] dark:bg-[#161822]">
-      <div>
-        <div className="mb-4 flex items-center justify-between border-b border-slate-100 dark:border-white/[0.06] pb-3">
+    <div className="relate-card relative flex flex-col rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-sm dark:border-white/[0.07] dark:bg-[#161822]">
+      {/* HEADER: Tiêu đề & Chuyển tháng */}
+      <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-white/[0.06]">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
+            <Calendar className="h-4 w-4" />
+          </div>
           <div>
-            <h3 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">Lịch Vận Hành & Ca Trực</h3>
-            <p className="text-[11px] font-normal text-slate-500 dark:text-slate-400">Ca sản xuất hiện hành</p>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <button className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-[#1E212D] dark:hover:text-slate-200">
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-              {monthNames[month]} {year}
-            </span>
-            <button className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-[#1E212D] dark:hover:text-slate-200">
-              <ChevronRight className="h-4 w-4" />
-            </button>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+              Bộ Lọc Thống Kê Ngày
+            </h3>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Chọn ngày để xem thống kê & lịch sử
+            </p>
           </div>
         </div>
 
-        {/* Day headers */}
-        <div className="mb-2 grid grid-cols-7 gap-1 text-center">
-          {["CN", "T2", "T3", "T4", "T5", "T6", "T7"].map((d) => (
-            <div key={d} className="text-[11px] font-semibold text-slate-400 dark:text-slate-400">
-              {d}
-            </div>
-          ))}
-        </div>
-
-        {/* Day cells */}
-        <div className="grid grid-cols-7 gap-1">
-          {cells.map((cell, i) => (
-            <div
-              key={i}
-              className={`relative flex h-8 items-center justify-center rounded-lg text-xs font-medium transition-colors ${
-                cell.isToday
-                  ? "bg-indigo-600 font-bold text-white shadow-sm dark:bg-indigo-500 dark:text-white"
-                  : cell.current
-                  ? "text-slate-800 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-[#1E212D]"
-                  : "text-slate-300 dark:text-slate-700"
-              }`}
-            >
-              {cell.day}
-              {cell.hasEvent && (
-                <span
-                  className={`absolute bottom-1 h-1 w-1 rounded-full ${
-                    cell.hasEvent === "incident"
-                      ? "bg-rose-500"
-                      : cell.hasEvent === "maintenance"
-                      ? "bg-indigo-400"
-                      : "bg-emerald-400"
-                  }`}
-                />
-              )}
-            </div>
-          ))}
+        {/* Nút điều hướng tháng & Nút Hôm nay */}
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={handleToday}
+            className="rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 transition-colors"
+            title="Quay lại ngày hôm nay"
+          >
+            Hôm nay
+          </button>
+          <button
+            type="button"
+            onClick={handlePrevMonth}
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10 transition-colors"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+          <span className="min-w-[76px] text-center text-xs font-bold text-slate-800 dark:text-slate-200">
+            {monthNames[month]}
+          </span>
+          <button
+            type="button"
+            onClick={handleNextMonth}
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10 transition-colors"
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
 
-      {/* Footer with Stacked Avatars & Legend */}
-      <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-white/[0.06]">
-        <div className="flex items-center gap-2">
-          <div className="flex -space-x-2 overflow-hidden">
-            <div
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-[#161822]"
-              title="Kỹ thuật viên 1: Lê Văn A"
-            >
-              LA
-            </div>
-            <div
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-[#161822]"
-              title="Kỹ thuật viên 2: Trần B"
-            >
-              TB
-            </div>
-            <div
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-[#161822]"
-              title="Trưởng ca: Nguyễn C"
-            >
-              NC
-            </div>
-          </div>
-          <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">3 KTV trực</span>
+      {/* LƯỚI LỊCH THÁNG (CALENDAR GRID) */}
+      <div className="mt-3">
+        {/* Tên thứ trong tuần */}
+        <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+          <div>T2</div>
+          <div>T3</div>
+          <div>T4</div>
+          <div>T5</div>
+          <div>T6</div>
+          <div>T7</div>
+          <div className="text-rose-500">CN</div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400">Ca trực</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-indigo-400" />
-            <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400">Bảo trì</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-rose-500" />
-            <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400">Sự cố</span>
-          </div>
+        {/* Ô ngày */}
+        <div className="grid grid-cols-7 gap-1">
+          {cells.map((cell, i) => {
+            const isSelected = cell.dateKey === selectedDateKey;
+            const hasData = cell.stats && cell.stats.total > 0;
+            const tooltipText = `Ngày ${String(cell.day).padStart(2, "0")}/${String(cell.month + 1).padStart(2, "0")}: ${
+              hasData ? `${cell.stats?.total} SP` : "Chưa có dữ liệu"
+            }`;
+
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setSelectedDateKey(cell.dateKey)}
+                title={tooltipText}
+                className={`relative flex h-8 items-center justify-center rounded-lg text-xs font-semibold transition-all group cursor-pointer hover:scale-105 duration-150 ${
+                  isSelected
+                    ? "ring-2 ring-cyan-500 bg-cyan-500/15 font-black text-cyan-700 dark:text-cyan-300 shadow-xs"
+                    : cell.isToday
+                    ? "border-2 border-indigo-500 font-black text-indigo-600 dark:text-indigo-400 dark:border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.35)]"
+                    : cell.current
+                    ? "text-slate-800 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-[#1E212D]"
+                    : "text-slate-300 hover:text-slate-400 dark:text-slate-700 dark:hover:text-slate-500"
+                }`}
+              >
+                {cell.day}
+                {hasData && (
+                  <span
+                    className="absolute bottom-1 h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]"
+                    title={`${cell.stats?.total} sản phẩm`}
+                  />
+                )}
+              </button>
+            );
+          })}
         </div>
+      </div>
+
+      {/* BẢNG THỐNG KÊ NGÀY [DD/MM/YYYY] */}
+      <div className="mt-4 rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 dark:border-white/[0.06] dark:bg-[#12141c]">
+        <div className="flex items-center justify-between gap-2 border-b border-slate-200/60 pb-2.5 dark:border-white/[0.05]">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-white">
+            <BarChart2 className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
+            <span>Thống Kê Ngày: {selectedDisplay}</span>
+            {isSelectedToday && (
+              <span className="rounded-md bg-indigo-600 text-white dark:bg-cyan-500 dark:text-slate-950 px-1.5 py-0.2 text-[9px] font-black uppercase">
+                Hôm nay
+              </span>
+            )}
+          </div>
+          <span className="rounded-lg bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 text-xs font-mono font-bold text-cyan-600 dark:text-cyan-400">
+            {selectedStats.total} SP
+          </span>
+        </div>
+
+        {selectedStats.total === 0 ? (
+          <div className="py-4 text-center text-xs text-slate-400 dark:text-slate-500">
+            Chưa có sản phẩm nào được phân loại trong ngày này.
+          </div>
+        ) : (
+          <div className="mt-3 space-y-2.5">
+            {/* 3 Khay */}
+            <div className="grid grid-cols-3 gap-1.5 text-center text-[10px]">
+              <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 p-1.5 dark:bg-rose-950/20">
+                <div className="text-slate-500 dark:text-slate-400 font-medium">Khay 1 (Coca)</div>
+                <div className="font-mono font-bold text-rose-600 dark:text-rose-400 text-xs mt-0.5">
+                  {selectedStats.bin1} SP
+                </div>
+                <div className="text-[9px] text-slate-400">
+                  {Math.round((selectedStats.bin1 / selectedStats.total) * 100)}%
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-1.5 dark:bg-blue-950/20">
+                <div className="text-slate-500 dark:text-slate-400 font-medium">Khay 2 (Pepsi)</div>
+                <div className="font-mono font-bold text-blue-600 dark:text-blue-400 text-xs mt-0.5">
+                  {selectedStats.bin2} SP
+                </div>
+                <div className="text-[9px] text-slate-400">
+                  {Math.round((selectedStats.bin2 / selectedStats.total) * 100)}%
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-1.5 dark:bg-amber-950/20">
+                <div className="text-slate-500 dark:text-slate-400 font-medium">Khay 3 (Khác)</div>
+                <div className="font-mono font-bold text-amber-700 dark:text-amber-400 text-xs mt-0.5">
+                  {selectedStats.bin3} SP
+                </div>
+                <div className="text-[9px] text-slate-400">
+                  {Math.round((selectedStats.bin3 / selectedStats.total) * 100)}%
+                </div>
+              </div>
+            </div>
+
+            {/* Tỷ lệ các nhãn lon/chai phân loại trong ngày */}
+            <div className="space-y-1.5 pt-1">
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Tỷ lệ nhãn phân loại:
+              </div>
+              {Object.keys(CATALOG_BRANDS).map((bId) => {
+                const count = selectedStats.brands[bId] || 0;
+                if (count === 0 && selectedStats.total > 0) return null;
+                const brand = CATALOG_BRANDS[bId];
+                const pct = Math.round((count / selectedStats.total) * 100);
+
+                return (
+                  <div key={bId} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: brand.color }}
+                      />
+                      <span className="text-slate-700 dark:text-slate-300 font-medium">
+                        {brand.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-12 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${pct}%`,
+                            backgroundColor: brand.color,
+                          }}
+                        />
+                      </div>
+                      <span className="font-mono text-[11px] font-bold text-slate-600 dark:text-slate-300 min-w-[28px] text-right">
+                        {count} SP
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Nút bấm nhanh: Xem Lịch Sử Ngày Này */}
+        <Link
+          href={`/history?date=${selectedDateKey}`}
+          className="mt-3.5 flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-2 text-xs font-bold transition-all shadow-sm shadow-cyan-500/20 active:scale-95"
+          title={`Xem bảng lịch sử chi tiết của ngày ${selectedDisplay}`}
+        >
+          <History className="h-3.5 w-3.5" />
+          <span>Xem Lịch Sử Ngày {selectedDisplay}</span>
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
       </div>
     </div>
   );
-}
+});
 
 export default function DashboardPage() {
   const {
@@ -268,10 +511,21 @@ export default function DashboardPage() {
     sorterConfig,
     handleToggleRun,
     handleEmergencyStop,
+    pingMs,
+    isSimulation,
   } = useDashboard();
 
   const totalSorted = binCounts.bin1 + binCounts.bin2 + binCounts.bin3;
   const animatedTotal = useCountUp(totalSorted, 800);
+
+  // Tính độ tin cậy AI trung bình thực tế từ danh sách records
+  const avgConfidence =
+    records.length > 0
+      ? (
+          (records.reduce((acc, r) => acc + (r.confidence || 0.95), 0) / records.length) *
+          100
+        ).toFixed(1) + "%"
+      : "100%";
 
   // Lấy danh sách 5 bản ghi mới nhất cho trang tổng quan
   const recentRecords = records.slice(0, 5);
@@ -323,18 +577,31 @@ export default function DashboardPage() {
         <StatCard
           icon={Cpu}
           title="Trạng Thái IoT ESP32-C5"
-          value={telemetry.online ? "Trực Tuyến" : "Ngoại Tuyến"}
+          value={
+            isSimulation
+              ? "Trực Tuyến (Mô Phỏng)"
+              : mqttStatus === "connected"
+              ? "Trực Tuyến (ESP32)"
+              : "Ngoại Tuyến / Mất kết nối"
+          }
           subtitle={`Uptime: ${formatUptime(telemetry.uptime)} • CPU: ${telemetry.cpu_temp}°C`}
-          trend={{ value: `${telemetry.wifi_band}`, positive: telemetry.online }}
-          color="purple"
+          trend={{
+            value: isSimulation
+              ? `${telemetry.wifi_band}`
+              : mqttStatus === "connected"
+              ? `${telemetry.wifi_band}`
+              : "Đang chờ kết nối MQTT...",
+            positive: isSimulation ? true : mqttStatus === "connected",
+          }}
+          color={isSimulation ? "purple" : mqttStatus === "connected" ? "emerald" : "rose"}
         />
 
-        {/* KPI 4: Hiệu Suất Nhận Diện AI */}
+        {/* KPI 4: Hiệu Suất Nhận Diện AI - Độ chính xác thực tế & Ping MQTT */}
         <StatCard
           icon={Sparkles}
           title="Hiệu Suất Nhận Diện AI"
-          value="99.4%"
-          subtitle="YOLOv8 Edge • Độ trễ ~24ms • 4 Nhãn Active"
+          value={avgConfidence}
+          subtitle={`YOLOv8 Edge • Ping MQTT ${pingMs || 24}ms • 4 Nhãn Active`}
           trend={{ value: "Tin cậy cao", positive: true }}
           color="amber"
         />
@@ -566,8 +833,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Cột 2 (1/3 chiều rộng): Lịch Ca Trực & Phân Công KTV */}
-        <CalendarWidget />
+        {/* Cột 2 (1/3 chiều rộng): Bộ Lọc Thống Kê Theo Ngày */}
+        <CalendarWidget records={records} />
       </div>
 
       {/* HÀNG 3: NHẬT KÝ HOẠT ĐỘNG MỚI NHẤT (5 BẢN GHI TÓM TẮT) */}

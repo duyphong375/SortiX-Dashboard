@@ -14,7 +14,12 @@ import {
   Zap,
   Clock,
   CheckCircle2,
+  Download,
 } from "lucide-react";
+import { exportAlertsToCSV } from "@/lib/exportCsv";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ExportDialog } from "@/components/ui/ExportDialog";
+import { useToast } from "@/components/ui/Toast";
 
 const SEVERITY_CONFIG: Record<
   AlertSeverity,
@@ -47,10 +52,23 @@ const SEVERITY_CONFIG: Record<
 
 export default function AlertsPage() {
   const { alerts, handleClearAlerts } = useDashboard();
+  const toast = useToast();
   const canDelete = usePermission("alerts.delete");
   const canConfigure = usePermission("alerts.configure");
 
   const [filter, setFilter] = useState<AlertSeverity | "all">("all");
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+
+  const availableDates = React.useMemo(() => {
+    const dates = new Set<string>();
+    alerts.forEach((a) => {
+      if (a.timestamp) {
+        dates.add(new Date(a.timestamp).toISOString().slice(0, 10));
+      }
+    });
+    return Array.from(dates).sort((a, b) => b.localeCompare(a));
+  }, [alerts]);
 
   const filteredAlerts = filter === "all" ? alerts : alerts.filter((a) => a.severity === filter);
 
@@ -58,6 +76,45 @@ export default function AlertsPage() {
     critical: alerts.filter((a) => a.severity === "critical").length,
     warning: alerts.filter((a) => a.severity === "warning").length,
     info: alerts.filter((a) => a.severity === "info").length,
+  };
+
+  const handleExport = (type: "day" | "month" | "all", value?: string) => {
+    if (alerts.length === 0) {
+      toast.warning("Không có sự cố nào để xuất file!");
+      return;
+    }
+
+    let filtered: AlertEvent[] = [];
+    let filename = "SortiX_CanhBao_ToanBo.csv";
+
+    if (type === "day" && value) {
+      filtered = alerts.filter(
+        (a) => a.timestamp && new Date(a.timestamp).toISOString().slice(0, 10) === value
+      );
+      filename = `SortiX_CanhBao_Ngay_${value}.csv`;
+    } else if (type === "month" && value) {
+      filtered = alerts.filter(
+        (a) => a.timestamp && new Date(a.timestamp).toISOString().slice(0, 7) === value
+      );
+      filename = `SortiX_CanhBao_Thang_${value}.csv`;
+    } else {
+      filtered = alerts;
+    }
+
+    if (filtered.length === 0) {
+      toast.warning(`Không có dữ liệu để xuất file!`);
+      return;
+    }
+
+    const ok = exportAlertsToCSV(filtered, filename);
+    if (ok) {
+      toast.success(`Đã xuất ${filtered.length} sự kiện cảnh báo ra file CSV!`);
+    }
+  };
+
+  const executeClearAll = () => {
+    handleClearAlerts();
+    toast.success("Đã xóa toàn bộ lịch sử cảnh báo thành công!");
   };
 
   return (
@@ -70,32 +127,41 @@ export default function AlertsPage() {
             {alerts.length} sự kiện • {severityCounts.critical} sự cố nghiêm trọng
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Filter buttons */}
           <div className="flex items-center rounded-xl border border-slate-200/80 bg-slate-100/80 p-0.5 dark:border-white/[0.06] dark:bg-[#111319]">
             {(["all", "critical", "warning", "info"] as const).map((sev) => (
               <button
                 key={sev}
                 onClick={() => setFilter(sev)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
-                  filter === sev
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${filter === sev
                     ? "bg-white text-slate-900 shadow-sm border border-slate-200/80 dark:border-white/20 dark:bg-[#1E212D] dark:text-white"
                     : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-                }`}
+                  }`}
               >
                 {sev === "all"
                   ? `Tất Cả (${alerts.length})`
                   : sev === "critical"
-                  ? `Nghiêm Trọng (${severityCounts.critical})`
-                  : sev === "warning"
-                  ? `Cảnh Báo (${severityCounts.warning})`
-                  : `Thông Tin (${severityCounts.info})`}
+                    ? `Nghiêm Trọng (${severityCounts.critical})`
+                    : sev === "warning"
+                      ? `Cảnh Báo (${severityCounts.warning})`
+                      : `Thông Tin (${severityCounts.info})`}
               </button>
             ))}
           </div>
+
+          <button
+            onClick={() => setExportDialogOpen(true)}
+            disabled={alerts.length === 0}
+            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-white/10 dark:bg-[#161822] dark:text-slate-300 dark:hover:bg-white/5 transition-colors disabled:opacity-50"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>Xuất CSV</span>
+          </button>
+
           {canDelete && (
             <button
-              onClick={handleClearAlerts}
+              onClick={() => setConfirmClearOpen(true)}
               className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-100 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -155,6 +221,28 @@ export default function AlertsPage() {
           })
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmClearOpen}
+        title="Xác nhận xóa cảnh báo"
+        message={`Bạn có chắc chắn muốn xóa toàn bộ ${alerts.length} sự kiện cảnh báo trong hệ thống? Hành động này không thể hoàn tác.`}
+        confirmText="Xóa tất cả"
+        cancelText="Hủy bỏ"
+        type="danger"
+        onConfirm={() => {
+          setConfirmClearOpen(false);
+          executeClearAll();
+        }}
+        onCancel={() => setConfirmClearOpen(false)}
+      />
+
+      <ExportDialog
+        isOpen={exportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
+        onExport={handleExport}
+        availableDates={availableDates}
+        totalRecords={alerts.length}
+      />
     </div>
   );
 }

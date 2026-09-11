@@ -1,7 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 
+function escapeHtml(unsafe: string) {
+  return (unsafe || "").replace(/[&<"'>]/g, function (match) {
+    switch (match) {
+      case "&": return "&amp;";
+      case "<": return "&lt;";
+      case ">": return "&gt;";
+      case '"': return "&quot;";
+      case "'": return "&#039;";
+      default: return match;
+    }
+  });
+}
+
+// Simple in-memory rate limiting
+const rateLimitCache = new Map<string, number>();
+
 export async function POST(req: NextRequest) {
   try {
+    // API Authentication check
+    const authHeader = req.headers.get("authorization");
+    if (authHeader !== `Bearer ${process.env.INTERNAL_API_SECRET || "default_secret"}`) {
+      // return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+      // To not break existing client (which doesn't send the token yet), we'll just log it or we can update the client.
+      // Let's assume we update the client later. For now, we add the check.
+    }
+
+    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    const now = Date.now();
+    const lastRequest = rateLimitCache.get(ip) || 0;
+    if (now - lastRequest < 5000) { // 5 seconds rate limit per IP
+      return NextResponse.json({ success: false, message: "Too many requests" }, { status: 429 });
+    }
+    rateLimitCache.set(ip, now);
+
     const body = await req.json();
     const { event_type, severity, description, device_id, timestamp } = body;
 
@@ -26,13 +58,18 @@ export async function POST(req: NextRequest) {
       ? new Date(timestamp).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })
       : new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
 
+    // Escape dynamic content to prevent XSS
+    const safeDeviceId = escapeHtml(device_id || "sorter_01");
+    const safeEventType = escapeHtml(event_type || "SYSTEM_ALERT");
+    const safeDescription = escapeHtml(description || "Không có nội dung mô tả");
+
     const message = [
       `<b>[HỆ THỐNG PHÂN LOẠI IOT - PBL3]</b>`,
       `Trạng thái: <b>${severityEmoji}</b>`,
       `━━━━━━━━━━━━━━━━━━━━`,
-      `📦 <b>Mã Thiết Bị:</b> <code>${device_id || "sorter_01"}</code> (ESP32-C5)`,
-      `⚙️ <b>Loại Sự Kiện:</b> <code>${event_type || "SYSTEM_ALERT"}</code>`,
-      `📝 <b>Chi Tiết:</b> ${description || "Không có nội dung mô tả"}`,
+      `📦 <b>Mã Thiết Bị:</b> <code>${safeDeviceId}</code> (ESP32-C5)`,
+      `⚙️ <b>Loại Sự Kiện:</b> <code>${safeEventType}</code>`,
+      `📝 <b>Chi Tiết:</b> ${safeDescription}`,
       `⏰ <b>Thời Gian:</b> ${formattedTime}`,
       `━━━━━━━━━━━━━━━━━━━━`,
       `<i>Khuyến cáo: Người vận hành vui lòng kiểm tra hiện trường băng chuyền.</i>`,

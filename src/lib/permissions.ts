@@ -163,11 +163,11 @@ export interface MockUser {
 }
 
 export const MOCK_USER_LIST: MockUser[] = [
-  { id: "u1", name: "Nguyễn Văn Quản Trị", email: "admin@pbl3.local", role: "admin", status: "active", avatar: "", createdAt: "2026-01-15", lastLogin: "2026-09-11" },
-  { id: "u2", name: "Trần Thị Vận Hành", email: "operator1@pbl3.local", role: "user", status: "active", avatar: "", createdAt: "2026-03-20", lastLogin: "2026-09-10" },
-  { id: "u3", name: "Lê Minh Kỹ Thuật", email: "tech@pbl3.local", role: "user", status: "active", avatar: "", createdAt: "2026-04-10", lastLogin: "2026-09-09" },
-  { id: "u4", name: "Phạm Hồng Giám Sát", email: "supervisor@pbl3.local", role: "admin", status: "active", avatar: "", createdAt: "2026-02-28", lastLogin: "2026-09-11" },
-  { id: "u5", name: "Hoàng Đức Bảo Trì", email: "maintenance@pbl3.local", role: "user", status: "inactive", avatar: "", createdAt: "2026-05-15", lastLogin: "2026-08-25" },
-  { id: "u6", name: "Võ Thị Chất Lượng", email: "quality@pbl3.local", role: "user", status: "active", avatar: "", createdAt: "2026-06-01", lastLogin: "2026-09-10" },
-  { id: "u7", name: "Đặng Quốc An Toàn", email: "safety@pbl3.local", role: "user", status: "active", avatar: "", createdAt: "2026-07-20", lastLogin: "2026-09-08" },
+  { id: "u1", name: "A", email: "admin@pbl3.local", role: "admin", status: "active", avatar: "", createdAt: "2026-01-15", lastLogin: "2026-09-11" },
+  { id: "u2", name: "B", email: "operator1@pbl3.local", role: "user", status: "active", avatar: "", createdAt: "2026-03-20", lastLogin: "2026-09-10" },
+  { id: "u3", name: "c", email: "tech@pbl3.local", role: "user", status: "active", avatar: "", createdAt: "2026-04-10", lastLogin: "2026-09-09" },
+  { id: "u4", name: "D", email: "supervisor@pbl3.local", role: "admin", status: "active", avatar: "", createdAt: "2026-02-28", lastLogin: "2026-09-11" },
+  { id: "u5", name: "123", email: "maintenance@pbl3.local", role: "user", status: "inactive", avatar: "", createdAt: "2026-05-15", lastLogin: "2026-08-25" },
+  { id: "u6", name: "12345", email: "quality@pbl3.local", role: "user", status: "active", avatar: "", createdAt: "2026-06-01", lastLogin: "2026-09-10" },
+  { id: "u7", name: "Tiểu Himass", email: "safety@pbl3.local", role: "user", status: "active", avatar: "", createdAt: "2026-07-20", lastLogin: "2026-09-08" },
 ];

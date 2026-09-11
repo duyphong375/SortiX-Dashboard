@@ -24,6 +24,8 @@ import {
   SlidersHorizontal,
   Cpu,
   Users,
+  FlaskConical,
+  Radio,
 } from "lucide-react";
 
 // Map path → breadcrumb labels
@@ -58,6 +60,8 @@ interface TopHeaderProps {
   onMobileMenuToggle?: () => void;
   mqttStatus?: "connected" | "disconnected" | "error";
   pingMs?: number;
+  isSimulation?: boolean;
+  onToggleSimulationMode?: () => void;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
@@ -69,6 +73,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onMobileMenuToggle,
   mqttStatus = "connected",
   pingMs = 24,
+  isSimulation = true,
+  onToggleSimulationMode,
 }) => {
   const pathname = usePathname();
   const router = useRouter();
@@ -144,8 +150,60 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           </div>
         </div>
 
-        {/* Right: MQTT Status, Search, Actions */}
+        {/* Right: Mode Switcher, MQTT Status, Search, Actions */}
         <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* NÚT CHUYỂN ĐỔI CHẾ ĐỘ VẬN HÀNH: MÔ PHỎNG <-> THỰC TẾ */}
+          <div className="flex items-center rounded-full border border-slate-200/90 bg-slate-100/90 p-1 dark:border-white/[0.08] dark:bg-[#161822] shadow-xs">
+            {/* Chế độ 1: MÔ PHỎNG (Tím/Cyan) */}
+            <button
+              type="button"
+              onClick={() => {
+                if (!isSimulation && onToggleSimulationMode) onToggleSimulationMode();
+              }}
+              className={`flex items-center gap-1.5 rounded-full px-2.5 sm:px-3 py-1 text-xs font-bold transition-all duration-300 ${
+                isSimulation
+                  ? "bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 text-white shadow-md shadow-indigo-500/25 border border-purple-400/40"
+                  : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+              }`}
+              title="Chuyển sang Chế độ Mô phỏng (Simulation Mode) - Cho phép thả phôi ảo"
+            >
+              <FlaskConical className={`h-3.5 w-3.5 ${isSimulation ? "animate-pulse" : ""}`} />
+              <span className="tracking-wide">MÔ PHỎNG</span>
+            </button>
+
+            {/* Chế độ 2: THỰC TẾ (Emerald/Amber kèm đèn nhấp nháy Live Hardware) */}
+            <button
+              type="button"
+              onClick={() => {
+                if (isSimulation && onToggleSimulationMode) onToggleSimulationMode();
+              }}
+              className={`flex items-center gap-1.5 rounded-full px-2.5 sm:px-3 py-1 text-xs font-bold transition-all duration-300 ${
+                !isSimulation
+                  ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-md shadow-emerald-500/25 border border-emerald-400/40"
+                  : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+              }`}
+              title="Chuyển sang Chế độ Thực tế (Real Hardware Mode) - Khóa nút ảo, nhận diện từ Camera/ESP32"
+            >
+              <span className="relative flex h-2 w-2">
+                {!isSimulation && (
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                )}
+                <span
+                  className={`relative inline-flex h-2 w-2 rounded-full ${
+                    !isSimulation ? "bg-emerald-300 shadow-[0_0_6px_#34d399]" : "bg-slate-400 dark:bg-slate-600"
+                  }`}
+                />
+              </span>
+              <Radio className="h-3.5 w-3.5" />
+              <span className="tracking-wide">THỰC TẾ</span>
+              {!isSimulation && (
+                <span className="hidden xl:inline text-[9px] font-mono font-bold px-1 py-0.5 rounded bg-emerald-950/60 border border-emerald-400/40 text-emerald-200">
+                  LIVE
+                </span>
+              )}
+            </button>
+          </div>
+
           {/* Live MQTT Status Pill */}
           <div
             title={`Trạng thái MQTT: ${mqttStatus.toUpperCase()} (${pingMs}ms)`}
