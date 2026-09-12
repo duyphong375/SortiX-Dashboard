@@ -12,8 +12,10 @@ export class SorterMQTTService {
   private client: MqttClient | null = null;
   private brokerUrl: string;
   private clientId: string;
-  private subscribedTopics: string[] = [];
+  /** Topics requested by the caller. They are re-subscribed after reconnect. */
+  private subscribedTopics = new Set<string>();
   private callbacks: MQTTCallbacks = {};
+  private closing = false;
 
   constructor(brokerUrl?: string, clientId?: string) {
     this.brokerUrl =
@@ -33,11 +35,22 @@ export class SorterMQTTService {
   public connect(topicsToSubscribe: string[] = []): MqttClient | null {
     if (typeof window === "undefined") return null;
 
-    if (this.client && this.client.connected) {
+    for (const topic of topicsToSubscribe) {
+      if (typeof topic === "string" && topic.trim()) this.subscribedTopics.add(topic.trim());
+    }
+
+    // mqtt.js automatically reconnects. Reusing the existing client avoids a
+    // second socket and duplicate event handlers while the first one is
+    // reconnecting.
+    if (this.client) {
+      if (this.client.connected && this.subscribedTopics.size > 0) {
+        this.subscribe(Array.from(this.subscribedTopics));
+      }
       return this.client;
     }
 
     try {
+      this.closing = false;
       this.client = mqtt.connect(this.brokerUrl, {
         clientId: this.clientId,
         clean: true,
@@ -49,8 +62,8 @@ export class SorterMQTTService {
         console.log(`[MQTT] Đã kết nối tới broker: ${this.brokerUrl}`);
         if (this.callbacks.onConnect) this.callbacks.onConnect();
 
-        if (topicsToSubscribe.length > 0) {
-          this.subscribe(topicsToSubscribe);
+        if (this.subscribedTopics.size > 0) {
+          this.subscribe(Array.from(this.subscribedTopics));
         }
       });
 
@@ -67,7 +80,7 @@ export class SorterMQTTService {
 
       this.client.on("close", () => {
         console.log("[MQTT] Mất kết nối broker");
-        if (this.callbacks.onDisconnect) this.callbacks.onDisconnect();
+        if (!this.closing) this.callbacks.onDisconnect?.();
       });
 
       return this.client;
@@ -80,12 +93,15 @@ export class SorterMQTTService {
   }
 
   public subscribe(topics: string | string[]) {
-    if (!this.client || !this.client.connected) return;
+    const topicList = (Array.isArray(topics) ? topics : [topics])
+      .filter((topic): topic is string => typeof topic === "string")
+      .map((topic) => topic.trim())
+      .filter(Boolean);
+    topicList.forEach((topic) => this.subscribedTopics.add(topic));
+    if (!this.client || !this.client.connected || topicList.length === 0) return;
 
-    const topicList = Array.isArray(topics) ? topics : [topics];
     this.client.subscribe(topicList, { qos: 1 }, (err) => {
       if (!err) {
-        this.subscribedTopics = Array.from(new Set([...this.subscribedTopics, ...topicList]));
         console.log("[MQTT] Đã đăng ký các topic:", topicList);
       } else {
         console.error("[MQTT] Lỗi đăng ký topic:", err);
@@ -99,22 +115,36 @@ export class SorterMQTTService {
     qos: 0 | 1 | 2 = 1
   ): Promise<boolean> {
     return new Promise((resolve) => {
-      if (!this.client || !this.client.connected) {
+      const topicName = typeof topic === "string" ? topic.trim() : "";
+      if (!topicName || !this.client || !this.client.connected) {
         console.warn("[MQTT] Không thể xuất bản vì máy khách chưa kết nối");
         resolve(false);
         return;
       }
 
-      const payload = typeof message === "string" ? message : JSON.stringify(message);
-      this.client.publish(topic, payload, { qos }, (err) => {
-        if (err) {
-          console.error(`[MQTT] Lỗi xuất bản tới ${topic}:`, err);
-          resolve(false);
-        } else {
-          console.log(`[MQTT] Đã xuất bản tới ${topic}`);
-          resolve(true);
-        }
-      });
+      let payload: string;
+      try {
+        payload = typeof message === "string" ? message : JSON.stringify(message);
+      } catch (error) {
+        console.error(`[MQTT] Payload không thể mã hóa cho ${topicName}:`, error);
+        resolve(false);
+        return;
+      }
+
+      try {
+        this.client.publish(topicName, payload, { qos }, (err) => {
+          if (err) {
+            console.error(`[MQTT] Lỗi xuất bản tới ${topicName}:`, err);
+            resolve(false);
+          } else {
+            console.log(`[MQTT] Đã xuất bản tới ${topicName}`);
+            resolve(true);
+          }
+        });
+      } catch (error) {
+        console.error(`[MQTT] Lỗi xuất bản tới ${topicName}:`, error);
+        resolve(false);
+      }
     });
   }
 
@@ -124,6 +154,7 @@ export class SorterMQTTService {
 
   public disconnect() {
     if (this.client) {
+      this.closing = true;
       this.client.end(true);
       this.client = null;
     }

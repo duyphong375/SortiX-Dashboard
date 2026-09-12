@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Download, X, Calendar, Layers, CalendarDays, FileSpreadsheet } from "lucide-react";
 
@@ -22,6 +22,10 @@ export function ExportDialog({
   const [exportType, setExportType] = useState<"day" | "month" | "all">("all");
   const [selectedDay, setSelectedDay] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   const availableMonths = useMemo(() => {
     const months = new Set<string>();
@@ -44,13 +48,24 @@ export function ExportDialog({
   }, [isOpen, availableDates, availableMonths]);
 
   useEffect(() => {
+    if (!isOpen) return;
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialogRef.current?.querySelector<HTMLElement>("button, input, select")?.focus();
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return;
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onCloseRef.current();
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused.current?.focus();
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -69,14 +84,18 @@ export function ExportDialog({
     <div
       role="dialog"
       aria-modal="true"
+      aria-labelledby="export-dialog-title"
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
         className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#161822] p-6 shadow-2xl transition-all animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <button
+          type="button"
+          aria-label="Đóng hộp thoại xuất file"
           onClick={onClose}
           className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
           title="Đóng"
@@ -89,7 +108,7 @@ export function ExportDialog({
             <FileSpreadsheet className="h-6 w-6" />
           </div>
           <div className="flex-1 min-w-0 pr-4">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">
+            <h3 id="export-dialog-title" className="text-base font-bold text-slate-900 dark:text-white">
               Tùy Chọn Xuất File CSV
             </h3>
             <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
@@ -104,6 +123,7 @@ export function ExportDialog({
             <div className="flex items-center gap-3">
               <input
                 type="radio"
+                aria-label="Xuất dữ liệu theo ngày"
                 name="exportType"
                 checked={exportType === "day"}
                 onChange={() => setExportType("day")}
@@ -118,6 +138,7 @@ export function ExportDialog({
               <div className="pl-7 mt-1">
                 {availableDates.length > 0 ? (
                   <select
+                    aria-label="Chọn ngày xuất dữ liệu"
                     value={selectedDay}
                     onChange={(e) => setSelectedDay(e.target.value)}
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium outline-none focus:border-cyan-500 dark:border-white/10 dark:bg-[#111319] dark:text-white"
@@ -143,6 +164,7 @@ export function ExportDialog({
             <div className="flex items-center gap-3">
               <input
                 type="radio"
+                aria-label="Xuất dữ liệu theo tháng"
                 name="exportType"
                 checked={exportType === "month"}
                 onChange={() => setExportType("month")}
@@ -157,6 +179,7 @@ export function ExportDialog({
               <div className="pl-7 mt-1">
                 {availableMonths.length > 0 ? (
                   <select
+                    aria-label="Chọn tháng xuất dữ liệu"
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(e.target.value)}
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium outline-none focus:border-cyan-500 dark:border-white/10 dark:bg-[#111319] dark:text-white"
@@ -182,6 +205,7 @@ export function ExportDialog({
             <div className="flex items-center gap-3">
               <input
                 type="radio"
+                aria-label="Xuất tất cả dữ liệu"
                 name="exportType"
                 checked={exportType === "all"}
                 onChange={() => setExportType("all")}
@@ -206,7 +230,8 @@ export function ExportDialog({
           <button
             type="button"
             onClick={handleConfirm}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-900/30 transition-all transform active:scale-95"
+            disabled={(exportType === "day" && !selectedDay) || (exportType === "month" && !selectedMonth)}
+            className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-900/30 transition-all transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Download className="h-3.5 w-3.5" />
             Tải xuống CSV

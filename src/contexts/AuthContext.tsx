@@ -14,6 +14,19 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 const STORAGE_KEY = "pbl3_auth_user";
+const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+
+function isValidStoredUser(value: unknown): value is AuthUser {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<AuthUser>;
+  if (candidate.role !== "admin" && candidate.role !== "user") return false;
+  if (typeof candidate.loginTime !== "string") return false;
+  const loginAt = Date.parse(candidate.loginTime);
+  if (!Number.isFinite(loginAt) || Date.now() - loginAt > SESSION_TTL_MS || loginAt > Date.now() + 60_000) return false;
+  // Restore canonical profile data instead of trusting editable localStorage fields.
+  const template = MOCK_USERS.find((item) => item.role === candidate.role);
+  return Boolean(template);
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -24,13 +37,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        const parsed = JSON.parse(stored) as AuthUser;
-        if (parsed.role === "admin" || parsed.role === "user") {
-          setUser(parsed);
+        const parsed: unknown = JSON.parse(stored);
+        if (isValidStoredUser(parsed)) {
+          const template = MOCK_USERS.find((item) => item.role === parsed.role)!;
+          setUser({ ...template, loginTime: parsed.loginTime });
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
         }
       }
     } catch {
-      localStorage.removeItem(STORAGE_KEY);
+      try { localStorage.removeItem(STORAGE_KEY); } catch { /* storage may be disabled */ }
     }
     setIsLoaded(true);
   }, []);
@@ -42,12 +58,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loginTime: new Date().toISOString(),
     };
     setUser(authUser);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
+    } catch {
+      // The in-memory session remains usable when storage is unavailable/full.
+    }
   }, []);
 
   const logout = useCallback(() => {
     setUser(null);
-    localStorage.removeItem(STORAGE_KEY);
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* storage may be disabled */ }
   }, []);
 
   const checkPermission = useCallback(

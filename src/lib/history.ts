@@ -19,6 +19,26 @@ export interface BinCounts {
 }
 
 const MAX_RECORDS = 500;
+const MAX_ALERTS = 100;
+
+function isRecord(value: unknown): value is ClassificationRecord {
+  if (!value || typeof value !== "object") return false;
+  const item = value as Partial<ClassificationRecord>;
+  return typeof item.id === "string" && item.id.length > 0 && item.id.length <= 200
+    && typeof item.product_id === "string" && typeof item.brand_id === "string"
+    && typeof item.brand_name === "string" && Number.isFinite(item.confidence)
+    && Number.isFinite(item.target_bin) && Number.isFinite(item.actual_bin)
+    && ["success", "diverted_default", "rejected", "jammed"].includes(item.status ?? "")
+    && typeof item.timestamp === "string";
+}
+
+function cloneDefaultConfig(): SorterConfig {
+  return {
+    ...DEFAULT_INITIAL_CONFIG,
+    bins: DEFAULT_INITIAL_CONFIG.bins.map((bin) => ({ ...bin, brand_ids: [...bin.brand_ids] })),
+    timestamp: new Date().toISOString(),
+  };
+}
 
 export const DEFAULT_INITIAL_CONFIG: SorterConfig = {
   schema_version: 1,
@@ -86,8 +106,9 @@ export function loadClassificationHistory(isSim: boolean = true): Classification
     if (isLegacy) raw = localStorage.getItem(STORAGE_KEYS.LEGACY_RECORDS);
     if (!raw) return [];
 
-    const records: ClassificationRecord[] = JSON.parse(raw);
-    if (!Array.isArray(records)) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    const records = parsed.filter(isRecord).slice(0, MAX_RECORDS);
     if (!isSim) return records;
 
     // Loại dữ liệu mẫu được phiên bản cũ tự tạo, giữ lịch sử người dùng đã chạy.
@@ -174,10 +195,14 @@ export function loadBinCountsLocal(isSim: boolean = true): BinCounts {
     const raw = localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw);
+      const safeCount = (value: unknown) => {
+        const n = typeof value === "number" ? value : Number(value);
+        return Number.isFinite(n) ? Math.max(0, Math.min(Math.floor(n), 50)) : 0;
+      };
       return {
-        bin1: Math.min(Number(parsed.bin1 || 0), 50),
-        bin2: Math.min(Number(parsed.bin2 || 0), 50),
-        bin3: Math.min(Number(parsed.bin3 || 0), 50),
+        bin1: safeCount(parsed.bin1),
+        bin2: safeCount(parsed.bin2),
+        bin3: safeCount(parsed.bin3),
       };
     }
 
@@ -276,7 +301,16 @@ export function loadAlertHistory(): AlertEvent[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.ALERTS);
     if (!raw) return [];
-    return JSON.parse(raw);
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((value): value is AlertEvent => {
+      if (!value || typeof value !== "object") return false;
+      const item = value as Partial<AlertEvent>;
+      return typeof item.event_id === "string" && item.event_id.length > 0
+        && typeof item.event_type === "string" && typeof item.severity === "string"
+        && typeof item.device_id === "string" && typeof item.description === "string"
+        && typeof item.timestamp === "string";
+    }).slice(0, MAX_ALERTS);
   } catch (err) {
     console.warn("Lỗi đọc LocalStorage alerts:", err);
     return [];
@@ -298,13 +332,20 @@ export function saveSorterConfigLocal(config: SorterConfig): void {
 }
 
 export function loadSorterConfigLocal(): SorterConfig {
-  if (typeof window === "undefined") return DEFAULT_INITIAL_CONFIG;
+  if (typeof window === "undefined") return cloneDefaultConfig();
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.CONFIG);
-    if (!raw) return DEFAULT_INITIAL_CONFIG;
-    return JSON.parse(raw);
+    if (!raw) return cloneDefaultConfig();
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return cloneDefaultConfig();
+    const candidate = parsed as Partial<SorterConfig>;
+    if (typeof candidate.device_id !== "string" || !Array.isArray(candidate.bins)
+      || !candidate.bins.every((bin) => bin && (bin.bin_id === 1 || bin.bin_id === 2) && Array.isArray(bin.brand_ids))) {
+      return cloneDefaultConfig();
+    }
+    return parsed as SorterConfig;
   } catch (err) {
-    return DEFAULT_INITIAL_CONFIG;
+    return cloneDefaultConfig();
   }
 }
 
@@ -316,7 +357,7 @@ export function resetSorterConfigLocal(): SorterConfig {
     localStorage.removeItem(STORAGE_KEYS.CONFIG);
   }
   return {
-    ...DEFAULT_INITIAL_CONFIG,
+    ...cloneDefaultConfig(),
     timestamp: new Date().toISOString(),
   };
 }

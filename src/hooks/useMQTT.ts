@@ -43,21 +43,28 @@ export function useMQTT({
   const handleIncomingMessage = useCallback((topic: string, msgText: string) => {
     try {
       const data = JSON.parse(msgText);
+      if (data === null || typeof data !== "object") return;
+
+      const isConfigStatus = topic.includes("config/status");
 
       // 1. Config status from ESP32
-      if (topic.includes("config/status")) {
-        if (data.status === "applied") {
+      if (isConfigStatus) {
+        if (data.status === "applied" && Number.isFinite(Number(data.config_version))) {
+          const version = Number(data.config_version);
           setConfigStatusMsg(`ESP32-C5 đã áp dụng thành công v${data.config_version}`);
-          callbacksRef.current.onConfigStatusApplied?.(data.config_version);
+          callbacksRef.current.onConfigStatusApplied?.(version);
         } else if (data.status === "rejected") {
-          const reason = data.reason || "Không hợp lệ";
+          const reason = typeof data.reason === "string" && data.reason.trim()
+            ? data.reason.trim()
+            : "Không hợp lệ";
           setConfigStatusMsg(`ESP32 từ chối cấu hình: ${reason}`);
           callbacksRef.current.onConfigStatusRejected?.(reason);
         }
       }
 
       // 2. Status / Telemetry
-      if (topic.includes("status") || topic.includes("telemetry")) {
+      // Config acknowledgements are status topics too, but are not telemetry.
+      if (!isConfigStatus && (topic.includes("status") || topic.includes("telemetry"))) {
         callbacksRef.current.onTelemetryPayload?.(data);
       }
 
@@ -102,18 +109,24 @@ export function useMQTT({
 
     return () => {
       service.disconnect();
+      if (mqttRef.current === service) {
+        mqttRef.current = null;
+        setMqttStatus("disconnected");
+      }
     };
   }, [isClient]);
 
-  const publishCommand = useCallback((cmd: string, value?: number) => {
-    if (!mqttRef.current || !mqttRef.current.isConnected()) return;
+  const publishCommand = useCallback(async (cmd: string, value?: number): Promise<boolean> => {
+    const command = typeof cmd === "string" ? cmd.trim() : "";
+    if (!command || !mqttRef.current || !mqttRef.current.isConnected()) return false;
+    if (value !== undefined && !Number.isFinite(value)) return false;
     const topic = process.env.NEXT_PUBLIC_MQTT_TOPIC_CONTROL || "sorter/sorter_01/control";
     const payload = {
-      command: cmd,
+      command,
       value: value !== undefined ? value : null,
       timestamp: new Date().toISOString(),
     };
-    mqttRef.current.publish(topic, payload);
+    return mqttRef.current.publish(topic, payload);
   }, []);
 
   const publishConfig = useCallback(async (config: SorterConfig): Promise<boolean> => {

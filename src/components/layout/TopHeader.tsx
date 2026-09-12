@@ -130,8 +130,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         <div className="flex items-center gap-4">
           {/* Mobile hamburger */}
           <button
+            type="button"
             onClick={onMobileMenuToggle}
-            aria-label="Menu"
+            aria-label="Mở menu điều hướng"
             className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-[#161822] dark:hover:text-white lg:hidden"
           >
             <Menu className="h-5 w-5" />
@@ -146,7 +147,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           {/* Real-time Industrial Clock */}
           <div className="hidden sm:flex items-center gap-1.5 rounded-xl border border-slate-200/60 bg-slate-100/70 px-2.5 py-1 text-xs font-mono font-bold text-slate-700 dark:border-white/[0.07] dark:bg-[#161822] dark:text-slate-300">
             <Clock className="h-3.5 w-3.5 text-cyan-500" />
-            <span>{currentTime || "--:--:--"}</span>
+            <time dateTime={currentTime || undefined} aria-label="Thời gian hiện tại">{currentTime || "--:--:--"}</time>
           </div>
         </div>
 
@@ -157,6 +158,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             {/* Chế độ 1: MÔ PHỎNG (Tím/Cyan) */}
             <button
               type="button"
+              aria-pressed={isSimulation}
               onClick={() => {
                 if (!isSimulation && onToggleSimulationMode) onToggleSimulationMode();
               }}
@@ -174,6 +176,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             {/* Chế độ 2: THỰC TẾ (Emerald/Amber kèm đèn nhấp nháy Live Hardware) */}
             <button
               type="button"
+              aria-pressed={!isSimulation}
               onClick={() => {
                 if (isSimulation && onToggleSimulationMode) onToggleSimulationMode();
               }}
@@ -206,6 +209,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
           {/* Live MQTT Status Pill */}
           <div
+            role="status"
+            aria-live="polite"
             title={`Trạng thái MQTT: ${mqttStatus.toUpperCase()} (${pingMs}ms)`}
             className={`hidden md:flex items-center gap-2 rounded-md px-2 py-0.5 text-xs font-semibold border ${
               mqttStatus === "connected"
@@ -236,6 +241,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
           {/* Quick Search Shortcut trigger */}
           <button
+            type="button"
+            aria-label="Mở tìm kiếm"
             onClick={() => setSearchOpen(true)}
             className="flex items-center gap-2 rounded-xl border border-slate-200/80 bg-slate-50 px-3 py-1.5 text-xs text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-100 dark:border-white/[0.07] dark:bg-[#161822] dark:text-slate-400 dark:hover:bg-[#1E212D] dark:hover:text-white"
           >
@@ -248,6 +255,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
           {/* Notifications */}
           <button
+            type="button"
+            aria-label={`Xem cảnh báo${alertCount > 0 ? ` (${alertCount} cảnh báo chưa xử lý)` : ""}`}
             onClick={() => router.push("/alerts")}
             title="Xem danh sách cảnh báo"
             className="relative rounded-xl border border-slate-200/80 p-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-white/[0.07] dark:bg-[#161822] dark:text-slate-400 dark:hover:bg-[#1E212D] dark:hover:text-white"
@@ -262,6 +271,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
           {/* Theme Toggle */}
           <button
+            type="button"
+            aria-label={themeMode === "dark" ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối"}
             onClick={onToggleTheme}
             title={themeMode === "dark" ? "Chuyển sang giao diện Sáng" : "Chuyển sang giao diện Tối"}
             className="rounded-xl border border-slate-200/80 p-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-white/[0.07] dark:bg-[#161822] dark:text-slate-400 dark:hover:bg-[#1E212D] dark:hover:text-white"
@@ -275,6 +286,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
           {/* Sound Toggle */}
           <button
+            type="button"
+            aria-label={isMuted ? "Bật âm thanh" : "Tắt âm thanh"}
             onClick={onToggleSound}
             title={isMuted ? "Bật âm thanh cơ khí & cảm biến" : "Tắt âm thanh"}
             className="rounded-xl border border-slate-200/80 p-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-white/[0.07] dark:bg-[#161822] dark:text-slate-400 dark:hover:bg-[#1E212D] dark:hover:text-white"
@@ -308,6 +321,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
       {/* Command Palette Modal (Ctrl + K) */}
       {searchOpen && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="command-palette-title"
           className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-20 backdrop-blur-sm"
           onClick={() => setSearchOpen(false)}
         >
@@ -316,6 +332,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="relative flex items-center border-b border-slate-200/80 pb-3 dark:border-white/[0.06]">
+              <h2 id="command-palette-title" className="sr-only">Tìm kiếm trong hệ thống</h2>
               <Search className="absolute left-3 h-4 w-4 text-slate-400" />
               <input
                 autoFocus
@@ -327,6 +344,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               />
               {searchQuery ? (
                 <button
+                  type="button"
+                  aria-label="Xóa nội dung tìm kiếm"
                   onClick={() => setSearchQuery("")}
                   className="absolute right-3 text-slate-400 hover:text-slate-600 dark:hover:text-white"
                 >
@@ -346,6 +365,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                   const Icon = item.icon;
                   return (
                     <button
+                      type="button"
                       key={item.href}
                       onClick={() => {
                         router.push(item.href);

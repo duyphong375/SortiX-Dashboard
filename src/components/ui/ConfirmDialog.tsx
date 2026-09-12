@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { AlertTriangle, AlertCircle, Info, X } from "lucide-react";
 
 export interface ConfirmDialogProps {
@@ -24,16 +24,30 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+  const onCancelRef = useRef(onCancel);
+  onCancelRef.current = onCancel;
+
   useEffect(() => {
+    if (!isOpen) return;
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialogRef.current?.querySelector<HTMLElement>("button")?.focus();
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return;
       if (e.key === "Escape") {
-        onCancel();
+        e.preventDefault();
+        onCancelRef.current();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onCancel]);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused.current?.focus();
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -61,14 +75,19 @@ export function ConfirmDialog({
     <div
       role="dialog"
       aria-modal="true"
+      aria-labelledby="confirm-dialog-title"
+      aria-describedby="confirm-dialog-description"
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={onCancel}
     >
       <div
+        ref={dialogRef}
         className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#161822] p-6 shadow-2xl transition-all animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <button
+          type="button"
+          aria-label="Đóng hộp thoại"
           onClick={onCancel}
           className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
           title="Đóng"
@@ -81,10 +100,10 @@ export function ConfirmDialog({
             <Icon className="h-6 w-6" />
           </div>
           <div className="flex-1 min-w-0 pr-4">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">
+            <h3 id="confirm-dialog-title" className="text-base font-bold text-slate-900 dark:text-white">
               {title}
             </h3>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            <p id="confirm-dialog-description" className="mt-2 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
               {message}
             </p>
           </div>

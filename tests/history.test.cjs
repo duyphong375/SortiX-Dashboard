@@ -119,3 +119,25 @@ test("corrupted counter cache does not hide retained simulation history", () => 
   assert.deepEqual(history.loadClassificationHistory(true), [userRecord]);
   assert.deepEqual(history.loadBinCountsLocal(true), { bin1: 1, bin2: 0, bin3: 0 });
 });
+
+test("malformed records and counters are ignored and normalized safely", () => {
+  const { history, storage } = createHistory();
+  const keys = history.STORAGE_KEYS;
+  storage.set(keys.SIM_RECORDS, JSON.stringify([
+    record("valid"),
+    { id: "missing-fields", actual_bin: 1 },
+    null,
+  ]));
+  storage.set(keys.SIM_BIN_COUNTS, JSON.stringify({ bin1: -5, bin2: "not-a-number", bin3: 99.8 }));
+  assert.deepEqual(history.loadClassificationHistory(true), [record("valid")]);
+  assert.deepEqual(history.loadBinCountsLocal(true), { bin1: 0, bin2: 0, bin3: 50 });
+});
+
+test("invalid sorter config falls back to an isolated default object", () => {
+  const { history, storage } = createHistory();
+  storage.set(history.STORAGE_KEYS.CONFIG, JSON.stringify({ bins: "invalid" }));
+  const first = history.loadSorterConfigLocal();
+  first.bins[0].brand_ids.push("mutated");
+  const second = history.loadSorterConfigLocal();
+  assert.equal(second.bins[0].brand_ids.includes("mutated"), false);
+});

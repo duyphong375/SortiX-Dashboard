@@ -1,126 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { ZodError } from "zod";
+import { allowRequest, clientAddress, hasValidInternalSecret, readAlertPayload } from "../_lib/alertPayload";
 
-function escapeHtml(unsafe: string) {
-  return (unsafe || "").replace(/[&<"'>]/g, function (match) {
-    switch (match) {
-      case "&": return "&amp;";
-      case "<": return "&lt;";
-      case ">": return "&gt;";
-      case '"': return "&quot;";
-      case "'": return "&#039;";
-      default: return match;
-    }
-  });
-}
-
-// Simple in-memory rate limiting
 const rateLimitCache = new Map<string, number>();
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (match) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[match]!);
+}
+
 export async function POST(req: NextRequest) {
+  if (!hasValidInternalSecret(req)) return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+  if (!allowRequest(rateLimitCache, clientAddress(req))) return NextResponse.json({ success: false, message: "Too many requests" }, { status: 429 });
   try {
-    const ip = req.headers.get("x-forwarded-for") || "unknown";
-    const now = Date.now();
-    const lastRequest = rateLimitCache.get(ip) || 0;
-    if (now - lastRequest < 5000) {
-      return NextResponse.json({ success: false, message: "Too many requests" }, { status: 429 });
-    }
-    rateLimitCache.set(ip, now);
-
-    const body = await req.json();
-    const { event_type, severity, description, device_id, timestamp } = body;
-
-    const host = process.env.SMTP_HOST || "smtp.gmail.com";
+    const { event_type, severity, description, device_id, timestamp } = await readAlertPayload(req);
+    const host = process.env.SMTP_HOST?.trim() || "smtp.gmail.com";
     const port = Number(process.env.SMTP_PORT || 587);
     const secure = process.env.SMTP_SECURE === "true";
-    const user = process.env.SMTP_USER;
+    const user = process.env.SMTP_USER?.trim();
     const pass = process.env.SMTP_PASS;
-    const to = process.env.ALERT_EMAIL_TO || user;
-
-    if (!user || !pass || user.includes("your_email")) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Chưa cấu hình thông tin xác thực SMTP (SMTP_USER/SMTP_PASS) trong .env.local",
-        },
-        { status: 400 }
-      );
+    const to = process.env.ALERT_EMAIL_TO?.trim() || user;
+    if (!user || !pass || user.includes("your_email") || !to || !Number.isInteger(port) || port < 1 || port > 65535) {
+      return NextResponse.json({ success: false, message: "Chưa cấu hình thông tin SMTP hợp lệ trong .env.local" }, { status: 400 });
     }
-
-    const transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: { user, pass },
-    });
-
+    const transporter = nodemailer.createTransport({ host, port, secure, auth: { user, pass }, connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 15_000 });
     const isCritical = severity === "critical";
     const statusColor = isCritical ? "#ef4444" : "#f59e0b";
     const statusTitle = isCritical ? "CẢNH BÁO NGUY HIỂM - MỨC NGHIÊM TRỌNG" : "CẢNH BÁO VẬN HÀNH - CẢNH BÁO";
-
-    const formattedTime = timestamp
-      ? new Date(timestamp).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })
-      : new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
-
-    // Escape dynamic content to prevent XSS
-    const safeDeviceId = escapeHtml(device_id || "sorter_01");
-    const safeEventType = escapeHtml(event_type || "SYSTEM_EVENT");
-    const safeDescription = escapeHtml(description || "Chưa có mô tả");
-
-    const htmlContent = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #0f172a; border-radius: 12px; overflow: hidden; border: 1px solid #334155; color: #f8fafc;">
-        <div style="background: ${statusColor}; padding: 18px 24px; text-align: center;">
-          <h2 style="margin: 0; color: #ffffff; font-size: 20px; letter-spacing: 0.5px;">${statusTitle}</h2>
-        </div>
-        <div style="padding: 24px;">
-          <p style="font-size: 15px; color: #94a3b8; margin-top: 0;">
-            Hệ thống phân loại IoT (ESP32-C5 và camera AI) ghi nhận một sự kiện cần chú ý:
-          </p>
-          <div style="background: #1e293b; border-radius: 8px; padding: 16px; margin: 20px 0; border-left: 4px solid ${statusColor};">
-            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-              <tr>
-                <td style="padding: 6px 0; color: #94a3b8; width: 140px;">Mã Thiết Bị:</td>
-                <td style="padding: 6px 0; font-weight: 600; color: #38bdf8;">${safeDeviceId}</td>
-              </tr>
-              <tr>
-                <td style="padding: 6px 0; color: #94a3b8;">Loại Sự Kiện:</td>
-                <td style="padding: 6px 0; font-weight: 600; color: #f8fafc;">${safeEventType}</td>
-              </tr>
-              <tr>
-                <td style="padding: 6px 0; color: #94a3b8;">Mô Tả Chi Tiết:</td>
-                <td style="padding: 6px 0; color: #f8fafc;">${safeDescription}</td>
-              </tr>
-              <tr>
-                <td style="padding: 6px 0; color: #94a3b8;">Thời Gian:</td>
-                <td style="padding: 6px 0; color: #e2e8f0;">${formattedTime}</td>
-              </tr>
-            </table>
-          </div>
-          <p style="font-size: 13px; color: #64748b; margin-bottom: 0;">
-            Email này được gửi tự động từ bảng điều khiển phân loại IoT PBL3. Vui lòng không trả lời thư này.
-          </p>
-        </div>
-      </div>
-    `;
-
-    const info = await transporter.sendMail({
-      from: `"Cảnh báo bộ phân loại IoT PBL3" <${user}>`,
-      to,
-      subject: `[${statusTitle}] ${event_type || "Sự cố băng chuyền"} - ${device_id || "sorter_01"}`,
-      html: htmlContent,
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: "Đã gửi email cảnh báo thành công",
-      messageId: info.messageId,
-    });
+    const formattedTime = new Date(timestamp).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
+    const safeDeviceId = escapeHtml(device_id), safeEventType = escapeHtml(event_type), safeDescription = escapeHtml(description);
+    const htmlContent = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f172a;border-radius:12px;overflow:hidden;color:#f8fafc"><div style="background:${statusColor};padding:18px 24px;text-align:center"><h2 style="margin:0;color:#fff">${statusTitle}</h2></div><div style="padding:24px"><p style="color:#94a3b8">Hệ thống phân loại IoT ghi nhận một sự kiện cần chú ý:</p><table style="width:100%;font-size:14px"><tr><td>Mã Thiết Bị:</td><td>${safeDeviceId}</td></tr><tr><td>Loại Sự Kiện:</td><td>${safeEventType}</td></tr><tr><td>Mô Tả Chi Tiết:</td><td>${safeDescription}</td></tr><tr><td>Thời Gian:</td><td>${formattedTime}</td></tr></table></div></div>`;
+    const info = await transporter.sendMail({ from: `"Cảnh báo bộ phân loại IoT PBL3" <${user}>`, to, subject: `[${statusTitle}] ${event_type} - ${device_id}`, html: htmlContent });
+    return NextResponse.json({ success: true, message: "Đã gửi email cảnh báo thành công", messageId: info.messageId });
   } catch (error: unknown) {
+    if (error instanceof ZodError || error instanceof SyntaxError || (error instanceof Error && error.message === "CONTENT_TYPE")) return NextResponse.json({ success: false, message: "Dữ liệu cảnh báo không hợp lệ" }, { status: 400 });
     console.error("[Lỗi cảnh báo email]:", error);
-    const message = error instanceof Error ? error.message : String(error);
-    return NextResponse.json(
-      { success: false, message: `Lỗi gửi email: ${message}` },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: "Không thể gửi email cảnh báo" }, { status: 502 });
   }
+}
+
+export function GET() {
+  return NextResponse.json({ success: false, message: "Method Not Allowed" }, { status: 405, headers: { Allow: "POST" } });
 }

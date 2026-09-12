@@ -1,9 +1,11 @@
 # SortiX Dashboard — Hướng dẫn sử dụng cho người mới
 
-SortiX Dashboard là giao diện theo dõi và điều khiển hệ thống phân loại sản phẩm trên băng tải. Ứng dụng có hai chế độ:
+SortiX Dashboard là giao diện theo dõi và điều khiển hệ thống phân loại sản phẩm trên băng tải, xây dựng bằng Next.js 14, React 18, TypeScript, MQTT.js, Recharts và Zod. Ứng dụng có hai chế độ:
 
 - **Mô phỏng:** chạy thử ngay trên máy tính, không cần ESP32 hay camera. Dữ liệu lịch sử chỉ xuất hiện khi người dùng tạo mẫu hoặc chạy mô phỏng.
 - **Máy thật:** nhận trạng thái, dữ liệu camera và telemetry từ thiết bị qua MQTT. Các nút tạo mẫu bị ẩn để tránh gửi dữ liệu giả vào quy trình thật.
+
+Các module chính nằm trong `src/`: `app/` chứa các trang và API route, `components/` chứa giao diện, `hooks/` quản lý mô phỏng/MQTT, còn `lib/` xử lý schema, lịch sử, quyền, cảnh báo và xuất dữ liệu. Dữ liệu trình duyệt được tách riêng giữa mô phỏng và máy thật.
 
 ## 1. Chuẩn bị
 
@@ -48,6 +50,8 @@ npm test
 npx tsc --noEmit --pretty false
 ```
 
+`npm test` chạy các kiểm tra hồi quy cho lịch sử và migration LocalStorage. Lệnh TypeScript kiểm tra toàn bộ mã nguồn mà không tạo file build. Trước khi mở pull request, nên chạy cả hai lệnh sau khi cài dependency sạch.
+
 ## 3. Đăng nhập
 
 Ứng dụng có sẵn hai tài khoản demo:
@@ -57,7 +61,7 @@ npx tsc --noEmit --pretty false
 | Quản trị viên | `admin@pbl3.local` | `admin123` | Xem và cấu hình toàn bộ, xóa lịch sử/cảnh báo, dừng khẩn cấp |
 | Vận hành | `operator@pbl3.local` | `operator123` | Theo dõi dashboard, băng tải, lịch sử và cảnh báo theo quyền được cấp |
 
-Đây là tài khoản demo phía trình duyệt, phù hợp cho phát triển và trình diễn. Không dùng cơ chế này làm hệ thống xác thực production nếu chưa thay bằng backend an toàn.
+Đây là tài khoản demo phía trình duyệt, phù hợp cho phát triển và trình diễn. Phiên đăng nhập được lưu trong LocalStorage và hết hạn sau 12 giờ; dữ liệu LocalStorage có thể bị người dùng chỉnh sửa. Không dùng cơ chế này làm hệ thống xác thực production nếu chưa thay bằng backend an toàn.
 
 ## 4. Quy trình dùng thử nhanh ở chế độ mô phỏng
 
@@ -111,11 +115,14 @@ Trong chế độ **Máy thật**:
 - Thanh nút nạp mẫu và nút tạo dữ liệu demo không hiển thị.
 - Vào **MQTT & IoT** để kiểm tra kết nối trước khi vận hành.
 - Chỉ gửi lệnh điều khiển khi đã xác nhận đúng thiết bị và đúng broker.
+- API gửi cảnh báo kiểm tra payload, giới hạn tần suất và thời gian chờ; có thể đặt `INTERNAL_API_SECRET` khi endpoint được gọi bởi backend tin cậy.
 - Các giá trị broker mẫu trong `.env.local.example` chỉ dành cho phát triển; production cần broker riêng, TLS và xác thực phù hợp.
 
 ## 9. Dữ liệu được lưu ở đâu?
 
-Ở môi trường hiện tại, dữ liệu giao diện được lưu trong `localStorage` của trình duyệt. Dữ liệu mô phỏng và máy thật được tách riêng theo chế độ. Làm mới trang không xóa dữ liệu; dùng chức năng xóa trong **Lịch Sử** hoặc **Cảnh Báo** khi cần dọn dẹp.
+Ở môi trường hiện tại, dữ liệu giao diện được lưu trong `localStorage` của trình duyệt. Dữ liệu mô phỏng và máy thật được tách riêng theo chế độ. Hệ thống giữ tối đa 500 bản ghi lịch sử, 100 cảnh báo và 50 sản phẩm cho mỗi khay. Làm mới trang không xóa dữ liệu; dùng chức năng xóa trong **Lịch Sử** hoặc **Cảnh Báo** khi cần dọn dẹp.
+
+Khi đọc dữ liệu, ứng dụng kiểm tra kiểu, loại bỏ bản ghi hỏng và chuẩn hóa counter không hợp lệ. Đây là cơ chế bảo vệ giao diện, không phải cơ sở dữ liệu giao dịch; dữ liệu quan trọng nên được lưu ở backend hoặc hệ thống lưu trữ riêng.
 
 Nếu trình duyệt còn dữ liệu cũ từ phiên bản trước, hãy đăng nhập lại, chọn đúng chế độ rồi xóa lịch sử/cảnh báo từ giao diện. Có thể xóa dữ liệu website trong phần Developer Tools của trình duyệt nếu muốn bắt đầu hoàn toàn từ đầu.
 
@@ -133,6 +140,8 @@ Kiểm tra cửa sổ chạy dev server hoặc dùng `npm run dev -- -p 3001`.
 
 Kiểm tra giá trị trong `.env.local`, broker có cho phép kết nối WebSocket hay không, đúng port/topic hay không và máy tính có truy cập được mạng/broker hay không.
 
+Sau khi kết nối lại, dashboard tự đăng ký lại các topic đã cấu hình. Nếu broker yêu cầu TLS hoặc xác thực, hãy dùng URL WebSocket bảo mật và thông tin xác thực do quản trị broker cấp.
+
 **Không thấy dữ liệu trong biểu đồ hoặc lịch sử**
 
 Ở chế độ mô phỏng, hãy chạy băng tải với nút nạp mẫu hoặc nhấn **Tạo dữ liệu demo**. Ứng dụng được thiết kế để khởi động với dữ liệu trống.
@@ -143,5 +152,32 @@ Nút này chỉ hiển thị trong **Mô phỏng**. Hãy kiểm tra chế độ 
 
 ## 11. Lưu ý an toàn
 
-Không dùng mật khẩu demo, broker công khai hoặc thông tin SMTP mẫu trong môi trường production. Khi kết nối phần cứng thật, cần phân quyền theo người dùng, bảo vệ broker bằng TLS/xác thực và kiểm tra nút dừng khẩn cấp trước khi vận hành.
+Không dùng mật khẩu demo, broker công khai hoặc thông tin SMTP mẫu trong môi trường production. Các API cảnh báo chỉ nhận JSON đúng schema, giới hạn tần suất và có timeout khi gọi dịch vụ bên ngoài. Nếu API được gọi bởi backend tin cậy, đặt `INTERNAL_API_SECRET`; không đưa secret này vào biến `NEXT_PUBLIC_*` hoặc mã nguồn.
 
+Khi kết nối phần cứng thật, cần phân quyền theo người dùng, bảo vệ broker bằng TLS/xác thực, giới hạn quyền publish/subscribe theo topic và kiểm tra nút dừng khẩn cấp trước khi vận hành. Cơ chế đăng nhập demo hiện tại chỉ dành cho phát triển/trình diễn và cần được thay bằng session server-side, cookie bảo mật hoặc nhà cung cấp IAM trước khi triển khai thực tế.
+
+## 12. Biến môi trường
+
+Sao chép `.env.local.example` thành `.env.local`. Các biến có tiền tố `NEXT_PUBLIC_` được gửi tới trình duyệt và chỉ nên chứa cấu hình không bí mật.
+
+| Nhóm | Biến | Mục đích |
+| --- | --- | --- |
+| MQTT | `NEXT_PUBLIC_MQTT_BROKER_URL`, `NEXT_PUBLIC_MQTT_CLIENT_ID` | URL WebSocket và mã client dashboard. |
+| MQTT | `NEXT_PUBLIC_DEFAULT_DEVICE_ID` và các biến `NEXT_PUBLIC_MQTT_TOPIC_*` | Thiết bị mặc định và topic status, vision, telemetry, control, config, alerts. |
+| Telegram | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Secret và đích nhận cảnh báo phía server. |
+| Email | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `ALERT_EMAIL_TO` | Cấu hình SMTP và địa chỉ nhận cảnh báo. |
+| API tùy chọn | `INTERNAL_API_SECRET` | Bearer secret cho backend tin cậy gọi API cảnh báo. Để trống khi dashboard gọi API same-origin trực tiếp. |
+
+Không commit `.env.local`. Khi triển khai, cấu hình secret trong secret manager của nền tảng hosting và dùng broker riêng có TLS.
+
+## 13. Trạng thái kiểm tra
+
+Các kiểm tra hiện có:
+
+```powershell
+npm test
+npx tsc --noEmit --pretty false
+npm run build
+```
+
+`npm run build` cần môi trường có quyền tạo worker process cho Next.js. Nếu môi trường bị chính sách Windows chặn `spawn`, hãy dùng hai lệnh kiểm tra đầu tiên để xác nhận test và typecheck, sau đó chạy build trên máy CI hoặc máy phát triển có quyền đầy đủ.

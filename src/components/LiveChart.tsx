@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useId } from "react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -29,6 +29,11 @@ export const LiveChart: React.FC<LiveChartProps> = ({
   conveyorSpeed = 65,
   isRunning = true,
 }) => {
+  // Multiple charts can render on the same page; scope SVG definition IDs per instance.
+  const chartId = useId().replace(/:/g, "");
+  const cyanGradientId = `${chartId}-cyan-gradient`;
+  const speedGradientId = `${chartId}-speed-gradient`;
+  const glowFilterId = `${chartId}-glow-cyan`;
   // Điểm dữ liệu mới nhất
   const latestPoint = data.length > 0 ? data[data.length - 1] : null;
   const currentPPM = latestPoint?.ppm ?? 0;
@@ -132,20 +137,20 @@ export const LiveChart: React.FC<LiveChartProps> = ({
           <AreaChart data={data} margin={{ top: 15, right: 15, left: -20, bottom: 5 }}>
             <defs>
               {/* Dải gradient lam ngọc (#06B6D4 chuyển sang trong suốt) */}
-              <linearGradient id="cyanGradient" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id={cyanGradientId} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#06B6D4" stopOpacity={0.45} />
                 <stop offset="60%" stopColor="#06B6D4" stopOpacity={0.12} />
                 <stop offset="100%" stopColor="#06B6D4" stopOpacity={0.0} />
               </linearGradient>
 
               {/* Dải gradient tím indigo cho tốc độ động cơ PWM */}
-              <linearGradient id="speedGradient" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id={speedGradientId} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#818CF8" stopOpacity={0.25} />
                 <stop offset="100%" stopColor="#818CF8" stopOpacity={0.0} />
               </linearGradient>
 
               {/* Bộ lọc phát sáng đường viền */}
-              <filter id="glowCyan" x="-20%" y="-20%" width="140%" height="140%">
+              <filter id={glowFilterId} x="-20%" y="-20%" width="140%" height="140%">
                 <feGaussianBlur stdDeviation="2" result="blur" />
                 <feMerge>
                   <feMergeNode in="blur" />
@@ -254,7 +259,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({
               stroke="#06B6D4"
               strokeWidth={2.8}
               fillOpacity={1}
-              fill="url(#cyanGradient)"
+              fill={`url(#${cyanGradientId})`}
               dot={renderPulseDot}
               activeDot={{
                 r: 6,
@@ -274,7 +279,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({
               strokeWidth={1.8}
               strokeDasharray="4 4"
               fillOpacity={1}
-              fill="url(#speedGradient)"
+              fill={`url(#${speedGradientId})`}
               dot={false}
             />
           </AreaChart>

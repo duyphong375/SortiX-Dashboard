@@ -8,20 +8,54 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export function cleanTelemetryPayload(raw: unknown, prev: TelemetryData): TelemetryData {
   if (!isRecord(raw)) return prev;
-  
-  const parsed = TelemetrySchema.safeParse(raw);
+
+  // Ignore malformed individual fields instead of dropping an otherwise valid
+  // heartbeat. Devices in the field occasionally serialize numbers/booleans as
+  // strings, so accept the unambiguous forms first.
+  const candidate: Record<string, unknown> = { ...raw };
+  const numericKeys = [
+    "uptime", "cpu_temp", "wifi_rssi", "conveyor_speed", "encoder_count",
+    "active_config_version",
+  ] as const;
+  for (const key of numericKeys) {
+    if (!(key in candidate)) continue;
+    const value = candidate[key];
+    if (typeof value === "string" && value.trim() !== "") {
+      const parsedNumber = Number(value);
+      if (Number.isFinite(parsedNumber)) candidate[key] = parsedNumber;
+    }
+    if (typeof candidate[key] !== "number" || !Number.isFinite(candidate[key])) {
+      delete candidate[key];
+    }
+  }
+  const booleanKeys = [
+    "online", "conveyor_running", "s1_entry", "s2_sorter1", "s3_sorter2",
+    "arm1_active", "arm2_active", "estop_pressed",
+  ] as const;
+  for (const key of booleanKeys) {
+    if (!(key in candidate)) continue;
+    const value = candidate[key];
+    if (value === "true") candidate[key] = true;
+    else if (value === "false") candidate[key] = false;
+    else if (typeof value !== "boolean") delete candidate[key];
+  }
+
+  const parsed = TelemetrySchema.safeParse(candidate);
   if (parsed.success) {
+    const merged = { ...prev } as TelemetryData;
+    const telemetryKeys: (keyof TelemetryData)[] = [
+      "device_id", "online", "uptime", "cpu_temp", "wifi_rssi", "wifi_band",
+      "conveyor_running", "conveyor_speed", "s1_entry", "s2_sorter1", "s3_sorter2",
+      "arm1_active", "arm2_active", "estop_pressed", "encoder_count", "active_config_version",
+    ];
+    for (const key of telemetryKeys) {
+      if (Object.prototype.hasOwnProperty.call(candidate, key) && parsed.data[key] !== undefined) {
+        (merged as unknown as Record<string, unknown>)[key] = parsed.data[key];
+      }
+    }
     return {
-      ...parsed.data,
-      device_id: parsed.data.device_id || prev.device_id,
-      uptime: parsed.data.uptime ?? prev.uptime,
-      cpu_temp: parsed.data.cpu_temp ?? prev.cpu_temp,
-      wifi_rssi: parsed.data.wifi_rssi ?? prev.wifi_rssi,
-      conveyor_running:
-        typeof raw.conveyor_running === "boolean" ? raw.conveyor_running : prev.conveyor_running,
-      conveyor_speed: parsed.data.conveyor_speed ?? prev.conveyor_speed,
-      encoder_count: parsed.data.encoder_count ?? prev.encoder_count,
-      active_config_version: parsed.data.active_config_version ?? prev.active_config_version,
+      ...merged,
+      device_id: merged.device_id || prev.device_id,
       last_heartbeat: new Date().toISOString(),
     } as TelemetryData;
   }
@@ -41,19 +75,26 @@ export function normalizeBrandId(rawBrand: string): string {
 export function cleanVisionPayload(raw: unknown): VisionDetection | null {
   if (!isRecord(raw)) return null;
 
-  const rawBrand = String(
-    raw.brand_id || raw.brand || raw.itemType || raw.item_type || raw.class_name || ""
-  );
+  const rawBrand = [raw.brand_id, raw.brand, raw.itemType, raw.item_type, raw.class_name]
+    .find((value): value is string => typeof value === "string" && value.trim().length > 0);
   if (!rawBrand) return null;
   const brandId = normalizeBrandId(rawBrand);
+  if (!brandId) return null;
+
+  const confidenceValue = Number(raw.confidence ?? 0.95);
+  if (!Number.isFinite(confidenceValue)) return null;
 
   const payload = {
-    product_id: String(raw.product_id || raw.id || `pkg_${Math.floor(1000 + Math.random() * 9000)}`),
+    product_id: String(raw.product_id || raw.id || `pkg_${Math.floor(1000 + Math.random() * 9000)}`).trim(),
     brand_id: brandId,
-    confidence: Number(raw.confidence ?? 0.95),
-    catalog_version: raw.catalog_version || "catalog_01",
-    timestamp: raw.timestamp || new Date().toISOString(),
+    confidence: confidenceValue,
+    catalog_version: String(raw.catalog_version || "catalog_01"),
+    timestamp: typeof raw.timestamp === "string" && raw.timestamp.trim()
+      ? raw.timestamp
+      : new Date().toISOString(),
   };
+
+  if (!payload.product_id) return null;
 
   const parsed = VisionDetectionSchema.safeParse(payload);
   if (parsed.success) {

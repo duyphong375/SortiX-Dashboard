@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ToastProvider } from "@/components/ui/Toast";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-
-const inter = Inter({ subsets: ["latin", "vietnamese"] });
 
 export const metadata: Metadata = {
   title: "SortiX",
@@ -23,7 +20,7 @@ export default function RootLayout({
       <head>
         <meta name="theme-color" content="#070b14" />
       </head>
-      <body className={`${inter.className} min-h-screen bg-[#070b14] text-slate-100 antialiased`}>
+      <body className="min-h-screen bg-[#070b14] text-slate-100 antialiased">
         <AuthProvider>
           <ToastProvider>
             <DashboardLayout>{children}</DashboardLayout>
