@@ -1,192 +1,265 @@
-# SortiX Dashboard — Hướng dẫn sử dụng cho người mới
+# SortiX Dashboard — Hệ Thống Giám Sát & Phân Loại Sản Phẩm Thông Minh (IoT Sorter)
 
-SortiX Dashboard là giao diện theo dõi và điều khiển hệ thống phân loại sản phẩm trên băng tải, xây dựng bằng Next.js 14, React 18, TypeScript, MQTT.js, Recharts và Zod. Ứng dụng có hai chế độ:
+> **Đồ án PBL3 / Capstone Project**: Hệ thống điều khiển, giám sát và phân loại sản phẩm theo thời gian thực trên băng tải công nghiệp tích hợp IoT (ESP32-C5), thị giác máy tính và ứng dụng quản trị phân tầng.
 
-- **Mô phỏng:** chạy thử ngay trên máy tính, không cần ESP32 hay camera. Dữ liệu lịch sử chỉ xuất hiện khi người dùng tạo mẫu hoặc chạy mô phỏng.
-- **Máy thật:** nhận trạng thái, dữ liệu camera và telemetry từ thiết bị qua MQTT. Các nút tạo mẫu bị ẩn để tránh gửi dữ liệu giả vào quy trình thật.
+---
 
-## 0. Kiến Trúc Dự Án (Monorepo Separation)
+## 📌 Mục Lục
+1. [Giới Thiệu Tổng Quan](#1-giới-thiệu-tổng-quan)
+2. [Kiến Trúc Hệ Thống (Monorepo Architecture)](#2-kiến-trúc-hệ-thống-monorepo-architecture)
+3. [Công Nghệ Sử Dụng](#3-công-nghệ-sử-dụng)
+4. [Tài Khoản Mặc Định & Phân Quyền (RBAC)](#4-tài-khoản-mặc-định--phân-quyền-rbac)
+5. [Cài Đặt & Khởi Chạy](#5-cài-đặt--khởi-chạy)
+6. [Chế Độ Vận Hành: Mô Phỏng vs. Máy Thật](#6-chế-độ-vận-hành-mô-phỏng-vs-máy-thật)
+7. [Các Trang Chức Năng Chính](#7-các-trang-chức-năng-chính)
+8. [Hệ Thống Xác Thực & Bảo Mật](#8-hệ-thống-xác-thực--bảo-mật)
+9. [Kiểm Thử & Đảm Bảo Chất Lượng (QA)](#9-kiểm-thử--đảm-bảo-chất-lượng-qa)
+10. [Biến Môi Trường (Environment Variables)](#10-biến-môi-trường-environment-variables)
+11. [Xử Lý Sự Cố Thường Gặp (Troubleshooting)](#11-xử-lý-sự-cố-thường-gặp-troubleshooting)
 
-Dự án được tái cấu trúc theo mô hình phân tách rõ ràng giữa Frontend, Backend và Shared Layer:
+---
 
-- **`frontend/` & `src/`**: Next.js 14 Client, App Router, Components theo từng tính năng, Hooks vật lý 60fps và API Fetch Clients.
-- **`backend/`**: Standalone Backend Server (Node.js/TypeScript), Controllers, Routes, Services, Models, Nodemailer & Telegram Bot alerts.
-- **`shared/`**: Kiểu dữ liệu (`types/`), Zod schemas có `.passthrough()` (`schemas/`), hằng số hệ thống (`constants/`) dùng chung cho cả FE và BE.
-- **`docs/`**: Tài liệu kỹ thuật chi tiết ([docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md)).
-- **`scripts/`**: Tiện ích PowerShell khởi động và kiểm thử tự động ([scripts/dev.ps1](scripts/dev.ps1), [scripts/test.ps1](scripts/test.ps1)).
-- **`tests/`**: Bộ kiểm thử hồi quy được bảo vệ tuyệt đối (`history.test.cjs`, `api_schemas.test.cjs`), đạt tỷ lệ Pass 100%.
+## 1. Giới Thiệu Tổng Quan
 
-## 1. Chuẩn bị
+**SortiX Dashboard** là nền tảng quản trị và vận hành toàn diện cho dây chuyền phân loại sản phẩm tự động. Hệ thống kết nối đồng bộ giữa vi điều khiển IoT (**ESP32-C5**), camera nhận diện thương hiệu/nhãn chai lọ, cụm cảm biến hồng ngoại, cánh gạt servo 3 khay và giao diện Dashboard giám sát 60fps trên nền tảng Web.
 
-Cài đặt các phần mềm sau trước khi chạy:
+### Tính năng nổi bật:
+- 🚀 **Trực quan hóa vật lý 60fps (HTML5 Canvas)**: Mô phỏng hành vi di chuyển của phôi chai/lon trên băng tải, qua cảm biến phát hiện và chuyển hướng vào đúng khay theo thời gian thực.
+- 🔊 **Âm thanh công nghiệp thuần (Web Audio API)**: Bộ phát âm thanh tổng hợp tín hiệu âm thanh cảnh báo còi hú, gạt servo, nạp phôi và sự cố mà không cần file MP3 ngoài.
+- 📡 **Kết nối IoT thời gian thực qua MQTT (WebSocket Secure)**: Thu thập telemetry (vận tốc encoder, nhiệt độ vi điều khiển, trạng thái cảm biến S1-S3) và truyền lệnh điều khiển 2 chiều.
+- 👥 **Quản lý người dùng & Phân quyền chặt chẽ (RBAC)**: Đầy đủ các luồng Đăng ký, Đăng nhập, Đổi mật khẩu, Quên mật khẩu OTP, Khóa/Mở tài khoản và chống leo thang đặc quyền.
+- 🚨 **Cảnh báo đa kênh tức thời**: Tích hợp tự động gửi Email (SMTP) và tin nhắn khẩn cấp qua Telegram Bot khi kích hoạt Dừng khẩn cấp (E-Stop) hoặc xảy ra kẹt phôi.
 
-- Node.js 18.17 trở lên (khuyến nghị dùng bản LTS).
-- npm, được cài kèm Node.js.
-- Trình duyệt hiện đại như Chrome, Edge hoặc Firefox.
+---
 
-## 2. Cài đặt và chạy lần đầu
+## 2. Kiến Trúc Hệ Thống (Monorepo Architecture)
 
-Mở PowerShell tại thư mục chứa dự án rồi chạy:
+Mã nguồn được tổ chức theo chuẩn **Monorepo (npm workspaces)** với sự phân định rạch ròi giữa Frontend, Backend độc lập và tầng Thư viện Dùng chung:
 
+```
+SortiX-Dashboard/
+├── backend/                  # Standalone Backend Server (Node.js/Express + TypeScript)
+│   ├── database/             # File migrations (SQLite, PostgreSQL, MySQL, MongoDB) & Seeds
+│   │   ├── migrations/       # SQL scripts tạo bảng Users & Schema
+│   │   └── seeds/            # Khởi tạo 4 tài khoản Quản trị viên ban đầu
+│   ├── src/
+│   │   ├── config/           # Cấu hình biến môi trường và runtime
+│   │   ├── controllers/      # Điều phối nghiệp vụ (user, config, history, stats, alert)
+│   │   ├── middlewares/      # Auth JWT/Bearer, Zod validator, Error Handler
+│   │   ├── models/           # Quản lý tầng dữ liệu (UserModel, HistoryModel, ConfigModel)
+│   │   ├── routes/           # RESTful API endpoints (/api/auth, /api/users, /api/config, ...)
+│   │   ├── services/         # Logic nghiệp vụ cốt lõi (Bcrypt hashing, OTP, Email, Telegram)
+│   │   └── server.ts         # Điểm khởi động HTTP Express Server (Port 5000)
+│   └── package.json
+├── frontend/                 # Client UI Next.js 14 App Router
+│   ├── public/               # Tài nguyên tĩnh, hình ảnh giao diện
+│   ├── src/
+│   │   ├── app/              # 9 Trang App Router (overview, conveyor, analytics, history, ...)
+│   │   ├── components/       # Components mô-đun hóa (overview/, conveyor/, layout/, ui/)
+│   │   ├── contexts/         # React Contexts (AuthContext, Theme, ...)
+│   │   ├── hooks/            # Hooks vật lý (useConveyorPhysics), useMQTT, useSorterData
+│   │   ├── lib/              # Client utilities, Audio Service, Data Processor, CSV Exporter
+│   │   └── services/         # Fetch API clients kết nối Backend RESTful
+│   └── package.json
+├── shared/                   # Tầng dùng chung giữa FE và BE
+│   ├── constants/            # Hằng số toàn hệ thống (Topics MQTT, mã màu khay, role)
+│   ├── schemas/              # Zod validation schemas (.passthrough() linh hoạt cho firmware)
+│   ├── types/                # TypeScript interfaces chuẩn mực
+│   └── package.json
+├── data/                     # Dữ liệu cục bộ bền vững (users.json)
+├── docs/                     # Tài liệu kỹ thuật chi tiết
+│   ├── architecture.md       # Thiết kế kiến trúc phân tầng & data flow
+│   ├── api.md                # Đặc tả toàn bộ RESTful API endpoints
+│   └── REFACTOR_PLAN.md      # Kế hoạch & lộ trình nâng cấp hệ thống
+├── scripts/                  # Scripts hỗ trợ tự động hóa (PowerShell)
+│   ├── dev.ps1               # Khởi chạy đồng bộ Frontend & Backend
+│   └── test.ps1              # Chạy toàn bộ test suites
+├── tests/                    # Bộ kiểm thử hồi quy tự động (Pass 100%)
+│   ├── history.test.cjs      # 9 bài test lưu trữ, khôi phục & dọn dẹp lịch sử
+│   ├── api_schemas.test.cjs  # 3 bài test xác thực schema Zod & passthrough
+│   └── users.test.cjs        # 14 bài test bảo mật tài khoản, Bcrypt, OTP & RBAC
+├── .env.example              # Mẫu biến môi trường cho Frontend Next.js
+└── package.json              # Root package quản lý Monorepo Workspaces
+```
+
+---
+
+## 3. Công Nghệ Sử Dụng
+
+- **Frontend**: Next.js 14 (App Router), React 18, TypeScript, TailwindCSS, Lucide React, Recharts.
+- **Backend**: Node.js, Express.js, TypeScript, Bcryptjs, Nodemailer, Telegram Bot API.
+- **Dữ liệu & Xác thực**: Zod, JSON Store bền vững (`data/users.json`), Sẵn sàng kết nối SQLite / PostgreSQL / MySQL / MongoDB.
+- **Truyền thông IoT**: MQTT over WebSocket (MQTT.js), Giao thức kết nối vi điều khiển ESP32-C5 qua Wi-Fi 6.
+- **Đồ họa & Âm thanh**: HTML5 Canvas API (Physics Loop 60fps), Web Audio API (Chíp âm công nghiệp tổng hợp).
+
+---
+
+## 4. Tài Khoản Mặc Định & Phân Quyền (RBAC)
+
+Hệ thống được khởi tạo sẵn **4 tài khoản Quản trị viên (Admin)** đại diện cho các thành viên phát triển đề tài PBL3 và tài khoản Người dùng (User):
+
+| Họ và tên | Username / Email | Mật khẩu mặc định | Vai trò | Quyền hạn |
+| :--- | :--- | :--- | :--- | :--- |
+| **Nguyễn Tá Duy Phong** | `admin1` / `admin1@gmail.com` | `123456` | **Quản trị viên (Admin)** | Toàn quyền cấu hình máy, xóa dữ liệu, dừng khẩn cấp, quản lý thành viên |
+| **Nguyễn Nhật Minh** | `admin2` / `admin2@gmail.com` | `123456` | **Quản trị viên (Admin)** | Toàn quyền cấu hình máy, xóa dữ liệu, dừng khẩn cấp, quản lý thành viên |
+| **Trần Đăng Lợi** | `admin3` / `admin3@gmail.com` | `123456` | **Quản trị viên (Admin)** | Toàn quyền cấu hình máy, xóa dữ liệu, dừng khẩn cấp, quản lý thành viên |
+| **Nguyễn Đình Anh Tuấn** | `admin4` / `admin4@gmail.com` | `123456` | **Quản trị viên (Admin)** | Toàn quyền cấu hình máy, xóa dữ liệu, dừng khẩn cấp, quản lý thành viên |
+| **Tài khoản Thử nghiệm** | `duyphong` / `duyphong@gmail.com` | `123456` | **Người vận hành (User)** | Theo dõi dashboard, giám sát băng tải, xem thống kê & lịch sử phân loại |
+
+> 🔒 **Cơ chế bảo vệ nâng cao**:
+> - Mọi tài khoản mới tạo qua trang Đăng ký tự do đều **bị ép cứng role: 'user'** để ngăn chặn leo thang đặc quyền.
+> - Quản trị viên **không thể tự xóa tài khoản của chính mình** khi đang đăng nhập.
+> - Hệ thống **bắt buộc luôn duy trì tối thiểu 1 Quản trị viên** (chặn thao tác xóa nếu chỉ còn duy nhất 1 Admin).
+
+---
+
+## 5. Cài Đặt & Khởi Chạy
+
+### 5.1. Yêu cầu hệ thống
+- **Node.js**: Phiên bản `18.17.0` trở lên (Khuyến nghị Node.js 20 LTS).
+- **Trình duyệt**: Chrome, Microsoft Edge, Brave hoặc Firefox hiện đại.
+
+### 5.2. Cài đặt các gói phụ thuộc
+Tại thư mục gốc dự án:
 ```powershell
-cd SortiX-Dashboard
 npm install
-copy .env.local.example .env.local
-npm run dev
 ```
 
-Mở trình duyệt tại [http://localhost:3000](http://localhost:3000).
-
-Nếu cổng 3000 đang được sử dụng, chạy bằng cổng khác:
-
+### 5.3. Thiết lập biến môi trường
+Tạo tệp `.env` từ tệp mẫu:
 ```powershell
-npm run dev -- -p 3001
+copy .env.example .env
+copy backend\.env.example backend\.env
 ```
 
-Sau đó truy cập [http://localhost:3001](http://localhost:3001).
+### 5.4. Khởi chạy ứng dụng
 
-### Chạy bản production
-
+#### Cách 1: Khởi chạy nhanh toàn bộ hệ thống bằng Script PowerShell
 ```powershell
-npm run build
-npm start
+.\scripts\dev.ps1
 ```
 
-### Kiểm tra nhanh mã nguồn
+#### Cách 2: Chạy riêng lẻ từng dịch vụ
+- **Chạy giao diện Frontend (Next.js - Port 3000)**:
+  ```powershell
+  npm run dev
+  ```
+- **Chạy máy chủ Backend (Express API - Port 5000)**:
+  ```powershell
+  npm run dev --workspace=backend
+  ```
 
-```powershell
-npm test
-npx tsc --noEmit --pretty false
-```
+Truy cập hệ thống tại: **[http://localhost:3000](http://localhost:3000)**.
 
-`npm test` chạy các kiểm tra hồi quy cho lịch sử và migration LocalStorage. Lệnh TypeScript kiểm tra toàn bộ mã nguồn mà không tạo file build. Trước khi mở pull request, nên chạy cả hai lệnh sau khi cài dependency sạch.
+---
 
-## 3. Đăng nhập
+## 6. Chế Độ Vận Hành: Mô Phỏng vs. Máy Thật
 
-Ứng dụng có sẵn hai tài khoản demo:
+Người dùng có thể chuyển đổi linh hoạt chế độ vận hành ngay trên thanh tiêu đề (**TopHeader**):
 
-| Vai trò | Email | Mật khẩu | Quyền chính |
-| --- | --- | --- | --- |
-| Quản trị viên | `admin@pbl3.local` | `admin123` | Xem và cấu hình toàn bộ, xóa lịch sử/cảnh báo, dừng khẩn cấp |
-| Vận hành | `operator@pbl3.local` | `operator123` | Theo dõi dashboard, băng tải, lịch sử và cảnh báo theo quyền được cấp |
+### 6.1. Chế độ Mô Phỏng (Simulation Mode)
+- **Mục đích**: Vận hành giả lập kiểm thử trực quan trên máy tính mà không cần cắm phần cứng ESP32 hay camera thật.
+- **Hoạt động**:
+  - Dữ liệu hoàn toàn độc lập, không gửi bản ghi giả vào hệ thống phần cứng thật.
+  - Sử dụng các nút **Nạp nhanh (Coca-Cola, Pepsi, Red Bull, Aquafina)** hoặc **Phôi ngẫu nhiên** để đưa phôi lên băng chuyền.
+  - Hỗ trợ nút **Tạo dữ liệu demo** để tạo nhanh 50–100 bản ghi lịch sử phục vụ vẽ đồ thị thống kê.
+  - Điều chỉnh tốc độ băng tải từ 10% đến 100% kèm âm thanh động cơ mô phỏng tương ứng.
 
-Đây là tài khoản demo phía trình duyệt, phù hợp cho phát triển và trình diễn. Phiên đăng nhập được lưu trong LocalStorage và hết hạn sau 12 giờ; dữ liệu LocalStorage có thể bị người dùng chỉnh sửa. Không dùng cơ chế này làm hệ thống xác thực production nếu chưa thay bằng backend an toàn.
+### 6.2. Chế độ Máy Thật (Live Hardware Mode)
+- **Mục đích**: Kết nối trực tiếp với hệ thống phần cứng thực tế qua giao thức MQTT.
+- **Hoạt động**:
+  - Nhận luồng dữ liệu phân loại từ camera AI (Vision topic: `sorter/01/vision`).
+  - Lắng nghe tín hiệu cảm biến hồng ngoại S1, S2, S3 và bộ mã hóa encoder (Telemetry: `sorter/01/telemetry`).
+  - Giao diện ẩn toàn bộ các nút nạp giả lập để đảm bảo tính toàn vẹn của dữ liệu sản xuất.
+  - Kích hoạt lệnh điều khiển hoặc cấu hình phân loại đẩy ngược lại thiết bị (`sorter/01/control`, `sorter/01/config`).
 
-## 4. Quy trình dùng thử nhanh ở chế độ mô phỏng
+---
 
-1. Đăng nhập bằng tài khoản quản trị viên.
-2. Trên thanh đầu trang, chọn **Mô phỏng** nếu ứng dụng đang ở chế độ **Máy thật**.
-3. Mở trang **Băng Tải**.
-4. Nhấn **Khởi động** để chạy băng tải.
-5. Nhấn một trong các nút nạp nhanh Coca-Cola, Pepsi, Red Bull hoặc Aquafina để đưa vật mẫu lên băng tải. Có thể dùng **Phôi ngẫu nhiên** để chọn ngẫu nhiên một loại.
-6. Theo dõi vật mẫu di chuyển, khay đích, số lượng phân loại và tốc độ.
-7. Mở **Tổng Quan**, **Thống Kê** hoặc **Lịch Sử** để xem kết quả.
+## 7. Các Trang Chức Năng Chính
 
-Ứng dụng **không tự tạo dữ liệu mẫu khi chạy `npm run dev`**. Vì vậy, nếu chưa chạy mô phỏng hoặc chưa bấm nút tạo dữ liệu, lịch sử có thể trống.
+| Trang | Đường dẫn | Chức năng chính |
+| :--- | :--- | :--- |
+| **Tổng Quan** | `/` | Hiển thị các thẻ KPI thời gian thực, widget sức khỏe thiết bị ESP32, trạng thái 3 khay chứa và lịch hoạt động. |
+| **Băng Tải** | `/conveyor` | Trực quan hóa băng chuyền Canvas 60fps, điều chỉnh tốc độ, dừng khẩn cấp E-Stop, 3 khay xả phôi. |
+| **Thống Kê** | `/analytics` | Biểu đồ Recharts phân tích sản lượng theo giờ, tỷ lệ phân loại thành công, phân bố nhãn hàng. |
+| **Lịch Sử** | `/history` | Bảng tra cứu dữ liệu phân loại chi tiết, bộ lọc theo ngày/thương hiệu/khay, xuất dữ liệu CSV, xóa dữ liệu. |
+| **Cảnh Báo** | `/alerts` | Danh sách sự cố (kẹt phôi, dừng khẩn cấp, quá nhiệt), lọc theo mức độ rủi ro, kiểm tra trạng thái gửi Mail/Telegram. |
+| **Cấu Hình** | `/config` | Gán quy tắc phân loại nhãn vào khay 1, 2 hoặc khay lỗi (khay 3), quản lý versioning cấu hình. |
+| **Thiết Bị & IoT**| `/devices` | Giám sát kết nối Broker MQTT, độ trễ mạng, IP thiết bị, tín hiệu encoder và các thông số telemetry. |
+| **Người Dùng** | `/users` | Quản lý danh sách thành viên (chỉ Admin), tạo tài khoản, phân quyền RBAC, khóa/mở khóa tài khoản. |
+| **Đăng Nhập** | `/login` | Đăng nhập tài khoản, đăng ký tài khoản mới, quên mật khẩu và xác thực mã OTP 6 số. |
 
-## 5. Tạo dữ liệu demo hàng loạt
+---
 
-Trong trang **Băng Tải**, ở chế độ **Mô phỏng**, nhấn **Tạo dữ liệu demo**.
+## 8. Hệ Thống Xác Thực & Bảo Mật
 
-- Ứng dụng sẽ tạo ngẫu nhiên một tập bản ghi phân loại trong khoảng 72 giờ gần nhất.
-- Dữ liệu được dùng cho biểu đồ, dashboard và lịch sử.
-- Nút này không đưa từng vật thể trực quan lên băng tải; muốn xem vật thể di chuyển, hãy dùng các nút nạp nhanh.
-- Nếu không nhấn nút này và cũng chưa chạy mô phỏng, ứng dụng sẽ không có dữ liệu mẫu sẵn.
+1. **Bảo mật mật khẩu**: Mọi mật khẩu người dùng đều được băm bằng thuật toán **Bcrypt (10 salt rounds)**, không lưu trữ mật khẩu thuần.
+2. **Quy trình Khôi phục Mật khẩu (Forgot Password)**:
+   - Cơ chế tạo mã Mock OTP ngẫu nhiên gồm 6 chữ số.
+   - Thời gian sống OTP giới hạn trong **5 phút**.
+   - Chống tái sử dụng mã OTP đã dùng.
+   - Chặn khôi phục từ bên ngoài đối với các tài khoản Quản trị viên (Admin chỉ đổi mật khẩu khi đã đăng nhập).
+3. **Phân quyền vai trò (Role-Based Access Control - RBAC)**:
+   - `admin`: Toàn quyền thao tác trên hệ thống.
+   - `user`: Giám sát và theo dõi, bị chặn mã lỗi `403 Forbidden` khi cố tình gọi API quản trị.
+4. **Bảo vệ Payload Thiết Bị (Zod Passthrough)**:
+   - Các Zod Schema xác thực dữ liệu từ thiết bị IoT luôn có thuộc tính `.passthrough()`, giúp ứng dụng không bị crash khi firmware cập nhật thêm trường dữ liệu mở rộng.
 
-## 6. Điều khiển băng tải và tốc độ
+---
 
-- **Khởi động / Tạm dừng:** bắt đầu hoặc tạm dừng mô phỏng.
-- **DỪNG KHẨN CẤP:** dừng ngay hoạt động mô phỏng; thao tác này yêu cầu quyền phù hợp.
-- **Thanh tốc độ:** điều chỉnh từ 10% đến 100%.
-- Nhãn phần trăm bên phải thanh trượt luôn hiển thị **giá trị đang chỉnh hiện tại**, kể cả khi băng tải đang dừng hoặc chưa có vật mẫu.
-- Mỗi khay có sức chứa giới hạn. Khi khay đầy, mở khay để xem tùy chọn xóa/giải phóng dữ liệu theo quyền người dùng.
+## 9. Kiểm Thử & Đảm Bảo Chất Lượng (QA)
 
-## 7. Các trang chính
-
-| Trang | Mục đích |
-| --- | --- |
-| **Tổng Quan** | Xem KPI, trạng thái hệ thống, năng suất và các cảnh báo nổi bật. |
-| **Thống Kê** | Phân tích sản lượng, tỷ lệ phân loại, thương hiệu và xu hướng theo thời gian. |
-| **Băng Tải** | Chạy mô phỏng, theo dõi vật mẫu, khay đích và điều chỉnh tốc độ. |
-| **Lịch Sử** | Tra cứu, lọc theo thời gian, xem và xuất CSV các bản ghi phân loại. Quản trị viên có thể xóa lịch sử. |
-| **Cảnh Báo** | Lọc cảnh báo theo mức độ, xem chi tiết và xuất CSV. Quản trị viên có thể xóa toàn bộ cảnh báo. |
-| **Cấu Hình** | Xem/chỉnh sửa cấu hình phân loại và xuất bản cấu hình nếu tài khoản có quyền. |
-| **MQTT & IoT** | Kiểm tra kết nối broker, trạng thái thiết bị, telemetry, encoder và phiên bản cấu hình. |
-| **Người Dùng** | Quản lý người dùng và quyền khi tài khoản được cấp quyền tương ứng. |
-
-## 8. Chế độ máy thật
-
-Để kết nối thiết bị, sao chép `.env.local.example` thành `.env.local` rồi cập nhật broker MQTT, client ID, device ID và các topic phù hợp với hệ thống. Các biến `NEXT_PUBLIC_*` là cấu hình được dùng ở phía trình duyệt; token Telegram, mật khẩu SMTP và thông tin nhạy cảm không được đưa vào mã nguồn hoặc commit Git.
-
-Trong chế độ **Máy thật**:
-
-- Dữ liệu phải đến từ MQTT/camera và thiết bị đang hoạt động.
-- Thanh nút nạp mẫu và nút tạo dữ liệu demo không hiển thị.
-- Vào **MQTT & IoT** để kiểm tra kết nối trước khi vận hành.
-- Chỉ gửi lệnh điều khiển khi đã xác nhận đúng thiết bị và đúng broker.
-- API gửi cảnh báo kiểm tra payload, giới hạn tần suất và thời gian chờ; có thể đặt `INTERNAL_API_SECRET` khi endpoint được gọi bởi backend tin cậy.
-- Các giá trị broker mẫu trong `.env.local.example` chỉ dành cho phát triển; production cần broker riêng, TLS và xác thực phù hợp.
-
-## 9. Dữ liệu được lưu ở đâu?
-
-Ở môi trường hiện tại, dữ liệu giao diện được lưu trong `localStorage` của trình duyệt. Dữ liệu mô phỏng và máy thật được tách riêng theo chế độ. Hệ thống giữ tối đa 500 bản ghi lịch sử, 100 cảnh báo và 50 sản phẩm cho mỗi khay. Làm mới trang không xóa dữ liệu; dùng chức năng xóa trong **Lịch Sử** hoặc **Cảnh Báo** khi cần dọn dẹp.
-
-Khi đọc dữ liệu, ứng dụng kiểm tra kiểu, loại bỏ bản ghi hỏng và chuẩn hóa counter không hợp lệ. Đây là cơ chế bảo vệ giao diện, không phải cơ sở dữ liệu giao dịch; dữ liệu quan trọng nên được lưu ở backend hoặc hệ thống lưu trữ riêng.
-
-Nếu trình duyệt còn dữ liệu cũ từ phiên bản trước, hãy đăng nhập lại, chọn đúng chế độ rồi xóa lịch sử/cảnh báo từ giao diện. Có thể xóa dữ liệu website trong phần Developer Tools của trình duyệt nếu muốn bắt đầu hoàn toàn từ đầu.
-
-## 10. Xử lý lỗi thường gặp
-
-**`npm` hoặc `node` không được nhận diện**
-
-Cài Node.js LTS, đóng rồi mở lại PowerShell và kiểm tra bằng `node -v` và `npm -v`.
-
-**Không mở được trang ở cổng 3000**
-
-Kiểm tra cửa sổ chạy dev server hoặc dùng `npm run dev -- -p 3001`.
-
-**Trang máy thật báo MQTT mất kết nối**
-
-Kiểm tra giá trị trong `.env.local`, broker có cho phép kết nối WebSocket hay không, đúng port/topic hay không và máy tính có truy cập được mạng/broker hay không.
-
-Sau khi kết nối lại, dashboard tự đăng ký lại các topic đã cấu hình. Nếu broker yêu cầu TLS hoặc xác thực, hãy dùng URL WebSocket bảo mật và thông tin xác thực do quản trị broker cấp.
-
-**Không thấy dữ liệu trong biểu đồ hoặc lịch sử**
-
-Ở chế độ mô phỏng, hãy chạy băng tải với nút nạp mẫu hoặc nhấn **Tạo dữ liệu demo**. Ứng dụng được thiết kế để khởi động với dữ liệu trống.
-
-**Không thấy nút nạp mẫu**
-
-Nút này chỉ hiển thị trong **Mô phỏng**. Hãy kiểm tra chế độ ở thanh đầu trang; ở **Máy thật**, nút bị ẩn có chủ ý.
-
-## 11. Lưu ý an toàn
-
-Không dùng mật khẩu demo, broker công khai hoặc thông tin SMTP mẫu trong môi trường production. Các API cảnh báo chỉ nhận JSON đúng schema, giới hạn tần suất và có timeout khi gọi dịch vụ bên ngoài. Nếu API được gọi bởi backend tin cậy, đặt `INTERNAL_API_SECRET`; không đưa secret này vào biến `NEXT_PUBLIC_*` hoặc mã nguồn.
-
-Khi kết nối phần cứng thật, cần phân quyền theo người dùng, bảo vệ broker bằng TLS/xác thực, giới hạn quyền publish/subscribe theo topic và kiểm tra nút dừng khẩn cấp trước khi vận hành. Cơ chế đăng nhập demo hiện tại chỉ dành cho phát triển/trình diễn và cần được thay bằng session server-side, cookie bảo mật hoặc nhà cung cấp IAM trước khi triển khai thực tế.
-
-## 12. Biến môi trường
-
-Sao chép `.env.local.example` thành `.env.local`. Các biến có tiền tố `NEXT_PUBLIC_` được gửi tới trình duyệt và chỉ nên chứa cấu hình không bí mật.
-
-| Nhóm | Biến | Mục đích |
-| --- | --- | --- |
-| MQTT | `NEXT_PUBLIC_MQTT_BROKER_URL`, `NEXT_PUBLIC_MQTT_CLIENT_ID` | URL WebSocket và mã client dashboard. |
-| MQTT | `NEXT_PUBLIC_DEFAULT_DEVICE_ID` và các biến `NEXT_PUBLIC_MQTT_TOPIC_*` | Thiết bị mặc định và topic status, vision, telemetry, control, config, alerts. |
-| Telegram | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Secret và đích nhận cảnh báo phía server. |
-| Email | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `ALERT_EMAIL_TO` | Cấu hình SMTP và địa chỉ nhận cảnh báo. |
-| API tùy chọn | `INTERNAL_API_SECRET` | Bearer secret cho backend tin cậy gọi API cảnh báo. Để trống khi dashboard gọi API same-origin trực tiếp. |
-
-Không commit `.env.local`. Khi triển khai, cấu hình secret trong secret manager của nền tảng hosting và dùng broker riêng có TLS.
-
-## 13. Trạng thái kiểm tra
-
-Các kiểm tra hiện có:
+Dự án sở hữu bộ kiểm thử tự động toàn diện với **26/26 Tests PASS (100%)**:
 
 ```powershell
 npm test
-npx tsc --noEmit --pretty false
-npm run build
 ```
 
-`npm run build` cần môi trường có quyền tạo worker process cho Next.js. Nếu môi trường bị chính sách Windows chặn `spawn`, hãy dùng hai lệnh kiểm tra đầu tiên để xác nhận test và typecheck, sau đó chạy build trên máy CI hoặc máy phát triển có quyền đầy đủ.
+### Chi tiết các bộ test:
+- **`tests/history.test.cjs` (9 tests)**: Kiểm tra lưu trữ, phân trang, migrate dữ liệu LocalStorage và cô lập dữ liệu rác.
+- **`tests/api_schemas.test.cjs` (3 tests)**: Kiểm tra tính toàn vẹn của SorterConfigSchema, ClassificationRecordSchema và HistoryQuerySchema.
+- **`tests/users.test.cjs` (14 tests)**: Kiểm tra bảo mật tài khoản, Admin Seeder, ràng buộc mật khẩu, cơ chế chống leo thang đặc quyền, RBAC, Mock OTP và bảo vệ xóa tài khoản Admin.
+
+Kiểm tra kiểu dữ liệu nghiêm ngặt toàn bộ dự án:
+```powershell
+npx tsc --noEmit --pretty false
+```
+
+---
+
+## 10. Biến Môi Trường (Environment Variables)
+
+Xem chi tiết tại [`.env.example`](.env.example):
+
+| Biến môi trường | Mục đích | Ví dụ |
+| :--- | :--- | :--- |
+| `NEXT_PUBLIC_MQTT_BROKER_URL` | WebSocket URL kết nối MQTT Broker | `ws://broker.emqx.io:8083/mqtt` |
+| `NEXT_PUBLIC_DEFAULT_DEVICE_ID` | Mã định danh thiết bị máy phân loại | `sorter_01` |
+| `NEXT_PUBLIC_MQTT_TOPIC_TELEMETRY` | Topic nhận telemetry cảm biến | `sorter/01/telemetry` |
+| `NEXT_PUBLIC_MQTT_TOPIC_VISION` | Topic nhận kết quả nhận diện camera | `sorter/01/vision` |
+| `NEXT_PUBLIC_MQTT_TOPIC_CONTROL` | Topic gửi lệnh điều khiển | `sorter/01/control` |
+| `TELEGRAM_BOT_TOKEN` | Token Bot gửi thông báo cảnh báo | `123456789:ABCdefGhI...` |
+| `TELEGRAM_CHAT_ID` | ID phòng chat nhận cảnh báo Telegram | `-100123456789` |
+| `SMTP_HOST` / `SMTP_PORT` | Máy chủ SMTP gửi email khẩn cấp | `smtp.gmail.com` / `587` |
+| `INTERNAL_API_SECRET` | Khóa xác thực nội bộ cho các API quan trọng | `your_secret_key_here` |
+
+---
+
+## 11. Xử Lý Sự Cố Thường Gặp (Troubleshooting)
+
+- **Cổng 3000 bị chiếm dụng**:
+  Chạy ứng dụng trên cổng khác: `npm run dev -- -p 3001`.
+- **Trang Máy Thật hiển thị MQTT Disconnected**:
+  Kiểm tra Broker URL trong tệp `.env` có đúng định dạng WebSocket (`ws://` hoặc `wss://`) và kiểm tra kết nối mạng cục bộ tới Broker.
+- **Lịch sử không hiển thị bản ghi mới**:
+  Ở chế độ Mô phỏng, nhấn các nút nạp nhanh sản phẩm hoặc nhấn nút **Tạo dữ liệu demo** tại trang Băng Tải.
+
+---
+
+## 👥 Nhóm Tác Giả & Đóng Góp (PBL3 Team)
+- **Nguyễn Tá Duy Phong** (Trưởng nhóm)
+- **Nguyễn Nhật Minh**
+- **Trần Đăng Lợi**
+- **Nguyễn Đình Anh Tuấn**
+
+*Khoa Điện - Điện Tử / Công Nghệ Thông Tin — Trường Đại học Bách Khoa, Đại học Đà Nẵng.*
