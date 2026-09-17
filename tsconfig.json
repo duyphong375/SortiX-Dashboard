@@ -13,15 +13,10 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./frontend/src/*"],
+      "@shared/*": ["./shared/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "legacy_static"]
+  "include": ["frontend/next-env.d.ts", "frontend/src/**/*.ts", "frontend/src/**/*.tsx", "shared/**/*.ts", "src/**/*.ts"]
 }

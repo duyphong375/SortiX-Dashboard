@@ -5,7 +5,16 @@ SortiX Dashboard là giao diện theo dõi và điều khiển hệ thống phâ
 - **Mô phỏng:** chạy thử ngay trên máy tính, không cần ESP32 hay camera. Dữ liệu lịch sử chỉ xuất hiện khi người dùng tạo mẫu hoặc chạy mô phỏng.
 - **Máy thật:** nhận trạng thái, dữ liệu camera và telemetry từ thiết bị qua MQTT. Các nút tạo mẫu bị ẩn để tránh gửi dữ liệu giả vào quy trình thật.
 
-Các module chính nằm trong `src/`: `app/` chứa các trang và API route, `components/` chứa giao diện, `hooks/` quản lý mô phỏng/MQTT, còn `lib/` xử lý schema, lịch sử, quyền, cảnh báo và xuất dữ liệu. Dữ liệu trình duyệt được tách riêng giữa mô phỏng và máy thật.
+## 0. Kiến Trúc Dự Án (Monorepo Separation)
+
+Dự án được tái cấu trúc theo mô hình phân tách rõ ràng giữa Frontend, Backend và Shared Layer:
+
+- **`frontend/` & `src/`**: Next.js 14 Client, App Router, Components theo từng tính năng, Hooks vật lý 60fps và API Fetch Clients.
+- **`backend/`**: Standalone Backend Server (Node.js/TypeScript), Controllers, Routes, Services, Models, Nodemailer & Telegram Bot alerts.
+- **`shared/`**: Kiểu dữ liệu (`types/`), Zod schemas có `.passthrough()` (`schemas/`), hằng số hệ thống (`constants/`) dùng chung cho cả FE và BE.
+- **`docs/`**: Tài liệu kỹ thuật chi tiết ([docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md)).
+- **`scripts/`**: Tiện ích PowerShell khởi động và kiểm thử tự động ([scripts/dev.ps1](scripts/dev.ps1), [scripts/test.ps1](scripts/test.ps1)).
+- **`tests/`**: Bộ kiểm thử hồi quy được bảo vệ tuyệt đối (`history.test.cjs`, `api_schemas.test.cjs`), đạt tỷ lệ Pass 100%.
 
 ## 1. Chuẩn bị
 

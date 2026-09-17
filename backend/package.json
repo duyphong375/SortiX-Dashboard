@@ -1,0 +1,22 @@
+{
+  "name": "@sortix/backend",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/server.ts",
+  "scripts": {
+    "dev": "node src/server.js",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "bcryptjs": "^3.0.3",
+    "nodemailer": "^6.9.15",
+    "zod": "^4.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.5",
+    "@types/nodemailer": "^6.4.16",
+    "typescript": "^5.6.2"
+  }
+}
