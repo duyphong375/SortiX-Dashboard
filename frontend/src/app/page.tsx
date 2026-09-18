@@ -6,6 +6,7 @@ import { KpiStatGrid } from "@/components/overview/KpiStatGrid";
 import { LiveHealthAndBinWidget } from "@/components/overview/LiveHealthAndBinWidget";
 import { CalendarWidget } from "@/components/overview/CalendarWidget";
 import { RecentActivityList } from "@/components/overview/RecentActivityList";
+import { TemperatureGaugeWidget } from "@/components/ui/TemperatureGaugeWidget";
 
 export default function DashboardPage() {
   const {
@@ -21,16 +22,23 @@ export default function DashboardPage() {
     handleEmergencyStop,
     pingMs,
     isSimulation,
+    isDeviceOffline,
+    handleSetBinCount,
+    binCapacities,
+    handleSetBinCapacity,
+    handleTriggerTemperatureWarning,
+    handleCoolDownTemperature,
   } = useDashboard();
 
   const totalSorted = binCounts.bin1 + binCounts.bin2 + binCounts.bin3;
 
-  // Xác định ESP32 có đang online thực sự hay không
+  // Xác định ESP32 có đang online thực sự hay không (nhịp tim ping mỗi 2s, quá 6s coi như ngắt)
   const isEspConnected =
+    !isDeviceOffline &&
     !isSimulation &&
     mqttStatus === "connected" &&
     telemetry.last_heartbeat !== "" &&
-    Date.now() - new Date(telemetry.last_heartbeat).getTime() < 15000;
+    Date.now() - new Date(telemetry.last_heartbeat).getTime() < 6000;
 
   // Tính độ tin cậy AI trung bình thực tế từ danh sách records
   const avgConfidence =
@@ -61,6 +69,7 @@ export default function DashboardPage() {
         visualItemsCount={visualItems.length}
         avgConfidence={avgConfidence}
         pingMs={pingMs}
+        isDeviceOffline={isDeviceOffline}
       />
 
       {/* HÀNG 2: GIÁM SÁT NHANH & LỊCH VẬN HÀNH */}
@@ -78,15 +87,45 @@ export default function DashboardPage() {
             bin2Brands={bin2Brands}
             handleToggleRun={handleToggleRun}
             handleEmergencyStop={handleEmergencyStop}
+            isDeviceOffline={isDeviceOffline}
+            onSetBinCount={handleSetBinCount}
+            binCapacities={binCapacities}
+            onSetBinCapacity={handleSetBinCapacity}
           />
         </div>
 
-        {/* Cột 2 (1/3 chiều rộng): Bộ Lọc Thống Kê Theo Ngày */}
-        <CalendarWidget
-          records={records}
-          bin1Brands={bin1Brands}
-          bin2Brands={bin2Brands}
-        />
+        {/* Cột 2 (1/3 chiều rộng): Đồng Hồ Đo Nhiệt Độ Gauge & Bộ Lọc Thống Kê */}
+        <div className="space-y-4">
+          <TemperatureGaugeWidget
+            currentTemp={telemetry.cpu_temp}
+            thresholdTemp={75.0}
+            deviceName="Động cơ chính / CPU Edge AI"
+            isOnline={isEspConnected || isSimulation}
+            isSimulation={isSimulation}
+            onSimulateTempChange={
+              isSimulation
+                ? (temp) => {
+                    void handleTriggerTemperatureWarning(
+                      {
+                        device_name: "Main_Drive_Motor / Edge_AI_Box",
+                        current_temp: temp,
+                        threshold_temp: 75.0,
+                        unit: "°C",
+                        mode: "simulation",
+                      },
+                      "sim_slider"
+                    );
+                  }
+                : undefined
+            }
+            onCoolDown={isSimulation ? handleCoolDownTemperature : undefined}
+          />
+          <CalendarWidget
+            records={records}
+            bin1Brands={bin1Brands}
+            bin2Brands={bin2Brands}
+          />
+        </div>
       </div>
 
       {/* HÀNG 3: NHẬT KÝ HOẠT ĐỘNG MỚI NHẤT (5 BẢN GHI TÓM TẮT) */}

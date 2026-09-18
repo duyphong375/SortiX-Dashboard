@@ -116,8 +116,9 @@ export function ConveyorControls({
             min="10"
             max="100"
             value={speed}
+            disabled={telemetry.estop_pressed}
             onChange={(e) => onSpeedChange(Number(e.target.value))}
-            className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-teal-600 dark:bg-slate-800 dark:accent-cyan-500"
+            className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-teal-600 dark:bg-slate-800 dark:accent-cyan-500 disabled:opacity-40 disabled:cursor-not-allowed"
           />
           <span className="text-[11px] font-bold text-teal-600 dark:text-cyan-400">100%</span>
           <span className="shrink-0 rounded-lg border border-teal-500/30 bg-teal-500/10 px-2 py-1 font-mono text-xs font-black text-teal-700 dark:text-cyan-300">

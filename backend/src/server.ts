@@ -6,6 +6,9 @@ import { StatsRoutes } from "./routes/statsRoutes";
 import { AlertRoutes } from "./routes/alertRoutes";
 import { UserRoutes } from "./routes/userRoutes";
 import { AuthRoutes } from "./routes/authRoutes";
+import { SafetyRoutes } from "./routes/safetyRoutes";
+import { SSEService } from "./services/sseService";
+import { initBackendMQTT } from "./services/mqttService";
 import { resolveUserFromRequest, checkRolePermission } from "./middlewares/authMiddleware";
 import { ENV } from "./config/env";
 import { formatErrorResponse } from "./middlewares/errorMiddleware";
@@ -253,6 +256,106 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // SSE Stream Route (Server-Sent Events)
+    if (pathname === "/api/events" && method === "GET") {
+      SSEService.addClient(res);
+      return;
+    }
+
+    // Safety & Emergency Stop Routes
+    if (pathname === "/api/safety/status" && method === "GET") {
+      const result = SafetyRoutes.handleGetStatus();
+      sendJson(res, result.status, result.body);
+      return;
+    }
+
+    if (pathname === "/api/safety/estop" && method === "POST") {
+      const body = await parseJsonBody(req);
+      const result = SafetyRoutes.handlePostEstop(body);
+      sendJson(res, result.status, result.body);
+      return;
+    }
+
+    if (pathname === "/api/safety/jam" && method === "POST") {
+      const body = await parseJsonBody(req);
+      const result = SafetyRoutes.handlePostJam(body);
+      sendJson(res, result.status, result.body);
+      return;
+    }
+
+    if ((pathname === "/api/safety/bin-full" || pathname === "/api/storage/bin-status") && method === "POST") {
+      const body = await parseJsonBody(req);
+      const result = SafetyRoutes.handlePostBinFull(body);
+      sendJson(res, result.status, result.body);
+      return;
+    }
+
+    if ((pathname === "/api/safety/temp-warning" || pathname === "/api/telemetry/temp") && method === "POST") {
+      const body = await parseJsonBody(req);
+      const result = SafetyRoutes.handlePostTemperatureWarning(body);
+      sendJson(res, result.status, result.body);
+      return;
+    }
+
+    if ((pathname === "/api/safety/device-offline" || pathname === "/api/device/offline") && method === "POST") {
+      const body = await parseJsonBody(req);
+      const result = SafetyRoutes.handlePostDeviceOffline(body);
+      sendJson(res, result.status, result.body);
+      return;
+    }
+
+    if ((pathname === "/api/safety/heartbeat" || pathname === "/api/heartbeat" || pathname === "/api/telemetry/heartbeat") && method === "POST") {
+      const body = await parseJsonBody(req);
+      const result = SafetyRoutes.handlePostHeartbeat(body);
+      sendJson(res, result.status, result.body);
+      return;
+    }
+
+    if ((pathname === "/api/safety/shift-summary" || pathname === "/api/shift/summary") && method === "POST") {
+      const body = await parseJsonBody(req);
+      const result = SafetyRoutes.handlePostShiftSummary(body);
+      sendJson(res, result.status, result.body);
+      return;
+    }
+
+    if ((pathname === "/api/safety/mqtt-disconnected" || pathname === "/api/mqtt/disconnected") && method === "POST") {
+      const body = await parseJsonBody(req);
+      const result = SafetyRoutes.handlePostMqttDisconnected(body);
+      sendJson(res, result.status, result.body);
+      return;
+    }
+
+    if ((pathname === "/api/safety/mqtt-connected" || pathname === "/api/mqtt/connected") && method === "POST") {
+      const body = await parseJsonBody(req);
+      const result = SafetyRoutes.handlePostMqttConnected(body);
+      sendJson(res, result.status, result.body);
+      return;
+    }
+
+    if (pathname === "/api/safety/unlock" && method === "POST") {
+
+      const perm = checkRolePermission(authUser.role, ["admin"]);
+      if (!perm.allowed) {
+        sendJson(res, perm.status || 403, { success: false, message: perm.error });
+        return;
+      }
+      const body = await parseJsonBody(req);
+      const result = SafetyRoutes.handlePostUnlock(
+        { userId: authUser.userId, username: authUser.username || authUser.userId, role: authUser.role },
+        body
+      );
+      sendJson(res, result.status, result.body);
+      return;
+    }
+
+    // Notifications Route
+    if (pathname === "/api/notifications" && method === "GET") {
+      const statusParam = parsedUrl.searchParams.get("status") || undefined;
+      const result = SafetyRoutes.handleGetNotifications(statusParam);
+      sendJson(res, result.status, result.body);
+      return;
+    }
+
     // 404 Not Found
     sendJson(res, 404, { success: false, message: "Route Not Found" });
   } catch (err: unknown) {
@@ -261,6 +364,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 if (require.main === module) {
+  initBackendMQTT();
   server.listen(ENV.PORT, () => {
     console.log(`[SortiX Backend] Running on http://localhost:${ENV.PORT}`);
   });

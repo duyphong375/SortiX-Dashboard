@@ -13,16 +13,19 @@ import {
 import { getBrandName, determineTargetBin } from "@/lib/dataProcessor";
 import {
   BinCounts,
+  BinCapacities,
   loadClassificationHistory,
   saveClassificationRecord,
   saveClassificationRecordsLocal,
   clearClassificationHistory,
   loadBinCountsLocal,
+  loadBinCapacitiesLocal,
   updateBinCountsLocal,
   loadBrandCountsLocal,
   loadOperatingMode,
   saveOperatingMode,
   saveBinCountsLocal,
+  saveBinCapacitiesLocal,
   loadAlertHistory,
   clearAlertHistory,
 } from "@/lib/history";
@@ -34,16 +37,20 @@ export interface UseSorterDataProps {
   configRef: React.MutableRefObject<SorterConfig>;
   onSpawnRealVisualItem?: (item: VisualItem) => void;
   onPublishCommand?: (cmd: string, value?: number) => void;
+  onBinFullTrigger?: (binIndex: 1 | 2 | 3, count: number, maxCapacity?: number) => void;
 }
 
-export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishCommand }: UseSorterDataProps) {
+export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishCommand, onBinFullTrigger }: UseSorterDataProps) {
   const [isClient, setIsClient] = useState(false);
-  const [isSimulation, setIsSimulation] = useState<boolean>(true);
+  const [isSimulation, setIsSimulation] = useState<boolean>(false);
   const { error: showToastError, success: showToastSuccess } = useToast();
+  const onBinFullTriggerRef = useRef(onBinFullTrigger);
+  onBinFullTriggerRef.current = onBinFullTrigger;
 
   // Simulation mode states
   const [simRecords, setSimRecords] = useState<ClassificationRecord[]>([]);
   const [simBinCounts, setSimBinCounts] = useState<BinCounts>({ bin1: 0, bin2: 0, bin3: 0 });
+  const [simBinCapacities, setSimBinCapacities] = useState<BinCapacities>({ bin1: 50, bin2: 50, bin3: 50 });
   const [simBrandCounts, setSimBrandCounts] = useState<Record<string, number>>({
     brand_c: 0,
     brand_a: 0,
@@ -55,6 +62,7 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishComma
   // Real hardware mode states
   const [realRecords, setRealRecords] = useState<ClassificationRecord[]>([]);
   const [realBinCounts, setRealBinCounts] = useState<BinCounts>({ bin1: 0, bin2: 0, bin3: 0 });
+  const [realBinCapacities, setRealBinCapacities] = useState<BinCapacities>({ bin1: 50, bin2: 50, bin3: 50 });
   const [realBrandCounts, setRealBrandCounts] = useState<Record<string, number>>({
     brand_c: 0,
     brand_a: 0,
@@ -77,6 +85,10 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishComma
   simBinCountsRef.current = simBinCounts;
   const realBinCountsRef = useRef<BinCounts>(realBinCounts);
   realBinCountsRef.current = realBinCounts;
+  const simBinCapacitiesRef = useRef<BinCapacities>(simBinCapacities);
+  simBinCapacitiesRef.current = simBinCapacities;
+  const realBinCapacitiesRef = useRef<BinCapacities>(realBinCapacities);
+  realBinCapacitiesRef.current = realBinCapacities;
 
   const recentSortTimesSimRef = useRef<number[]>([]);
   const recentSortTimesRealRef = useRef<number[]>([]);
@@ -90,17 +102,21 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishComma
     // 1. Sim Data
     const loadedSimRecords = loadClassificationHistory(true);
     const loadedSimCounts = loadBinCountsLocal(true);
+    const loadedSimCapacities = loadBinCapacitiesLocal(true);
     const loadedSimBrands = loadBrandCountsLocal(true);
     setSimRecords(loadedSimRecords);
     setSimBinCounts(loadedSimCounts);
+    setSimBinCapacities(loadedSimCapacities);
     setSimBrandCounts(loadedSimBrands);
 
     // 2. Real Data
     const loadedRealRecords = loadClassificationHistory(false);
     const loadedRealCounts = loadBinCountsLocal(false);
+    const loadedRealCapacities = loadBinCapacitiesLocal(false);
     const loadedRealBrands = loadBrandCountsLocal(false);
     setRealRecords(loadedRealRecords);
     setRealBinCounts(loadedRealCounts);
+    setRealBinCapacities(loadedRealCapacities);
     setRealBrandCounts(loadedRealBrands);
 
     // 3. Alerts
@@ -129,10 +145,10 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishComma
   }, []);
 
   // Toggle Mode Handler
-  const toggleSimulationMode = useCallback(() => {
+  const toggleSimulationMode = useCallback((targetMode?: boolean) => {
     industrialAudio.playClick();
     setIsSimulation((prev) => {
-      const next = !prev;
+      const next = typeof targetMode === "boolean" ? targetMode : !prev;
       saveOperatingMode(next);
       return next;
     });
@@ -258,23 +274,27 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishComma
       ? simBinCountsRef.current[`bin${actualBin}` as keyof BinCounts] || 0
       : realBinCountsRef.current[`bin${actualBin}` as keyof BinCounts] || 0;
 
-    const newCount = currentCount + 1;
-    const MAX_BIN_CAPACITY = 50;
+    const capacities = isSim ? simBinCapacitiesRef.current : realBinCapacitiesRef.current;
+    const targetCapacity = capacities[`bin${actualBin}` as keyof BinCapacities] || 50;
 
-    if (newCount === MAX_BIN_CAPACITY || (newCount > MAX_BIN_CAPACITY && (newCount - MAX_BIN_CAPACITY) % 5 === 0)) {
+    const newCount = currentCount + 1;
+
+    if (newCount >= targetCapacity) {
+      const binIdStr = actualBin === 1 ? "BIN_RED_01" : actualBin === 2 ? "BIN_BLUE_02" : "BIN_DEFAULT_03";
+      const binName = actualBin === 1 ? "Đỏ (#01)" : actualBin === 2 ? "Xanh (#02)" : "Mặc định (#03)";
       const alert: AlertEvent = {
         event_id: `bin_full_${actualBin}_${Date.now()}`,
         event_type: "bin_full",
         severity: "warning",
-        device_id: "sorter_01",
-        description: `Cảnh báo: Khay số ${actualBin} đã đầy (${newCount}/${MAX_BIN_CAPACITY} SP). Yêu cầu dọn khay ngay!`,
+        device_id: binIdStr,
+        description: `[ĐẦY KHAY CHỨA] Khay phân loại sản phẩm ${binName} đã đạt giới hạn ${newCount}/${targetCapacity} cái. Vui lòng thay thế khay rỗng mới`,
         timestamp: new Date().toISOString(),
         resolved: false,
+        mode: isSim ? "simulation" : "realtime",
       };
-      setAlerts((prev) => [alert, ...prev].slice(0, 100));
+      setAlerts((prev) => [alert, ...prev.filter((a) => a.event_id !== alert.event_id)].slice(0, 100));
       triggerAlertDispatch(alert);
-      // Wait for UI to mount or just show toast
-      setTimeout(() => showToastError(alert.description), 0);
+      onBinFullTriggerRef.current?.(actualBin as 1 | 2 | 3, newCount, targetCapacity);
     }
 
     if (isSim) {
@@ -284,7 +304,7 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishComma
       setSimRecords((prev) => [record, ...prev].slice(0, 500));
       setSimBinCounts((prev: BinCounts) => {
         const binKey = `bin${actualBin}` as "bin1" | "bin2" | "bin3";
-        if ((prev[binKey] || 0) >= 50) return prev;
+        if ((prev[binKey] || 0) >= targetCapacity) return prev;
         return { ...prev, [binKey]: (prev[binKey] || 0) + 1 };
       });
       setSimBrandCounts((prev) => ({
@@ -298,7 +318,7 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishComma
       setRealRecords((prev) => [record, ...prev].slice(0, 500));
       setRealBinCounts((prev: BinCounts) => {
         const binKey = `bin${actualBin}` as "bin1" | "bin2" | "bin3";
-        if ((prev[binKey] || 0) >= 50) return prev;
+        if ((prev[binKey] || 0) >= targetCapacity) return prev;
         return { ...prev, [binKey]: (prev[binKey] || 0) + 1 };
       });
       setRealBrandCounts((prev) => ({
@@ -308,7 +328,7 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishComma
     }
 
     industrialAudio.playSortSuccess();
-  }, [showToastError]);
+  }, []);
 
   // Clear history action
   const executeClearHistory = useCallback(() => {
@@ -372,6 +392,40 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishComma
     }
   }, [onPublishCommand, simBinCountsRef, realBinCountsRef]);
 
+  // Set / Adjust specific bin capacity (điều chỉnh độ rộng / sức chứa khay: 5 - 50 SP)
+  const handleSetBinCapacity = useCallback((binIndex: 1 | 2 | 3, capacity: number) => {
+    const isSim = isSimulationRef.current;
+    const clamped = Math.max(5, Math.min(50, Math.round(Number(capacity) || 50)));
+    const current = isSim ? simBinCapacitiesRef.current : realBinCapacitiesRef.current;
+    const next = { ...current, [`bin${binIndex}`]: clamped } as BinCapacities;
+    saveBinCapacitiesLocal(next, isSim);
+    if (isSim) {
+      setSimBinCapacities(next);
+    } else {
+      setRealBinCapacities(next);
+    }
+  }, [simBinCapacitiesRef, realBinCapacitiesRef]);
+
+  // Set / Adjust specific bin count directly (đặt số lượng hoặc xóa về 0)
+  const handleSetBinCount = useCallback((binIndex: 1 | 2 | 3, count: number) => {
+    const isSim = isSimulationRef.current;
+    const capacities = isSim ? simBinCapacitiesRef.current : realBinCapacitiesRef.current;
+    const maxCap = capacities[`bin${binIndex}` as keyof BinCapacities] || 50;
+    const clamped = Math.max(0, Math.min(maxCap, Math.round(Number(count) || 0)));
+    const current = isSim ? simBinCountsRef.current : realBinCountsRef.current;
+    const next = { ...current, [`bin${binIndex}`]: clamped } as BinCounts;
+    saveBinCountsLocal(next, isSim);
+    if (isSim) {
+      setSimBinCounts(next);
+    } else {
+      setRealBinCounts(next);
+    }
+
+    if (onPublishCommand) {
+      onPublishCommand(`set_bin_${binIndex}`, clamped);
+    }
+  }, [onPublishCommand, simBinCountsRef, realBinCountsRef, simBinCapacitiesRef, realBinCapacitiesRef]);
+
   // Clear alerts
   const handleClearAlerts = useCallback(() => {
     industrialAudio.playClick();
@@ -382,6 +436,7 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishComma
   // Active data views based on current mode
   const records = isSimulation ? simRecords : realRecords;
   const binCounts = isSimulation ? simBinCounts : realBinCounts;
+  const binCapacities = isSimulation ? simBinCapacities : realBinCapacities;
   const brandCounts = isSimulation ? simBrandCounts : realBrandCounts;
   const throughputHistory = isSimulation ? simThroughput : realThroughput;
 
@@ -399,6 +454,17 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishComma
         setSimBinCounts(action);
       } else {
         setRealBinCounts(action);
+      }
+    },
+    []
+  );
+
+  const setBinCapacities = useCallback(
+    (action: React.SetStateAction<BinCapacities>) => {
+      if (isSimulationRef.current) {
+        setSimBinCapacities(action);
+      } else {
+        setRealBinCapacities(action);
       }
     },
     []
@@ -432,12 +498,16 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishComma
     realRecordsRef,
     simBinCountsRef,
     realBinCountsRef,
+    simBinCapacitiesRef,
+    realBinCapacitiesRef,
     recentSortTimesSimRef,
     recentSortTimesRealRef,
     records,
     setRecords,
     binCounts,
     setBinCounts,
+    binCapacities,
+    setBinCapacities,
     brandCounts,
     setBrandCounts,
     throughputHistory,
@@ -447,6 +517,8 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishComma
     setAlerts,
     handleClearAlerts,
     handleClearBin,
+    handleSetBinCount,
+    handleSetBinCapacity,
     unresolvedAlertCount,
     handleRealHardwareDetection,
     handleItemSorted,

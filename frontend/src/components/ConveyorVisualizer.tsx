@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { TelemetryData, SorterConfig, CATALOG_BRANDS, VisualItem } from "@/lib/types";
+import { TelemetryData, SorterConfig, CATALOG_BRANDS, VisualItem, JamDetectedPayload } from "@/lib/types";
 import { determineTargetBin } from "@/lib/dataProcessor";
 import {
   Play,
@@ -17,6 +17,10 @@ import {
   FlaskConical,
   Radio,
   Sparkles,
+  Trash2,
+  Boxes,
+  PackageCheck,
+  SlidersHorizontal,
 } from "lucide-react";
 
 interface ConveyorVisualizerProps {
@@ -28,7 +32,7 @@ interface ConveyorVisualizerProps {
   onToggleRun: () => void;
   onEmergencyStop: () => void;
   onSpeedChange: (newSpeed: number) => void;
-  onSpawnPackage: (brandKey?: string) => void;
+  onSpawnPackage?: (brandKey?: string) => void;
   arm1Active: boolean;
   arm2Active: boolean;
   binCounts: { bin1: number; bin2: number; bin3: number };
@@ -37,6 +41,15 @@ interface ConveyorVisualizerProps {
   onToggleSimulationMode?: () => void;
   onGenerateDemoData?: () => void;
   onClearBin?: (binIndex: 1 | 2 | 3) => void;
+  isJammed?: boolean;
+  jamIncident?: JamDetectedPayload | null;
+  onClearJam?: () => void;
+  isBinFull?: boolean;
+  fullBinIndex?: 1 | 2 | 3 | null;
+  onConfirmBinReplaced?: (binIdx?: 1 | 2 | 3) => void;
+  onSetBinCount?: (binIndex: 1 | 2 | 3, count: number) => void;
+  binCapacities?: { bin1: number; bin2: number; bin3: number };
+  onSetBinCapacity?: (binIndex: 1 | 2 | 3, capacity: number) => void;
 }
 
 export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
@@ -53,10 +66,19 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
   arm2Active,
   binCounts,
   brandCounts = {},
-  isSimulation = true,
+  isSimulation = false,
   onToggleSimulationMode,
   onGenerateDemoData,
   onClearBin,
+  isJammed = false,
+  jamIncident = null,
+  onClearJam,
+  isBinFull = false,
+  fullBinIndex = null,
+  onConfirmBinReplaced,
+  onSetBinCount,
+  binCapacities = { bin1: 50, bin2: 50, bin3: 50 },
+  onSetBinCapacity,
 }) => {
   const [confirmBinClear, setConfirmBinClear] = useState<1 | 2 | 3 | null>(null);
 
@@ -69,6 +91,10 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
   const bin2Brands = config.bins[1]?.brand_ids || [];
   const assignedBrands = new Set([...bin1Brands, ...bin2Brands]);
   const bin3Brands = Object.keys(CATALOG_BRANDS).filter((b) => !assignedBrands.has(b));
+
+  const cap1 = binCapacities.bin1 || 50;
+  const cap2 = binCapacities.bin2 || 50;
+  const cap3 = binCapacities.bin3 || 50;
 
   // Render hình dạng 2D chân thực của từng loại phôi mẫu (Digital Twin)
   const renderPhysicalItem = (item: VisualItem) => {
@@ -197,6 +223,13 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
 
             {/* Đáy chai nhựa 5 múi chân */}
             <div className="relative z-10 h-2 w-6 rounded-b-lg bg-sky-900/30 border-t border-sky-400/30" />
+          </div>
+        )}
+
+        {/* Nhãn cảnh báo kẹt phôi trực tiếp trên vật phẩm */}
+        {item.isJammed && (
+          <div className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-rose-400 bg-rose-600 px-1.5 py-0.5 text-[8px] font-black text-white shadow-[0_0_10px_rgba(244,63,94,0.8)] animate-bounce z-50">
+            ⚠️ KẸT PHÔI
           </div>
         )}
 
@@ -356,7 +389,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
 
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => onSpawnPackage("brand_c")}
+            onClick={() => onSpawnPackage?.("brand_c")}
             disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
             className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-1.5 text-xs font-bold text-red-700 transition-all hover:bg-red-100 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
             title={!isSimulation ? "Nút bị khóa ở chế độ máy thật" : "Thả Lon Coca-Cola (Khay 1)"}
@@ -365,7 +398,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           </button>
 
           <button
-            onClick={() => onSpawnPackage("brand_a")}
+            onClick={() => onSpawnPackage?.("brand_a")}
             disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
             className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-1.5 text-xs font-bold text-blue-700 transition-all hover:bg-blue-100 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-400 dark:hover:bg-blue-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
             title={!isSimulation ? "Nút bị khóa ở chế độ máy thật" : "Thả Lon Pepsi (Khay 2)"}
@@ -374,7 +407,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           </button>
 
           <button
-            onClick={() => onSpawnPackage("brand_b")}
+            onClick={() => onSpawnPackage?.("brand_b")}
             disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
             className="flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-1.5 text-xs font-bold text-amber-800 transition-all hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-400 dark:hover:bg-amber-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
             title={!isSimulation ? "Nút bị khóa ở chế độ máy thật" : "Thả Lon Red Bull (Khay 3)"}
@@ -383,7 +416,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           </button>
 
           <button
-            onClick={() => onSpawnPackage("brand_d")}
+            onClick={() => onSpawnPackage?.("brand_d")}
             disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
             className="flex items-center gap-1.5 rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-1.5 text-xs font-bold text-cyan-700 transition-all hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/15 dark:text-cyan-400 dark:hover:bg-cyan-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
             title={!isSimulation ? "Nút bị khóa ở chế độ máy thật" : "Thả Chai Aquafina (Khay 3)"}
@@ -393,7 +426,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
 
           {/* Nút thả phôi ngẫu nhiên */}
           <button
-            onClick={() => onSpawnPackage()}
+            onClick={() => onSpawnPackage?.()}
             disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
             className="flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-1.5 text-xs font-bold text-purple-700 transition-all hover:bg-purple-100 dark:border-purple-500/40 dark:bg-purple-500/15 dark:text-purple-400 dark:hover:bg-purple-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
             title={!isSimulation ? "Nút bị khóa ở chế độ máy thật" : "Thả ngẫu nhiên một phôi"}
@@ -405,7 +438,8 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           {isSimulation && (
             <button
               onClick={onGenerateDemoData}
-              className="flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-bold text-emerald-700 transition-all hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-400 dark:hover:bg-emerald-500/25 shadow-xs active:scale-95"
+              disabled={telemetry.estop_pressed}
+              className="flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-bold text-emerald-700 transition-all hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-400 dark:hover:bg-emerald-500/25 shadow-xs active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
               title="Tạo dữ liệu lịch sử demo ngẫu nhiên"
             >
               <span>📊 Tạo dữ liệu demo</span>
@@ -437,8 +471,9 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
             min="10"
             max="100"
             value={speed}
+            disabled={telemetry.estop_pressed}
             onChange={(e) => onSpeedChange(Number(e.target.value))}
-            className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-teal-600 dark:bg-slate-800 dark:accent-cyan-500"
+            className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-teal-600 dark:bg-slate-800 dark:accent-cyan-500 disabled:opacity-40 disabled:cursor-not-allowed"
           />
           <span className="text-[11px] font-bold text-teal-600 dark:text-cyan-400">100%</span>
           <span className="shrink-0 rounded-lg border border-teal-500/30 bg-teal-500/10 px-2 py-1 font-mono text-xs font-black text-teal-700 dark:text-cyan-300">
@@ -472,10 +507,10 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
               ▲ 150mm <span className="hidden sm:inline">(CAM)</span>
             </span>
             <span className="absolute left-[45%] top-1/2 -translate-y-1/2 -translate-x-1/2 whitespace-nowrap text-cyan-700 dark:text-cyan-300 font-black">
-              ▲ 450mm <span className="hidden sm:inline">(GẠT 1)</span>
+              ▲ 450mm <span className="hidden sm:inline">(PISTON 1)</span>
             </span>
             <span className="absolute left-[72%] top-1/2 -translate-y-1/2 -translate-x-1/2 whitespace-nowrap text-blue-700 dark:text-blue-300 font-black">
-              ▲ 720mm <span className="hidden sm:inline">(GẠT 2)</span>
+              ▲ 720mm <span className="hidden sm:inline">(PISTON 2)</span>
             </span>
             <span className="absolute right-2 top-1/2 -translate-y-1/2 whitespace-nowrap text-amber-700 dark:text-amber-300 font-black">
               ▲ 1000mm <span className="hidden sm:inline">(KHAY 3)</span>
@@ -489,13 +524,17 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
             <Camera className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">1. CAMERA AI (15%)</span>
           </div>
-          <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 py-1.5 px-2 text-cyan-700 dark:text-cyan-300 flex items-center justify-center gap-1.5 shadow-sm font-mono min-w-0">
-            <span className="shrink-0">🦾</span>
-            <span className="truncate">2. GẠT 1 (IO23 - 45%)</span>
+          <div className={`rounded-lg border py-1.5 px-2 flex items-center justify-center gap-1.5 shadow-sm font-mono min-w-0 transition-colors ${
+            isJammed
+              ? "border-rose-500 bg-rose-500/20 text-rose-700 dark:text-rose-300 animate-pulse ring-1 ring-rose-500"
+              : "border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
+          }`}>
+            <span className="shrink-0">{isJammed ? "⚠️" : "🎛️"}</span>
+            <span className="truncate">{isJammed ? "2. ZONE A: KẸT PHÔI!" : "2. PISTON 1 (IO23 - 45%)"}</span>
           </div>
           <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 py-1.5 px-2 text-blue-700 dark:text-blue-300 flex items-center justify-center gap-1.5 shadow-sm font-mono min-w-0">
-            <span className="shrink-0">🦾</span>
-            <span className="truncate">3. GẠT 2 (IO24 - 72%)</span>
+            <span className="shrink-0">🎛️</span>
+            <span className="truncate">3. PISTON 2 (IO24 - 72%)</span>
           </div>
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 py-1.5 px-2 text-amber-700 dark:text-amber-300 flex items-center justify-center gap-1.5 shadow-sm font-mono min-w-0">
             <span className="shrink-0">📥</span>
@@ -539,7 +578,9 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           </div>
 
           {/* Dây Băng Tải Cao Su / Mắt Xích Modul 12px */}
-          <div className="conveyor-belt-track relative h-32 w-full border-y-4 border-slate-700 overflow-visible shadow-inner">
+          <div className={`conveyor-belt-track relative h-32 w-full border-y-4 transition-colors duration-300 overflow-visible shadow-inner ${
+            isJammed ? "border-rose-500 ring-2 ring-rose-500/50" : "border-slate-700"
+          }`}>
             {/* Lớp hoa văn chuyển động 12px micro-ribbed */}
             <div
               className={`absolute inset-0 conveyor-belt-track ${
@@ -549,6 +590,16 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                 animationDuration: `${Math.max(0.18, (110 - speed) / 110)}s`,
               }}
             />
+
+            {/* KHU VỰC KẸT PHÔI ZONE A (36% - 54%) */}
+            {isJammed && (
+              <div className="absolute left-[36%] w-[18%] inset-y-0 z-20 pointer-events-none rounded-xl border-2 border-rose-500 bg-rose-950/40 backdrop-blur-[1px] shadow-[0_0_25px_rgba(244,63,94,0.7)] animate-pulse flex flex-col items-center justify-center">
+                <div className="rounded bg-rose-950/95 border border-rose-400 px-1.5 py-0.5 text-[8px] font-black text-rose-200 tracking-wider flex items-center gap-1 shadow-md">
+                  <span className="h-2 w-2 rounded-full bg-rose-400 animate-ping" />
+                  <span>KHU VỰC KẸT PHÔI (ZONE A)</span>
+                </div>
+              </div>
+            )}
 
             {/* Chiều sâu 3D quang học: Vệt sáng phản quang kim loại chạy ngang (Specular Sheen) */}
             <div className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-white/10 via-white/5 to-transparent pointer-events-none z-10" />
@@ -605,83 +656,179 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
               </div>
             </div>
 
-            {/* 2. CƠ CẤU GẠT SERVO 1 (IO23) & CẢM BIẾN S2 (45%) */}
-            <div className="absolute left-[45%] top-0 bottom-0 z-30 flex flex-col items-center justify-between py-0.5 pointer-events-none">
-              {/* Đĩa tròn Servo Flange & Khớp quay CNC */}
-              <div className="relative z-40 flex h-7 w-7 items-center justify-center rounded-full border-2 border-slate-400 bg-slate-900 shadow-md shrink-0">
-                <div className="h-2.5 w-2.5 rounded-full bg-cyan-400 shadow-[0_0_6px_#00f2fe]" />
-                {/* 4 Lỗ ốc servo disc */}
-                <div className="absolute top-0.5 h-1 w-1 rounded-full bg-slate-500" />
-                <div className="absolute bottom-0.5 h-1 w-1 rounded-full bg-slate-500" />
-                <div className="absolute left-0.5 h-1 w-1 rounded-full bg-slate-500" />
-                <div className="absolute right-0.5 h-1 w-1 rounded-full bg-slate-500" />
+            {/* 2. CƠ CẤU PISTON KHÍ NÉN ĐẨY 1 (IO23) & CẢM BIẾN S2 (45%) */}
+            <div className="absolute left-[45%] -top-4 bottom-0 z-30 flex flex-col items-center justify-between pointer-events-none -translate-x-1/2 w-16">
+              {/* Thân Xi Lanh Hợp Kim Nhôm CNC Cố Định (Pneumatic Cylinder Body - Festo Standard) */}
+              <div className="relative z-40 flex flex-col items-center w-14 rounded-md border-2 border-slate-500 bg-gradient-to-b from-slate-700 via-slate-800 to-slate-900 shadow-xl px-1 py-1">
+                {/* 2 Khớp nối nhanh khí nén đồng thau (Dual Brass Quick Fittings) */}
+                <div className="flex w-full justify-between px-1 mb-0.5">
+                  <div className="h-1.5 w-2 rounded-t-xs bg-amber-400 border border-amber-600 shadow-xs" title="Khí vào (Extend)" />
+                  <div className="h-1.5 w-2 rounded-t-xs bg-cyan-400 border border-cyan-600 shadow-xs" title="Khí hồi (Retract)" />
+                </div>
+
+                {/* Nhãn hiệu & Đèn LED van điện từ Solenoid */}
+                <div className="flex items-center justify-between w-full px-0.5">
+                  <span className="text-[7px] font-mono font-black text-amber-300 leading-none">CYL-01</span>
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full transition-all duration-150 ${
+                      arm1Active
+                        ? "bg-amber-400 shadow-[0_0_8px_#f59e0b] scale-125"
+                        : "bg-slate-600"
+                    }`}
+                  />
+                </div>
+                <div className="flex items-center justify-between w-full px-0.5 text-[6px] font-mono text-slate-400 uppercase tracking-tighter">
+                  <span>IO23</span>
+                  <span className={arm1Active ? "text-amber-300 font-bold" : ""}>
+                    {arm1Active ? "EXTEND" : "RETRACT"}
+                  </span>
+                </div>
+
+                {/* Khe phốt chặn ty xi lanh */}
+                <div className="w-10 h-0.5 bg-slate-950 rounded-b-xs border-t border-slate-600 mt-1" />
               </div>
 
-              {/* Cánh Tay Gạt Hợp Kim Nhôm CNC Phay Nguyên Khối */}
+              {/* CỤM ĐẨY TRƯỢT PISTON THỤT RA THỤT VÔ (Linear Moving Pusher Assembly) */}
               <div
-                className="absolute top-3.5 left-2 h-24 w-4 rounded-md border border-cyan-300 bg-gradient-to-b from-cyan-400 via-cyan-600 to-slate-800 shadow-lg flex flex-col items-center justify-between py-1"
+                className="absolute top-0 flex flex-col items-center pointer-events-none z-35"
                 style={{
-                  transformOrigin: "top left",
-                  transform: arm1Active ? "rotate(45deg)" : "rotate(0deg)",
-                  transition: "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
-                  boxShadow: arm1Active
-                    ? "0 0 20px rgba(6, 182, 212, 0.85), inset 0 0 8px #22d3ee"
-                    : "0 4px 8px rgba(0, 0, 0, 0.4)",
+                  transform: arm1Active ? "translateY(50px)" : "translateY(0px)",
+                  transition: "transform 0.16s cubic-bezier(0.18, 0.9, 0.32, 1.25)",
+                  willChange: "transform",
                 }}
               >
-                {/* Rãnh khoét rỗng giảm trọng lượng CNC (Lightening Slot) */}
-                <div className="h-12 w-1.5 rounded-full bg-slate-950/80 border border-cyan-200/40" />
-                {/* Đệm cao su giảm chấn bo tròn ở đầu gạt (Industrial Amber Rubber Bumper) */}
-                <div className="h-4 w-full rounded-b-md bg-amber-500 border-t border-amber-300 shadow-sm" />
+                {/* Ty Piston Inox Mạ Chrome & 2 Thanh Dẫn Hướng (Dual Guide Rods + Piston Shaft) */}
+                <div className="flex items-center justify-center gap-1.5 h-6 w-10">
+                  {/* Trục dẫn hướng trái */}
+                  <div className="h-full w-1 rounded-xs bg-gradient-to-b from-slate-400 via-slate-200 to-slate-400 shadow-inner" />
+                  {/* Ty xi lanh chính inox mạ chrome bóng gương */}
+                  <div className="h-full w-2.5 rounded-xs bg-gradient-to-r from-slate-300 via-white to-slate-400 border-x border-slate-400/80 shadow-md flex items-center justify-center">
+                    <div className="h-full w-0.5 bg-white/70" />
+                  </div>
+                  {/* Trục dẫn hướng phải */}
+                  <div className="h-full w-1 rounded-xs bg-gradient-to-b from-slate-400 via-slate-200 to-slate-400 shadow-inner" />
+                </div>
+
+                {/* ĐẦU BÚA ĐẨY BỌC CAO SU GIẢM CHẤN (Heavy-Duty Industrial Pusher Bumper Pad) */}
+                <div
+                  className="relative flex flex-col items-center justify-center w-12 h-5 rounded-md border border-amber-300/80 bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 shadow-lg px-1 transition-all"
+                  style={{
+                    boxShadow: arm1Active
+                      ? "0 0 16px rgba(245, 158, 11, 0.95), inset 0 1px 2px rgba(255, 255, 255, 0.6)"
+                      : "0 2px 4px rgba(0, 0, 0, 0.4)",
+                  }}
+                >
+                  <div className="flex items-center justify-between w-full px-1">
+                    <span className="text-[7px] font-mono font-black text-amber-950 tracking-tighter leading-none">
+                      PUSH 1
+                    </span>
+                    <span className="text-[6px] font-mono font-bold text-amber-900 leading-none">
+                      ▼
+                    </span>
+                  </div>
+                  {/* Viền đệm cao su dẻo polyurethane chịu lực bên dưới */}
+                  <div className="absolute -bottom-1 inset-x-1 h-1.5 rounded-b-xs bg-amber-700 border-t border-amber-300/40" />
+                </div>
               </div>
 
-              {/* Cảm biến quang học S2 (IO1) */}
-              <div className="flex items-center gap-1 mt-auto">
+              {/* Cảm biến quang học S2 (IO1) / OPTICAL_JAM_02 */}
+              <div className="flex items-center gap-1 mt-auto pb-0.5">
                 <div
                   className={`h-3.5 w-3.5 rounded-full border-2 transition-all shrink-0 ${
-                    telemetry.s2_sorter1
+                    isJammed
+                      ? "border-rose-300 bg-rose-500 shadow-[0_0_14px_#f43f5e] animate-ping"
+                      : telemetry.s2_sorter1
                       ? "border-cyan-300 bg-cyan-400 shadow-[0_0_12px_#06b6d4]"
                       : "border-slate-400 bg-slate-800"
                   }`}
                 />
-                <span className="rounded bg-slate-950/90 px-1 font-mono text-[8px] font-bold text-cyan-400 border border-cyan-500/30 whitespace-nowrap">
-                  S2:IO1
+                <span className={`rounded px-1 font-mono text-[8px] font-bold border whitespace-nowrap ${
+                  isJammed
+                    ? "bg-rose-950 text-rose-300 border-rose-500 animate-pulse"
+                    : "bg-slate-950/90 text-cyan-400 border-cyan-500/30"
+                }`}>
+                  {isJammed ? "OPTICAL_JAM_02: KẸT PHÔI" : "S2:IO1"}
                 </span>
               </div>
             </div>
 
-            {/* 3. CƠ CẤU GẠT SERVO 2 (IO24) & CẢM BIẾN S3 (72%) */}
-            <div className="absolute left-[72%] top-0 bottom-0 z-30 flex flex-col items-center justify-between py-0.5 pointer-events-none">
-              {/* Đĩa tròn Servo Flange & Khớp quay CNC */}
-              <div className="relative z-40 flex h-7 w-7 items-center justify-center rounded-full border-2 border-slate-400 bg-slate-900 shadow-md shrink-0">
-                <div className="h-2.5 w-2.5 rounded-full bg-blue-400 shadow-[0_0_6px_#3b82f6]" />
-                {/* 4 Lỗ ốc servo disc */}
-                <div className="absolute top-0.5 h-1 w-1 rounded-full bg-slate-500" />
-                <div className="absolute bottom-0.5 h-1 w-1 rounded-full bg-slate-500" />
-                <div className="absolute left-0.5 h-1 w-1 rounded-full bg-slate-500" />
-                <div className="absolute right-0.5 h-1 w-1 rounded-full bg-slate-500" />
+            {/* 3. CƠ CẤU PISTON KHÍ NÉN ĐẨY 2 (IO24) & CẢM BIẾN S3 (72%) */}
+            <div className="absolute left-[72%] -top-4 bottom-0 z-30 flex flex-col items-center justify-between pointer-events-none -translate-x-1/2 w-16">
+              {/* Thân Xi Lanh Hợp Kim Nhôm CNC Cố Định (Pneumatic Cylinder Body - Festo Standard) */}
+              <div className="relative z-40 flex flex-col items-center w-14 rounded-md border-2 border-slate-500 bg-gradient-to-b from-slate-700 via-slate-800 to-slate-900 shadow-xl px-1 py-1">
+                {/* 2 Khớp nối nhanh khí nén đồng thau (Dual Brass Quick Fittings) */}
+                <div className="flex w-full justify-between px-1 mb-0.5">
+                  <div className="h-1.5 w-2 rounded-t-xs bg-blue-400 border border-blue-600 shadow-xs" title="Khí vào (Extend)" />
+                  <div className="h-1.5 w-2 rounded-t-xs bg-cyan-400 border border-cyan-600 shadow-xs" title="Khí hồi (Retract)" />
+                </div>
+
+                {/* Nhãn hiệu & Đèn LED van điện từ Solenoid */}
+                <div className="flex items-center justify-between w-full px-0.5">
+                  <span className="text-[7px] font-mono font-black text-cyan-300 leading-none">CYL-02</span>
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full transition-all duration-150 ${
+                      arm2Active
+                        ? "bg-blue-400 shadow-[0_0_8px_#3b82f6] scale-125"
+                        : "bg-slate-600"
+                    }`}
+                  />
+                </div>
+                <div className="flex items-center justify-between w-full px-0.5 text-[6px] font-mono text-slate-400 uppercase tracking-tighter">
+                  <span>IO24</span>
+                  <span className={arm2Active ? "text-blue-300 font-bold" : ""}>
+                    {arm2Active ? "EXTEND" : "RETRACT"}
+                  </span>
+                </div>
+
+                {/* Khe phốt chặn ty xi lanh */}
+                <div className="w-10 h-0.5 bg-slate-950 rounded-b-xs border-t border-slate-600 mt-1" />
               </div>
 
-              {/* Cánh Tay Gạt Hợp Kim Nhôm CNC Phay Nguyên Khối */}
+              {/* CỤM ĐẨY TRƯỢT PISTON THỤT RA THỤT VÔ (Linear Moving Pusher Assembly) */}
               <div
-                className="absolute top-3.5 left-2 h-24 w-4 rounded-md border border-blue-300 bg-gradient-to-b from-blue-400 via-blue-600 to-slate-800 shadow-lg flex flex-col items-center justify-between py-1"
+                className="absolute top-0 flex flex-col items-center pointer-events-none z-35"
                 style={{
-                  transformOrigin: "top left",
-                  transform: arm2Active ? "rotate(45deg)" : "rotate(0deg)",
-                  transition: "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
-                  boxShadow: arm2Active
-                    ? "0 0 20px rgba(59, 130, 246, 0.85), inset 0 0 8px #60a5fa"
-                    : "0 4px 8px rgba(0, 0, 0, 0.4)",
+                  transform: arm2Active ? "translateY(50px)" : "translateY(0px)",
+                  transition: "transform 0.16s cubic-bezier(0.18, 0.9, 0.32, 1.25)",
+                  willChange: "transform",
                 }}
               >
-                {/* Rãnh khoét rỗng giảm trọng lượng CNC (Lightening Slot) */}
-                <div className="h-12 w-1.5 rounded-full bg-slate-950/80 border border-blue-200/40" />
-                {/* Đệm cao su giảm chấn bo tròn ở đầu gạt (High-density Blue Rubber Bumper) */}
-                <div className="h-4 w-full rounded-b-md bg-cyan-400 border-t border-cyan-200 shadow-sm" />
+                {/* Ty Piston Inox Mạ Chrome & 2 Thanh Dẫn Hướng (Dual Guide Rods + Piston Shaft) */}
+                <div className="flex items-center justify-center gap-1.5 h-6 w-10">
+                  {/* Trục dẫn hướng trái */}
+                  <div className="h-full w-1 rounded-xs bg-gradient-to-b from-slate-400 via-slate-200 to-slate-400 shadow-inner" />
+                  {/* Ty xi lanh chính inox mạ chrome bóng gương */}
+                  <div className="h-full w-2.5 rounded-xs bg-gradient-to-r from-slate-300 via-white to-slate-400 border-x border-slate-400/80 shadow-md flex items-center justify-center">
+                    <div className="h-full w-0.5 bg-white/70" />
+                  </div>
+                  {/* Trục dẫn hướng phải */}
+                  <div className="h-full w-1 rounded-xs bg-gradient-to-b from-slate-400 via-slate-200 to-slate-400 shadow-inner" />
+                </div>
+
+                {/* ĐẦU BÚA ĐẨY BỌC CAO SU GIẢM CHẤN (Heavy-Duty Industrial Pusher Bumper Pad) */}
+                <div
+                  className="relative flex flex-col items-center justify-center w-12 h-5 rounded-md border border-cyan-300/80 bg-gradient-to-b from-cyan-400 via-blue-500 to-blue-600 shadow-lg px-1 transition-all"
+                  style={{
+                    boxShadow: arm2Active
+                      ? "0 0 16px rgba(59, 130, 246, 0.95), inset 0 1px 2px rgba(255, 255, 255, 0.6)"
+                      : "0 2px 4px rgba(0, 0, 0, 0.4)",
+                  }}
+                >
+                  <div className="flex items-center justify-between w-full px-1">
+                    <span className="text-[7px] font-mono font-black text-cyan-950 tracking-tighter leading-none">
+                      PUSH 2
+                    </span>
+                    <span className="text-[6px] font-mono font-bold text-cyan-900 leading-none">
+                      ▼
+                    </span>
+                  </div>
+                  {/* Viền đệm cao su dẻo polyurethane chịu lực bên dưới */}
+                  <div className="absolute -bottom-1 inset-x-1 h-1.5 rounded-b-xs bg-blue-800 border-t border-cyan-300/40" />
+                </div>
               </div>
 
               {/* Cảm biến quang học S3 (IO6) */}
-              <div className="flex items-center gap-1 mt-auto">
+              <div className="flex items-center gap-1 mt-auto pb-0.5">
                 <div
                   className={`h-3.5 w-3.5 rounded-full border-2 transition-all shrink-0 ${
                     telemetry.s3_sorter2
@@ -735,28 +882,63 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
 
         {/* CÁC MÁNG HỨNG NGHIÊNG THEO TRỌNG LỰC (GRAVITY SLIDE CHUTES) BÊN DƯỚI BĂNG TẢI */}
         <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
-          {/* MÁNG KHAY 1 (GẠT 1 - 45%) */}
+          {/* MÁNG KHAY 1 (PISTON 1 - 45%) */}
           <div 
             onClick={() => {
-              if (binCounts.bin1 >= 50) {
-                setConfirmBinClear(1);
-              }
+              setConfirmBinClear(1);
             }}
-            className={`relate-card relative overflow-hidden rounded-2xl border p-3.5 shadow-sm transition-colors flex flex-col justify-between gap-3 ${
-              binCounts.bin1 >= 50 
-                ? "border-rose-500 bg-rose-500/10 cursor-pointer animate-pulse ring-2 ring-rose-500/50" 
-                : "border-rose-500/30 bg-white dark:bg-[#161822] dark:border-rose-500/20 hover:border-rose-500/50"
+            role="button"
+            tabIndex={0}
+            className={`relate-card relative overflow-hidden rounded-2xl border p-3.5 shadow-sm transition-all cursor-pointer flex flex-col justify-between gap-3 group hover:scale-[1.01] ${
+              binCounts.bin1 >= cap1 
+                ? "border-amber-500 bg-amber-500/15 animate-pulse ring-2 ring-amber-500/60 shadow-[0_0_16px_rgba(245,158,11,0.4)]" 
+                : "border-rose-500/30 bg-white dark:bg-[#161822] dark:border-rose-500/20 hover:border-rose-500/60 hover:shadow-md"
             }`}
           >
             <div>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-black tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5 truncate">
-                  <span className="h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_6px_#f43f5e] shrink-0" />
-                  <span className="truncate">MÁNG TRƯỢT 1 (GẠT 1)</span>
+                  {binCounts.bin1 >= cap1 ? (
+                    <Boxes className="h-4 w-4 text-amber-500 animate-bounce shrink-0" />
+                  ) : (
+                    <span className="h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_6px_#f43f5e] shrink-0" />
+                  )}
+                  <span className="truncate">MÁNG TRƯỢT 1 (PISTON 1)</span>
                 </span>
-                <span className="rounded-md border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-rose-700 dark:text-rose-400 shrink-0">
-                  Servo IO23
-                </span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {binCounts.bin1 >= cap1 ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onConfirmBinReplaced ? onConfirmBinReplaced(1) : onClearBin?.(1);
+                      }}
+                      className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black rounded-lg transition-all border border-amber-400 bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md active:scale-95 animate-pulse"
+                      title="Xác nhận đã thay thế khay rỗng mới và reset số đếm về 0"
+                    >
+                      <PackageCheck className="h-3.5 w-3.5 shrink-0" />
+                      <span>Xác nhận đã thay khay mới</span>
+                    </button>
+                  ) : (
+                    <>
+                      <span className="rounded-md border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-rose-700 dark:text-rose-400">
+                        Piston IO23
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmBinClear(1);
+                        }}
+                        className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-md transition-all border border-rose-500/40 bg-rose-500/10 hover:bg-rose-600 hover:text-white text-rose-600 dark:text-rose-300 shadow-xs active:scale-95"
+                        title={`Dọn khay ngay lập tức (không cần đợi đủ ${cap1} SP)`}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        <span>Dọn khay</span>
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Tên nhãn gạt chính */}
@@ -772,7 +954,11 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                 <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                   Tổng SP trong máng:
                 </span>
-                <div className="text-3xl font-black text-rose-600 dark:text-rose-400 font-mono drop-shadow-[0_0_8px_rgba(244,63,94,0.6)] shrink-0">
+                <div className={`text-3xl font-black font-mono shrink-0 ${
+                  binCounts.bin1 >= cap1 
+                    ? "text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.8)] animate-pulse" 
+                    : "text-rose-600 dark:text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]"
+                }`}>
                   {binCounts.bin1} <span className="text-xs font-normal text-slate-500">SP</span>
                 </div>
               </div>
@@ -782,12 +968,16 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
             <div>
               <div className="flex items-center gap-1">
                 {Array.from({ length: 10 }).map((_, idx) => {
-                  const isFilled = idx < Math.ceil((binCounts.bin1 / 50) * 10);
+                  const cap1 = binCapacities.bin1 || 50;
+                  const isFilled = idx < Math.ceil((binCounts.bin1 / cap1) * 10);
+                  const isFull = binCounts.bin1 >= cap1;
                   return (
                     <div
                       key={idx}
                       className={`h-2 flex-1 rounded-xs transition-all duration-300 ${
-                        isFilled
+                        isFull
+                          ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,1)] animate-pulse"
+                          : isFilled
                           ? "bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.9)]"
                           : "bg-slate-200 dark:bg-slate-800/90 border border-slate-300/40 dark:border-white/5"
                       }`}
@@ -798,33 +988,131 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
 
               <div className="mt-1.5 flex items-center justify-between text-[10px] font-medium text-slate-500 dark:text-slate-400 gap-2">
                 <span className="truncate">Góc dốc 25° • Trạm 45%</span>
-                <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{binCounts.bin1}/50 SP (Định mức)</span>
+                {binCounts.bin1 >= (binCapacities.bin1 || 50) ? (
+                  <span className="font-mono font-black text-amber-800 dark:text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
+                    100% ĐẦY ({binCounts.bin1}/{binCapacities.bin1 || 50} SP) - CẦN THAY
+                  </span>
+                ) : (
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{binCounts.bin1}/{binCapacities.bin1 || 50} SP (Định mức)</span>
+                )}
               </div>
+              <div className="mt-1 text-center text-[9px] text-slate-400 dark:text-slate-500 italic">
+                💡 Click khay hoặc bấm nút để dọn dẹp bất kỳ lúc nào
+              </div>
+
+              {/* Thanh trượt điều chỉnh sức chứa định mức của Máng 1 */}
+              {(onSetBinCapacity || onSetBinCount) && (
+                <div
+                  className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-white/[0.08]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    <span className="flex items-center gap-1">
+                      <SlidersHorizontal className="h-3 w-3 text-rose-500" />
+                      <span>Độ rộng / Sức chứa khay:</span>
+                    </span>
+                    <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
+                      {binCapacities.bin1 || 50} SP (Tối đa)
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="5"
+                    max="50"
+                    step="1"
+                    value={binCapacities.bin1 || 50}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (onSetBinCapacity) onSetBinCapacity(1, val);
+                      else if (onSetBinCount) onSetBinCount(1, val);
+                    }}
+                    className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-rose-500"
+                  />
+                  <div className="flex items-center justify-between text-[9px] font-mono text-slate-400 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => onSetBinCapacity ? onSetBinCapacity(1, 10) : onSetBinCount?.(1, 10)}
+                      className="hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer transition-colors"
+                    >
+                      10 SP
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onSetBinCapacity ? onSetBinCapacity(1, 30) : onSetBinCount?.(1, 30)}
+                      className="hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer font-bold transition-colors"
+                    >
+                      30 SP
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onSetBinCapacity ? onSetBinCapacity(1, 50) : onSetBinCount?.(1, 50)}
+                      className="hover:text-amber-500 font-bold cursor-pointer transition-colors"
+                    >
+                      50 SP (Chuẩn)
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* MÁNG KHAY 2 (GẠT 2 - 72%) */}
+          {/* MÁNG KHAY 2 (PISTON 2 - 72%) */}
           <div 
             onClick={() => {
-              if (binCounts.bin2 >= 50) {
-                setConfirmBinClear(2);
-              }
+              setConfirmBinClear(2);
             }}
-            className={`relate-card relative overflow-hidden rounded-2xl border p-3.5 shadow-sm transition-colors flex flex-col justify-between gap-3 ${
-              binCounts.bin2 >= 50 
-                ? "border-blue-500 bg-blue-500/10 cursor-pointer animate-pulse ring-2 ring-blue-500/50" 
-                : "border-blue-500/30 bg-white dark:bg-[#161822] dark:border-blue-500/20 hover:border-blue-500/50"
+            role="button"
+            tabIndex={0}
+            className={`relate-card relative overflow-hidden rounded-2xl border p-3.5 shadow-sm transition-all cursor-pointer flex flex-col justify-between gap-3 group hover:scale-[1.01] ${
+              binCounts.bin2 >= cap2 
+                ? "border-amber-500 bg-amber-500/15 animate-pulse ring-2 ring-amber-500/60 shadow-[0_0_16px_rgba(245,158,11,0.4)]" 
+                : "border-blue-500/30 bg-white dark:bg-[#161822] dark:border-blue-500/20 hover:border-blue-500/60 hover:shadow-md"
             }`}
           >
             <div>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-black tracking-wider text-blue-700 dark:text-blue-400 flex items-center gap-1.5 truncate">
-                  <span className="h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_6px_#3b82f6] shrink-0" />
-                  <span className="truncate">MÁNG TRƯỢT 2 (GẠT 2)</span>
+                  {binCounts.bin2 >= cap2 ? (
+                    <Boxes className="h-4 w-4 text-amber-500 animate-bounce shrink-0" />
+                  ) : (
+                    <span className="h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_6px_#3b82f6] shrink-0" />
+                  )}
+                  <span className="truncate">MÁNG TRƯỢT 2 (PISTON 2)</span>
                 </span>
-                <span className="rounded-md border border-blue-500/30 bg-blue-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-blue-700 dark:text-blue-400 shrink-0">
-                  Servo IO24
-                </span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {binCounts.bin2 >= cap2 ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onConfirmBinReplaced ? onConfirmBinReplaced(2) : onClearBin?.(2);
+                      }}
+                      className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black rounded-lg transition-all border border-amber-400 bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md active:scale-95 animate-pulse"
+                      title="Xác nhận đã thay thế khay rỗng mới và reset số đếm về 0"
+                    >
+                      <PackageCheck className="h-3.5 w-3.5 shrink-0" />
+                      <span>Xác nhận đã thay khay mới</span>
+                    </button>
+                  ) : (
+                    <>
+                      <span className="rounded-md border border-blue-500/30 bg-blue-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-blue-700 dark:text-blue-400">
+                        Piston IO24
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmBinClear(2);
+                        }}
+                        className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-md transition-all border border-blue-500/40 bg-blue-500/10 hover:bg-blue-600 hover:text-white text-blue-600 dark:text-blue-300 shadow-xs active:scale-95"
+                        title={`Dọn khay ngay lập tức (không cần đợi đủ ${cap2} SP)`}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        <span>Dọn khay</span>
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Tên nhãn gạt chính */}
@@ -840,7 +1128,11 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                 <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                   Tổng SP trong máng:
                 </span>
-                <div className="text-3xl font-black text-blue-600 dark:text-blue-400 font-mono drop-shadow-[0_0_8px_rgba(59,130,246,0.6)] shrink-0">
+                <div className={`text-3xl font-black font-mono shrink-0 ${
+                  binCounts.bin2 >= cap2 
+                    ? "text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.8)] animate-pulse" 
+                    : "text-blue-600 dark:text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]"
+                }`}>
                   {binCounts.bin2} <span className="text-xs font-normal text-slate-500">SP</span>
                 </div>
               </div>
@@ -850,12 +1142,16 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
             <div>
               <div className="flex items-center gap-1">
                 {Array.from({ length: 10 }).map((_, idx) => {
-                  const isFilled = idx < Math.ceil((binCounts.bin2 / 50) * 10);
+                  const cap2 = binCapacities.bin2 || 50;
+                  const isFilled = idx < Math.ceil((binCounts.bin2 / cap2) * 10);
+                  const isFull = binCounts.bin2 >= cap2;
                   return (
                     <div
                       key={idx}
                       className={`h-2 flex-1 rounded-xs transition-all duration-300 ${
-                        isFilled
+                        isFull
+                          ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,1)] animate-pulse"
+                          : isFilled
                           ? "bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.9)]"
                           : "bg-slate-200 dark:bg-slate-800/90 border border-slate-300/40 dark:border-white/5"
                       }`}
@@ -866,33 +1162,131 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
 
               <div className="mt-1.5 flex items-center justify-between text-[10px] font-medium text-slate-500 dark:text-slate-400 gap-2">
                 <span className="truncate">Góc dốc 25° • Trạm 72%</span>
-                <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{binCounts.bin2}/50 SP (Định mức)</span>
+                {binCounts.bin2 >= (binCapacities.bin2 || 50) ? (
+                  <span className="font-mono font-black text-amber-800 dark:text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
+                    100% ĐẦY ({binCounts.bin2}/{binCapacities.bin2 || 50} SP) - CẦN THAY
+                  </span>
+                ) : (
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{binCounts.bin2}/{binCapacities.bin2 || 50} SP (Định mức)</span>
+                )}
               </div>
+              <div className="mt-1 text-center text-[9px] text-slate-400 dark:text-slate-500 italic">
+                💡 Click khay hoặc bấm nút để dọn dẹp bất kỳ lúc nào
+              </div>
+
+              {/* Thanh trượt điều chỉnh sức chứa định mức của Máng 2 */}
+              {(onSetBinCapacity || onSetBinCount) && (
+                <div
+                  className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-white/[0.08]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    <span className="flex items-center gap-1">
+                      <SlidersHorizontal className="h-3 w-3 text-blue-500" />
+                      <span>Độ rộng / Sức chứa khay:</span>
+                    </span>
+                    <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
+                      {binCapacities.bin2 || 50} SP (Tối đa)
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="5"
+                    max="50"
+                    step="1"
+                    value={binCapacities.bin2 || 50}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (onSetBinCapacity) onSetBinCapacity(2, val);
+                      else if (onSetBinCount) onSetBinCount(2, val);
+                    }}
+                    className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-blue-500"
+                  />
+                  <div className="flex items-center justify-between text-[9px] font-mono text-slate-400 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => onSetBinCapacity ? onSetBinCapacity(2, 10) : onSetBinCount?.(2, 10)}
+                      className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors"
+                    >
+                      10 SP
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onSetBinCapacity ? onSetBinCapacity(2, 30) : onSetBinCount?.(2, 30)}
+                      className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer font-bold transition-colors"
+                    >
+                      30 SP
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onSetBinCapacity ? onSetBinCapacity(2, 50) : onSetBinCount?.(2, 50)}
+                      className="hover:text-amber-500 font-bold cursor-pointer transition-colors"
+                    >
+                      50 SP (Chuẩn)
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           {/* MÁNG KHAY 3 (ĐI THẲNG - 96%) */}
           <div 
             onClick={() => {
-              if (binCounts.bin3 >= 50) {
-                setConfirmBinClear(3);
-              }
+              setConfirmBinClear(3);
             }}
-            className={`relate-card relative overflow-hidden rounded-2xl border p-3.5 shadow-sm transition-colors flex flex-col justify-between gap-3 ${
-              binCounts.bin3 >= 50 
-                ? "border-amber-500 bg-amber-500/10 cursor-pointer animate-pulse ring-2 ring-amber-500/50" 
-                : "border-amber-500/30 bg-white dark:bg-[#161822] dark:border-amber-500/20 hover:border-amber-500/50"
+            role="button"
+            tabIndex={0}
+            className={`relate-card relative overflow-hidden rounded-2xl border p-3.5 shadow-sm transition-all cursor-pointer flex flex-col justify-between gap-3 group hover:scale-[1.01] ${
+              binCounts.bin3 >= cap3 
+                ? "border-amber-500 bg-amber-500/15 animate-pulse ring-2 ring-amber-500/60 shadow-[0_0_16px_rgba(245,158,11,0.4)]" 
+                : "border-amber-500/30 bg-white dark:bg-[#161822] dark:border-amber-500/20 hover:border-amber-500/60 hover:shadow-md"
             }`}
           >
             <div>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-black tracking-wider text-amber-800 dark:text-amber-400 flex items-center gap-1.5 truncate">
-                  <span className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_6px_#f59e0b] shrink-0" />
+                  {binCounts.bin3 >= cap3 ? (
+                    <Boxes className="h-4 w-4 text-amber-500 animate-bounce shrink-0" />
+                  ) : (
+                    <span className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_6px_#f59e0b] shrink-0" />
+                  )}
                   <span className="truncate">KHAY 3 (MẶC ĐỊNH)</span>
                 </span>
-                <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-amber-800 dark:text-amber-400 shrink-0">
-                  Đi Thẳng
-                </span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {binCounts.bin3 >= cap3 ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onConfirmBinReplaced ? onConfirmBinReplaced(3) : onClearBin?.(3);
+                      }}
+                      className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black rounded-lg transition-all border border-amber-400 bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md active:scale-95 animate-pulse"
+                      title="Xác nhận đã thay thế khay rỗng mới và reset số đếm về 0"
+                    >
+                      <PackageCheck className="h-3.5 w-3.5 shrink-0" />
+                      <span>Xác nhận đã thay khay mới</span>
+                    </button>
+                  ) : (
+                    <>
+                      <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-amber-800 dark:text-amber-400">
+                        Đi Thẳng
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmBinClear(3);
+                        }}
+                        className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-md transition-all border border-amber-500/40 bg-amber-500/10 hover:bg-amber-600 hover:text-white text-amber-700 dark:text-amber-300 shadow-xs active:scale-95"
+                        title={`Dọn khay ngay lập tức (không cần đợi đủ ${cap3} SP)`}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        <span>Dọn khay</span>
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Tên nhãn gạt chính */}
@@ -908,7 +1302,11 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                 <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                   Tổng SP trong máng:
                 </span>
-                <div className="text-3xl font-black text-amber-600 dark:text-amber-400 font-mono drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] shrink-0">
+                <div className={`text-3xl font-black font-mono shrink-0 ${
+                  binCounts.bin3 >= cap3 
+                    ? "text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.8)] animate-pulse" 
+                    : "text-amber-600 dark:text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]"
+                }`}>
                   {binCounts.bin3} <span className="text-xs font-normal text-slate-500">SP</span>
                 </div>
               </div>
@@ -918,12 +1316,16 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
             <div>
               <div className="flex items-center gap-1">
                 {Array.from({ length: 10 }).map((_, idx) => {
-                  const isFilled = idx < Math.ceil((binCounts.bin3 / 50) * 10);
+                  const cap3 = binCapacities.bin3 || 50;
+                  const isFilled = idx < Math.ceil((binCounts.bin3 / cap3) * 10);
+                  const isFull = binCounts.bin3 >= cap3;
                   return (
                     <div
                       key={idx}
                       className={`h-2 flex-1 rounded-xs transition-all duration-300 ${
-                        isFilled
+                        isFull
+                          ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,1)] animate-pulse"
+                          : isFilled
                           ? "bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.9)]"
                           : "bg-slate-200 dark:bg-slate-800/90 border border-slate-300/40 dark:border-white/5"
                       }`}
@@ -934,27 +1336,131 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
 
               <div className="mt-1.5 flex items-center justify-between text-[10px] font-medium text-slate-500 dark:text-slate-400 gap-2">
                 <span className="truncate">Thoát tự do 1000mm • 96%</span>
-                <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{binCounts.bin3}/50 SP (Định mức)</span>
+                {binCounts.bin3 >= (binCapacities.bin3 || 50) ? (
+                  <span className="font-mono font-black text-amber-800 dark:text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
+                    100% ĐẦY ({binCounts.bin3}/{binCapacities.bin3 || 50} SP) - CẦN THAY
+                  </span>
+                ) : (
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{binCounts.bin3}/{binCapacities.bin3 || 50} SP (Định mức)</span>
+                )}
               </div>
+              <div className="mt-1 text-center text-[9px] text-slate-400 dark:text-slate-500 italic">
+                💡 Click khay hoặc bấm nút để dọn dẹp bất kỳ lúc nào
+              </div>
+
+              {/* Thanh trượt điều chỉnh sức chứa định mức của Khay 3 */}
+              {(onSetBinCapacity || onSetBinCount) && (
+                <div
+                  className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-white/[0.08]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    <span className="flex items-center gap-1">
+                      <SlidersHorizontal className="h-3 w-3 text-amber-500" />
+                      <span>Độ rộng / Sức chứa khay:</span>
+                    </span>
+                    <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                      {binCapacities.bin3 || 50} SP (Tối đa)
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="5"
+                    max="50"
+                    step="1"
+                    value={binCapacities.bin3 || 50}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (onSetBinCapacity) onSetBinCapacity(3, val);
+                      else if (onSetBinCount) onSetBinCount(3, val);
+                    }}
+                    className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-amber-500"
+                  />
+                  <div className="flex items-center justify-between text-[9px] font-mono text-slate-400 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => onSetBinCapacity ? onSetBinCapacity(3, 10) : onSetBinCount?.(3, 10)}
+                      className="hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer transition-colors"
+                    >
+                      10 SP
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onSetBinCapacity ? onSetBinCapacity(3, 30) : onSetBinCount?.(3, 30)}
+                      className="hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer font-bold transition-colors"
+                    >
+                      30 SP
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onSetBinCapacity ? onSetBinCapacity(3, 50) : onSetBinCount?.(3, 50)}
+                      className="hover:text-amber-500 font-bold cursor-pointer transition-colors"
+                    >
+                      50 SP (Chuẩn)
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      <ConfirmDialog
-        isOpen={confirmBinClear !== null}
-        onCancel={() => setConfirmBinClear(null)}
-        onConfirm={() => {
-          if (confirmBinClear) {
-            onClearBin?.(confirmBinClear);
-          }
-          setConfirmBinClear(null);
-        }}
-        title="Dọn dẹp khay chứa"
-        message={`Khay ${confirmBinClear} đã đầy định mức. Bạn có chắc chắn muốn dọn dẹp và reset số đếm của khay này về 0 không?`}
-        confirmText="Xác nhận"
-        cancelText="Hủy"
-      />
+      {(() => {
+        const selectedBinCount =
+          confirmBinClear === 1
+            ? binCounts.bin1
+            : confirmBinClear === 2
+            ? binCounts.bin2
+            : confirmBinClear === 3
+            ? binCounts.bin3
+            : 0;
+        const selectedBinCap =
+          confirmBinClear === 1
+            ? cap1
+            : confirmBinClear === 2
+            ? cap2
+            : confirmBinClear === 3
+            ? cap3
+            : 50;
+        const isSelectedBinFull = selectedBinCount >= selectedBinCap;
+
+        return (
+          <ConfirmDialog
+            isOpen={confirmBinClear !== null}
+            onCancel={() => setConfirmBinClear(null)}
+            onConfirm={() => {
+              if (confirmBinClear) {
+                if (isSelectedBinFull && onConfirmBinReplaced) {
+                  onConfirmBinReplaced(confirmBinClear);
+                } else {
+                  onClearBin?.(confirmBinClear);
+                }
+              }
+              setConfirmBinClear(null);
+            }}
+            title={
+              confirmBinClear && isSelectedBinFull
+                ? `Xác nhận đã thay Khay ${confirmBinClear} mới`
+                : `Dọn dẹp Khay ${confirmBinClear}`
+            }
+            message={
+              confirmBinClear
+                ? isSelectedBinFull
+                  ? `Khay ${confirmBinClear} hiện đã đầy ${selectedBinCount}/${selectedBinCap} sản phẩm (100% định mức). Bạn xác nhận đã thay thế khay rỗng mới và muốn đặt lại số lượng về 0?`
+                  : `Khay ${confirmBinClear} hiện đang có ${selectedBinCount} sản phẩm (định mức tối đa: ${selectedBinCap} SP). Bạn có chắc chắn muốn dọn sạch khay và đặt lại số đếm về 0 không?`
+                : ""
+            }
+            confirmText={
+              confirmBinClear && isSelectedBinFull
+                ? "Xác nhận đã thay khay mới"
+                : "Xác nhận dọn khay"
+            }
+            cancelText="Hủy bỏ"
+            type="warning"
+          />
+        );
+      })()}
     </div>
   );
 };

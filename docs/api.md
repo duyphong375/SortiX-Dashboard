@@ -12,6 +12,8 @@
 3. [Lịch Sử Phân Loại (`/api/history`)](#3-lịch-sử-phân-loại)
 4. [Thống Kê Tổng Hợp (`/api/stats`)](#4-thống-kê-tổng-hợp)
 5. [Cảnh Báo Sự Cố Khẩn Cấp (`/api/email-alert` & `/api/telegram-alert`)](#5-cảnh-báo-sự-cố-khẩn-cấp)
+6. [An Toàn Hệ Thống, Quản Lý Sự Cố, Báo Cáo Ca & SSE Stream (`/api/safety`, `/api/notifications`, `/api/events`)](#6-an-toàn-hệ-thống-quản-lý-sự-cố--sse-stream)
+7. [Danh Mục Mã Lỗi HTTP Chuẩn](#7-danh-mục-mã-lỗi-http-chuẩn)
 
 ---
 
@@ -354,7 +356,398 @@ Xác thực mã OTP 6 chữ số và thiết lập mật khẩu mới.
 
 ---
 
-## 6. Danh Mục Mã Lỗi HTTP Chuẩn
+## 6. An Toàn Hệ Thống, Quản Lý Sự Cố & SSE Stream
+
+### 6.1. Kích Hoạt Dừng Khẩn Cấp (E-Stop)
+Kích hoạt trạng thái dừng khẩn cấp trên toàn hệ thống, khóa băng tải, lưu thông báo sự cố và phát tán broadcast.
+
+- **Method**: `POST`
+- **Path**: `/api/safety/estop`
+- **Headers**: `Content-Type: application/json`
+- **Request Body** (`EmergencyStopPayload`):
+```json
+{
+  "event": "emergency_stop",
+  "station_id": "STATION_01",
+  "triggered_by": "Physical E-Stop Button #1",
+  "timestamp": "2026-09-18T03:00:00.000Z",
+  "mode": "realtime"
+}
+```
+- **Response `200 OK`**:
+```json
+{
+  "success": true,
+  "message": "Đã ghi nhận sự cố dừng khẩn cấp và kích hoạt còi báo động",
+  "data": {
+    "is_locked": true,
+    "incident": { ... }
+  }
+}
+```
+
+---
+
+### 6.2. Kích Hoạt Cảnh Báo Kẹt Phôi (Jam Detected)
+Kích hoạt cảnh báo tắc nghẽn sản phẩm khi cảm biến quang học che khuất liên tục quá thời gian cho phép (5s).
+
+- **Method**: `POST`
+- **Path**: `/api/safety/jam`
+- **Headers**: `Content-Type: application/json`
+- **Request Body** (`JamDetectedPayload`):
+```json
+{
+  "event": "jam_detected",
+  "section": "Conveyor_Belt_Zone_A",
+  "duration_seconds": 5,
+  "sensor_id": "OPTICAL_JAM_02",
+  "mode": "realtime",
+  "timestamp": "2026-09-18T03:05:00.000Z"
+}
+```
+- **Response `200 OK`**:
+```json
+{
+  "success": true,
+  "message": "Đã kích hoạt cảnh báo kẹt phôi thành công",
+  "data": {
+    "notification_id": "notif_1789676162429",
+    "event": "jam_detected"
+  }
+}
+```
+
+### 6.3. Kích Hoạt Cảnh Báo Khay Phân Loại Đầy (Bin Full)
+Kích hoạt cảnh báo khi khay phân loại sản phẩm đạt hoặc vượt định mức dung lượng (dải sức chứa tùy chỉnh linh hoạt từ 5 đến 50 SP, mặc định 50 SP/khay).
+
+- **Method**: `POST`
+- **Path**: `/api/safety/bin-full` (hoặc `/api/storage/bin-status`)
+- **Headers**: `Content-Type: application/json`
+- **Request Body** (`BinFullPayload`):
+```json
+{
+  "event": "bin_full",
+  "bin_id": "BIN_RED_01",
+  "category": "Sản phẩm loại A",
+  "current_count": 30,
+  "max_capacity": 30,
+  "mode": "realtime",
+  "timestamp": "2026-09-18T03:10:00.000Z"
+}
+```
+- **Response `200 OK`**:
+```json
+{
+  "success": true,
+  "message": "Đã ghi nhận sự cố đầy khay phân loại",
+  "data": {
+    "success": true,
+    "notification": {
+      "id": "notif_1789676500000",
+      "event": "bin_full",
+      "severity": "warning",
+      "station_id": "BIN_RED_01",
+      "description": "[ĐẦY KHAY CHỨA] Khay phân loại sản phẩm Đỏ (#01) đã đạt giới hạn 30/30 cái. Vui lòng thay thế khay rỗng mới",
+      "timestamp": "2026-09-18T03:10:00.000Z",
+      "status": "unprocessed"
+    }
+  }
+}
+```
+
+---
+
+### 6.4. Ghi Nhận Cảnh Báo Quá Nhiệt Thiết Bị (Temperature Warning)
+Ghi nhận sự cố nhiệt độ động cơ truyền động hoặc CPU máy chủ Edge AI vượt ngưỡng an toàn (> 75.0°C). Tự động lưu cảnh báo vào `data/notifications.json` và phát thông báo qua SSE.
+
+- **Method**: `POST`
+- **Path**: `/api/safety/temp-warning` (hoặc `/api/telemetry/temp`)
+- **Headers**: `Content-Type: application/json`
+- **Request Body** (`TemperatureWarningPayload`):
+```json
+{
+  "event": "temperature_warning",
+  "device_name": "Main_Drive_Motor / Edge_AI_Box",
+  "current_temp": 78.5,
+  "threshold_temp": 75.0,
+  "unit": "°C",
+  "mode": "realtime"
+}
+```
+- **Response `200 OK`**:
+```json
+{
+  "success": true,
+  "message": "Đã ghi nhận cảnh báo quá nhiệt thiết bị",
+  "data": {
+    "success": true,
+    "notification": {
+      "id": "notif_1789676600000",
+      "event": "temperature_warning",
+      "severity": "warning",
+      "station_id": "Main_Drive_Motor / Edge_AI_Box",
+      "description": "[QUÁ NHIỆT] Động cơ truyền động chính đang ở mức 78.5°C (Ngưỡng an toàn: 75°C). Khuyến nghị kiểm tra quạt tản nhiệt hoặc giảm tải",
+      "timestamp": "2026-09-18T03:15:00.000Z",
+      "status": "unprocessed"
+    }
+  }
+}
+```
+
+---
+
+### 6.5. Ghi Nhận Sự Cố Thiết Bị Vi Điều Khiển Ngoại Tuyến (Device Offline)
+Ghi nhận sự cố vi điều khiển ESP32 bị ngắt kết nối (mất nguồn hoặc mất sóng Wi-Fi) khi Watchdog không nhận được nhịp tim ping quá 6 giây. Tự động lưu thông báo mức `error` vào `data/notifications.json` và phát thông báo qua SSE.
+
+- **Method**: `POST`
+- **Path**: `/api/safety/device-offline` (hoặc `/api/device/offline`)
+- **Headers**: `Content-Type: application/json`
+- **Request Body** (`DeviceOfflinePayload`):
+```json
+{
+  "event": "device_offline",
+  "device_id": "ESP32_MAIN_CONTROLLER",
+  "ip_address": "192.168.1.105",
+  "last_seen": "15 giây trước",
+  "mode": "realtime"
+}
+```
+- **Response `200 OK`**:
+```json
+{
+  "success": true,
+  "message": "Đã ghi nhận sự cố mất kết nối vi điều khiển",
+  "data": {
+    "success": true,
+    "notification": {
+      "id": "notif_1789676700000",
+      "event": "device_offline",
+      "severity": "error",
+      "station_id": "ESP32_MAIN_CONTROLLER",
+      "description": "[MẤT KẾT NỐI THIẾT BỊ] Vi điều khiển trung tâm (ESP32) đã ngoại tuyến! Dữ liệu cảm biến thời gian thực bị ngắt",
+      "timestamp": "2026-09-18T03:20:00.000Z",
+      "status": "unprocessed"
+    }
+  }
+}
+```
+
+---
+
+### 6.6. Nhịp Tim Vi Điều Khiển (Device Heartbeat Ping)
+Ghi nhận gói tin nhịp tim (ping) định kỳ mỗi 2 giây từ vi điều khiển qua HTTP hoặc MQTT topic `conveyor/heartbeat`. Reset bộ đếm Watchdog 6 giây và kích hoạt phục hồi trạng thái Online qua SSE.
+
+- **Method**: `POST`
+- **Path**: `/api/safety/heartbeat` (hoặc `/api/heartbeat`, `/api/telemetry/heartbeat`)
+- **Headers**: `Content-Type: application/json`
+- **Request Body** (`HeartbeatPayload`):
+```json
+{
+  "event": "heartbeat",
+  "device_id": "ESP32_MAIN_CONTROLLER",
+  "uptime": 3600,
+  "wifi_rssi": -65,
+  "mode": "realtime"
+}
+```
+- **Response `200 OK`**:
+```json
+{
+  "success": true,
+  "message": "Heartbeat ghi nhận thành công",
+  "device_id": "ESP32_MAIN_CONTROLLER",
+  "timestamp": "2026-09-18T03:20:02.000Z"
+}
+```
+
+---
+
+### 6.7. Báo Cáo 1 Ngày Làm Việc (Shift Summary / Daily Work Report)
+Kích hoạt tự động lúc 17:00 hàng ngày hoặc khi người dùng bấm nút "Báo cáo 1 ngày làm việc" trên TopHeader. Tự động đồng bộ số liệu thời gian thực từ 3 khay chứa (Khay 1 Coca, Khay 2 Pepsi, Khay 3 Lỗi/Khác), số lần E-Stop và thời gian vận hành. Tự động lưu thông báo mức `info` vào `data/notifications.json` và phát thông báo qua kênh SSE cho các client.
+
+- **Method**: `POST`
+- **Path**: `/api/safety/shift-summary` (hoặc `/api/shift/summary`)
+- **Headers**: `Content-Type: application/json`
+- **Request Body** (`ShiftSummaryPayload`):
+```json
+{
+  "event": "shift_summary",
+  "shift_name": "Ca 1 - Buổi sáng",
+  "total_products": 1250,
+  "sorted_good": 1180,
+  "sorted_defect": 70,
+  "accuracy_rate": "94.4%",
+  "emergency_stops_count": 1,
+  "operating_hours": "7.5 giờ",
+  "mode": "realtime",
+  "timestamp": "2026-09-18T17:00:00Z"
+}
+```
+- **Response `200 OK`**:
+```json
+{
+  "success": true,
+  "message": "Đã ghi nhận báo cáo 1 ngày làm việc thành công",
+  "data": {
+    "success": true,
+    "notification": {
+      "id": "notif_1789677000000",
+      "event": "shift_summary",
+      "severity": "info",
+      "station_id": "SHIFT_SUPERVISOR",
+      "description": "[BÁO CÁO 1 NGÀY LÀM VIỆC] Ca 1 - Buổi sáng: 1180/1250 SP đạt (94.4%), 70 lỗi, 1 E-Stops.",
+      "timestamp": "2026-09-18T17:00:00.000Z",
+      "status": "unprocessed"
+    }
+  }
+}
+```
+
+---
+
+### 6.8. Mở Khóa An Toàn Hệ Thống (Safety Unlock)
+Mở khóa an toàn sau sự cố dừng khẩn cấp. **Chỉ Quản trị viên (Admin)** mới có quyền gọi API này và bắt buộc phải gửi kèm ghi chú xác nhận an toàn hiện trường.
+
+- **Method**: `POST`
+- **Path**: `/api/safety/unlock`
+- **Headers**: `Content-Type: application/json`
+- **Request Body** (`UnlockSystemInput`):
+```json
+{
+  "userId": "admin-001",
+  "role": "admin",
+  "note": "Đã kiểm tra hiện trường an toàn, gỡ bỏ vật cản và cho phép vận hành lại"
+}
+```
+- **Response `200 OK`**: Hệ thống đã được mở khóa an toàn.
+- **Response `403 Forbidden`**: Tài khoản không có quyền Admin hoặc vi phạm kiểm tra xác thực.
+
+---
+
+### 6.9. Truy Vấn Trạng Thái Khóa An Toàn
+Lấy trạng thái hiện tại của hệ thống khóa an toàn.
+
+- **Method**: `GET`
+- **Path**: `/api/safety/status`
+- **Response `200 OK`**:
+```json
+{
+  "success": true,
+  "data": {
+    "is_locked": false,
+    "estop_incident": null,
+    "last_unlocked": 1789676500000
+  }
+}
+```
+
+---
+
+### 6.10. Truy Vấn Danh Sách Thông Báo Bền Vững
+Lấy danh sách các sự cố khẩn cấp và cảnh báo được lưu trữ bền vững trong `data/notifications.json`.
+
+- **Method**: `GET`
+- **Path**: `/api/notifications`
+- **Query Params**: `?status=unprocessed|processed&limit=50`
+- **Response `200 OK`**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "notif_001",
+      "type": "jam_detected",
+      "message": "[CẢNH BÁO KẸT PHÔI] Phát hiện tắc nghẽn sản phẩm tại Khu vực Băng chuyền A (Cảm biến #02)",
+      "severity": "critical",
+      "status": "unprocessed",
+      "timestamp": "2026-09-18T03:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### 6.11. Cảnh Báo Mất Kết Nối MQTT Broker (`mqtt_disconnected`)
+Kích hoạt khi máy chủ hoặc giao diện người dùng mất kết nối socket/TCP với MQTT Broker quá 5 giây.
+
+- **Method**: `POST`
+- **Path**: `/api/safety/mqtt-disconnected`
+- **Headers**: `Content-Type: application/json`
+- **Request Body**:
+```json
+{
+  "event": "mqtt_disconnected",
+  "broker_url": "wss://broker.emqx.io:8084/mqtt",
+  "disconnected_duration_seconds": 5,
+  "reconnect_attempt": 3,
+  "mode": "realtime",
+  "timestamp": "2026-09-18T18:00:00.000Z"
+}
+```
+- **Response `200 OK`**:
+```json
+{
+  "success": true,
+  "message": "Đã ghi nhận cảnh báo mất kết nối MQTT Broker",
+  "data": {
+    "success": true,
+    "notification": {
+      "id": "notif_mqtt_123",
+      "event": "mqtt_disconnected",
+      "severity": "critical",
+      "description": "[MẤT KẾT NỐI MẠNG] Mất liên lạc với MQTT Broker! Đang thử kết nối lại lần thứ 3 (Reconnecting...)"
+    }
+  }
+}
+```
+
+---
+
+### 6.12. Phục Hồi Kết Nối MQTT Broker Thành Công (`mqtt_connected`)
+Kích hoạt khi client tự động kết nối lại (auto-reconnect) thành công sau các chu kỳ 3s, 5s, 10s.
+
+- **Method**: `POST`
+- **Path**: `/api/safety/mqtt-connected`
+- **Headers**: `Content-Type: application/json`
+- **Request Body**:
+```json
+{
+  "broker_url": "wss://broker.emqx.io:8084/mqtt"
+}
+```
+- **Response `200 OK`**:
+```json
+{
+  "success": true,
+  "message": "[ĐÃ PHỤC HỒI] Kết nối MQTT Broker thành công"
+}
+```
+
+---
+
+### 6.13. Luồng Sự Kiện Thời Gian Thực Server-Sent Events (SSE)
+Kết nối luồng stream một chiều từ server tới các client để cập nhật sự kiện tức thời mà không cần polling liên tục.
+
+- **Method**: `GET`
+- **Path**: `/api/events`
+- **Headers**: `Accept: text/event-stream`
+- **Event Types**:
+  - `safety_estop`: Gửi payload sự cố dừng khẩn cấp.
+  - `jam_detected`: Gửi payload cảnh báo kẹt phôi.
+  - `bin_full`: Gửi payload cảnh báo khay phân loại sản phẩm đã đầy (50/50 cái).
+  - `temperature_warning`: Gửi payload cảnh báo quá nhiệt động cơ / CPU Edge AI (> 75°C).
+  - `device_offline`: Gửi payload cảnh báo vi điều khiển ESP32 mất kết nối ngoại tuyến.
+  - `device_online`: Gửi tín hiệu vi điều khiển đã phục hồi kết nối trực tuyến.
+  - `shift_summary`: Gửi payload báo cáo tổng kết ca làm việc cuối ngày (17:00 / bấm nút).
+  - `mqtt_disconnected`: Gửi payload cảnh báo mất kết nối MQTT Broker quá 5 giây (CRITICAL).
+  - `mqtt_connected`: Gửi thông báo phục hồi kết nối MQTT Broker thành công (INFO).
+  - `safety_unlock`: Gửi tín hiệu mở khóa an toàn thành công.
+
+---
+
+
+## 7. Danh Mục Mã Lỗi HTTP Chuẩn
 
 | Mã trạng thái | Ý nghĩa | Mô tả |
 | :--- | :--- | :--- |

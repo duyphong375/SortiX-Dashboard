@@ -45,7 +45,7 @@ export default function UsersPage() {
   // State bộ lọc và tìm kiếm
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | UserRole>("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | UserStatus>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "offline" | "locked">("all");
 
   // State Modal Thêm tài khoản
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -120,6 +120,30 @@ export default function UsersPage() {
     }
   }, [canView, router]);
 
+  // Kiểm tra tài khoản hiện tại có trùng với ID người dùng không
+  const isCurrentSelf = useCallback(
+    (userItem: SafeUser): boolean => {
+      if (!currentAuthUser) return false;
+      return Boolean(
+        (currentAuthUser.id && currentAuthUser.id === userItem.id) ||
+        (currentAuthUser.username &&
+          currentAuthUser.username.toLowerCase() === userItem.username.toLowerCase()) ||
+        (currentAuthUser.email &&
+          currentAuthUser.email.toLowerCase() === userItem.email.toLowerCase())
+      );
+    },
+    [currentAuthUser]
+  );
+
+  // Kiểm tra tài khoản có đang trực tuyến/hoạt động không
+  const isUserActive = useCallback(
+    (userItem: SafeUser): boolean => {
+      if (userItem.status === "locked") return false;
+      return isCurrentSelf(userItem) || Boolean(userItem.is_online);
+    },
+    [isCurrentSelf]
+  );
+
   // Lọc danh sách người dùng
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
@@ -131,29 +155,25 @@ export default function UsersPage() {
         u.full_name.toLowerCase().includes(q);
 
       const matchRole = roleFilter === "all" || u.role === roleFilter;
-      const matchStatus = statusFilter === "all" || u.status === statusFilter;
+      let matchStatus = true;
+      if (statusFilter === "active") {
+        matchStatus = isUserActive(u);
+      } else if (statusFilter === "offline") {
+        matchStatus = !isUserActive(u) && u.status !== "locked";
+      } else if (statusFilter === "locked") {
+        matchStatus = u.status === "locked";
+      }
 
       return matchQuery && matchRole && matchStatus;
     });
-  }, [users, searchQuery, roleFilter, statusFilter]);
+  }, [users, searchQuery, roleFilter, statusFilter, isUserActive]);
 
   // Thống kê
   const totalCount = users.length;
   const adminCount = users.filter((u) => u.role === "admin").length;
-  const activeCount = users.filter((u) => u.status === "active").length;
+  const activeCount = users.filter((u) => isUserActive(u)).length;
+  const offlineCount = users.filter((u) => !isUserActive(u) && u.status !== "locked").length;
   const lockedCount = users.filter((u) => u.status === "locked").length;
-
-  // Kiểm tra tài khoản hiện tại có trùng với ID người dùng không
-  const isCurrentSelf = (userItem: SafeUser): boolean => {
-    if (!currentAuthUser) return false;
-    return Boolean(
-      (currentAuthUser.id && currentAuthUser.id === userItem.id) ||
-      (currentAuthUser.username &&
-        currentAuthUser.username.toLowerCase() === userItem.username.toLowerCase()) ||
-      (currentAuthUser.email &&
-        currentAuthUser.email.toLowerCase() === userItem.email.toLowerCase())
-    );
-  };
 
   // Xử lý Thêm tài khoản mới
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -512,12 +532,13 @@ export default function UsersPage() {
             <span className="text-slate-500 dark:text-slate-400 font-medium">Trạng thái:</span>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as "all" | UserStatus)}
+              onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "offline" | "locked")}
               className="rounded-xl border border-slate-200/80 bg-white dark:bg-[#111319] dark:border-white/[0.07] text-slate-900 dark:text-white px-2.5 py-1.5 text-xs font-semibold outline-none cursor-pointer"
             >
               <option value="all">Tất cả trạng thái</option>
-              <option value="active">Đang hoạt động</option>
-              <option value="locked">Bị khóa</option>
+              <option value="active">Đang hoạt động (Online)</option>
+              <option value="offline">Ngoại tuyến (Offline)</option>
+              <option value="locked">Bị khóa (Locked)</option>
             </select>
           </div>
         </div>
@@ -633,25 +654,40 @@ export default function UsersPage() {
 
                       {/* Trạng thái */}
                       <td className="px-5 py-3.5">
-                        {userItem.status === "active" ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            Hoạt động
-                          </span>
-                        ) : (
+                        {userItem.status === "locked" ? (
                           <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/25 bg-rose-500/10 px-2.5 py-0.5 text-xs font-semibold text-rose-600 dark:text-rose-400">
                             <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
                             Bị khóa
                           </span>
+                        ) : isUserActive(userItem) ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shadow-xs">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Đang hoạt động
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-300/70 bg-slate-100/80 px-2.5 py-0.5 text-xs font-medium text-slate-500 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-400">
+                            <span className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500" />
+                            Ngoại tuyến
+                          </span>
                         )}
                       </td>
 
-                      {/* Ngày tạo */}
+                      {/* Ngày tạo & Lần cuối */}
                       <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
-                        {new Date(userItem.created_at).toLocaleString("vi-VN", {
-                          dateStyle: "short",
-                          timeStyle: "short",
-                        })}
+                        <div>
+                          {new Date(userItem.created_at).toLocaleString("vi-VN", {
+                            dateStyle: "short",
+                            timeStyle: "short",
+                          })}
+                        </div>
+                        {userItem.last_login_at && (
+                          <div className="text-[10px] text-slate-400 dark:text-slate-500">
+                            Lần cuối: {new Date(userItem.last_login_at).toLocaleString("vi-VN", {
+                              dateStyle: "short",
+                              timeStyle: "short",
+                            })}
+                          </div>
+                        )}
                       </td>
 
                       {/* Thao tác */}

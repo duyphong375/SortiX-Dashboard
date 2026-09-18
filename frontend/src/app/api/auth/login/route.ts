@@ -37,11 +37,14 @@ export async function POST(request: Request) {
         );
       }
 
+      NextUsersStore.setOnline(user.id, true);
+      const updatedUser = NextUsersStore.findById(user.id) || user;
+
       const token = Buffer.from(
         JSON.stringify({
-          id: user.id,
-          role: user.role,
-          username: user.username,
+          id: updatedUser.id,
+          role: updatedUser.role,
+          username: updatedUser.username,
           issuedAt: Date.now(),
         })
       ).toString("base64");
@@ -50,7 +53,7 @@ export async function POST(request: Request) {
         success: true,
         message: "Đăng nhập thành công",
         data: {
-          user: toSafeUser(user),
+          user: toSafeUser(updatedUser),
           token,
         },
       });

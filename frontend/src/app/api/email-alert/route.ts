@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   if (!hasValidInternalSecret(req)) return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
   if (!allowRequest(rateLimitCache, clientAddress(req))) return NextResponse.json({ success: false, message: "Too many requests" }, { status: 429 });
   try {
-    const { event_type, severity, description, device_id, timestamp } = await readAlertPayload(req);
+    const { event_type, severity, description, device_id, timestamp, mode } = await readAlertPayload(req);
     const host = process.env.SMTP_HOST?.trim() || "smtp.gmail.com";
     const port = Number(process.env.SMTP_PORT || 587);
     const secure = process.env.SMTP_SECURE === "true";
@@ -27,10 +27,15 @@ export async function POST(req: NextRequest) {
     const isCritical = severity === "critical";
     const statusColor = isCritical ? "#ef4444" : "#f59e0b";
     const statusTitle = isCritical ? "CẢNH BÁO NGUY HIỂM - MỨC NGHIÊM TRỌNG" : "CẢNH BÁO VẬN HÀNH - CẢNH BÁO";
+    const isSim = mode === "simulation";
+    const modeBadge = isSim
+      ? `<span style="background:#0284c7;color:#ffffff;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:bold;display:inline-block">🧪 MÔ PHỎNG (Simulation)</span>`
+      : `<span style="background:#10b981;color:#ffffff;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:bold;display:inline-block">🏭 THỰC TẾ (Real-time IoT)</span>`;
+    const modePrefix = isSim ? "[MÔ PHỎNG]" : "[THỰC TẾ]";
     const formattedTime = new Date(timestamp).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
     const safeDeviceId = escapeHtml(device_id), safeEventType = escapeHtml(event_type), safeDescription = escapeHtml(description);
-    const htmlContent = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f172a;border-radius:12px;overflow:hidden;color:#f8fafc"><div style="background:${statusColor};padding:18px 24px;text-align:center"><h2 style="margin:0;color:#fff">${statusTitle}</h2></div><div style="padding:24px"><p style="color:#94a3b8">Hệ thống phân loại IoT ghi nhận một sự kiện cần chú ý:</p><table style="width:100%;font-size:14px"><tr><td>Mã Thiết Bị:</td><td>${safeDeviceId}</td></tr><tr><td>Loại Sự Kiện:</td><td>${safeEventType}</td></tr><tr><td>Mô Tả Chi Tiết:</td><td>${safeDescription}</td></tr><tr><td>Thời Gian:</td><td>${formattedTime}</td></tr></table></div></div>`;
-    const info = await transporter.sendMail({ from: `"Cảnh báo bộ phân loại IoT PBL3" <${user}>`, to, subject: `[${statusTitle}] ${event_type} - ${device_id}`, html: htmlContent });
+    const htmlContent = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f172a;border-radius:12px;overflow:hidden;color:#f8fafc"><div style="background:${statusColor};padding:18px 24px;text-align:center"><h2 style="margin:0;color:#fff">${statusTitle}</h2><div style="margin-top:8px">${modeBadge}</div></div><div style="padding:24px"><p style="color:#94a3b8">Hệ thống phân loại IoT ghi nhận một sự kiện cần chú ý:</p><table style="width:100%;font-size:14px"><tr><td style="padding:6px 0;color:#94a3b8;width:140px">Môi Trường:</td><td style="padding:6px 0">${modeBadge}</td></tr><tr><td style="padding:6px 0;color:#94a3b8">Mã Thiết Bị:</td><td style="padding:6px 0">${safeDeviceId}</td></tr><tr><td style="padding:6px 0;color:#94a3b8">Loại Sự Kiện:</td><td style="padding:6px 0">${safeEventType}</td></tr><tr><td style="padding:6px 0;color:#94a3b8">Mô Tả Chi Tiết:</td><td style="padding:6px 0">${safeDescription}</td></tr><tr><td style="padding:6px 0;color:#94a3b8">Thời Gian:</td><td style="padding:6px 0">${formattedTime}</td></tr></table></div></div>`;
+    const info = await transporter.sendMail({ from: `"Cảnh báo bộ phân loại IoT PBL3" <${user}>`, to, subject: `${modePrefix} [${statusTitle}] ${event_type} - ${device_id}`, html: htmlContent });
     return NextResponse.json({ success: true, message: "Đã gửi email cảnh báo thành công", messageId: info.messageId });
   } catch (error: unknown) {
     if (error instanceof ZodError || error instanceof SyntaxError || (error instanceof Error && error.message === "CONTENT_TYPE")) return NextResponse.json({ success: false, message: "Dữ liệu cảnh báo không hợp lệ" }, { status: 400 });

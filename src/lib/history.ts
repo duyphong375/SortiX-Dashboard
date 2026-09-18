@@ -59,12 +59,12 @@ export const DEFAULT_INITIAL_CONFIG: SorterConfig = {
  * @returns true nếu là Mô phỏng, false nếu là Thực tế
  */
 export function loadOperatingMode(): boolean {
-  if (typeof window === "undefined") return true;
+  if (typeof window === "undefined") return false;
   try {
     const saved = localStorage.getItem(STORAGE_KEYS.MODE);
-    return saved !== "real";
+    return saved === "sim";
   } catch {
-    return true;
+    return false;
   }
 }
 

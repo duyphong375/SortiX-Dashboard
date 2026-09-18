@@ -18,7 +18,30 @@ export default function ConfigPage() {
     configStatusMsg,
     handleClearAlerts,
     handleResetConfigToDefault,
+    handleEmergencyStop,
+    isSimulation,
+    handleTriggerJam,
+    isJammed,
+    handleClearJam,
+    isBinFull,
+    handleTriggerBinFull,
+    handleConfirmBinReplaced,
+    isTempWarning,
+    handleTriggerTemperatureWarning,
+    handleCoolDownTemperature,
+    isDeviceOffline,
+    handleTriggerDeviceOffline,
+    handleReconnectDevice,
+    handleTriggerShiftSummary,
+    isMqttAlertActive,
+    handleSimulateMqttDisconnect,
+    handleReconnectMqtt,
+    binCounts,
+    handleSetBinCount,
+    binCapacities,
+    handleSetBinCapacity,
   } = useDashboard();
+
   const canEdit = usePermission("config.edit");
   const router = useRouter();
   const [countdown, setCountdown] = useState(3);
@@ -76,7 +99,86 @@ export default function ConfigPage() {
         applyStatusText={configStatusMsg}
         onClearAlerts={handleClearAlerts}
         onResetDefaultConfig={handleResetConfigToDefault}
+        onSimulateEStop={isSimulation ? handleEmergencyStop : undefined}
+        onSimulateJam={isSimulation ? () => handleTriggerJam(undefined, "user_action") : undefined}
+        isJammed={isJammed}
+        onClearJam={handleClearJam}
+        onSimulateBinFull={
+          isSimulation
+            ? (binIdx = 1) => {
+                const binId = binIdx === 1 ? "BIN_RED_01" : binIdx === 2 ? "BIN_BLUE_02" : "BIN_DEFAULT_03";
+                void handleTriggerBinFull({ bin_id: binId, current_count: 50, max_capacity: 50 }, "user_action");
+              }
+            : undefined
+        }
+        isBinFull={isBinFull}
+        onConfirmBinReplaced={() => handleConfirmBinReplaced()}
+        onSimulateTemperatureChange={
+          isSimulation
+            ? (temp: number) => {
+                void handleTriggerTemperatureWarning(
+                  {
+                    device_name: "Main_Drive_Motor / Edge_AI_Box",
+                    current_temp: temp,
+                    threshold_temp: 75.0,
+                    unit: "°C",
+                    mode: "realtime",
+                  },
+                  "sim_slider"
+                );
+              }
+            : undefined
+        }
+        isTempWarning={isTempWarning}
+        onCoolDownTemperature={handleCoolDownTemperature}
+        onSimulateDeviceOffline={
+          isSimulation
+            ? () => {
+                void handleTriggerDeviceOffline(
+                  {
+                    event: "device_offline",
+                    device_id: "ESP32_MAIN_CONTROLLER",
+                    ip_address: "192.168.1.105",
+                    last_seen: "15 giây trước",
+                    mode: "realtime",
+                  },
+                  "user_action"
+                );
+              }
+            : undefined
+        }
+        isDeviceOffline={isDeviceOffline}
+        onReconnectDevice={handleReconnectDevice}
+        onSimulateShiftSummary={
+          isSimulation
+            ? () => {
+                void handleTriggerShiftSummary(
+                  {
+                    event: "shift_summary",
+                    shift_name: "Ca 1 - Buổi sáng",
+                    total_products: 1250,
+                    sorted_good: 1180,
+                    sorted_defect: 70,
+                    accuracy_rate: "94.4%",
+                    emergency_stops_count: 1,
+                    operating_hours: "7.5 giờ",
+                    timestamp: new Date().toISOString(),
+                  },
+                  "user_action"
+                );
+              }
+            : undefined
+        }
+        isSimulation={isSimulation}
+        binCounts={binCounts}
+        onSetBinCount={isSimulation ? handleSetBinCount : undefined}
+        binCapacities={binCapacities}
+        onSetBinCapacity={handleSetBinCapacity}
+        onSimulateMqttDisconnect={handleSimulateMqttDisconnect}
+        onReconnectMqtt={handleReconnectMqtt}
+        isMqttAlertActive={isMqttAlertActive}
       />
     </div>
   );
 }
+

@@ -101,6 +101,7 @@ interface KpiStatGridProps {
   visualItemsCount: number;
   avgConfidence: string;
   pingMs: number;
+  isDeviceOffline?: boolean;
 }
 
 export function KpiStatGrid({
@@ -114,6 +115,7 @@ export function KpiStatGrid({
   visualItemsCount,
   avgConfidence,
   pingMs,
+  isDeviceOffline = false,
 }: KpiStatGridProps) {
   const animatedTotal = useCountUp(totalSorted, 800);
 
@@ -179,24 +181,28 @@ export function KpiStatGrid({
         icon={Cpu}
         title="Trạng Thái IoT ESP32-C5"
         value={
-          isSimulation
+          isDeviceOffline
+            ? "Offline"
+            : isSimulation
             ? "Trực Tuyến (Mô Phỏng)"
             : isEspConnected
             ? "Trực Tuyến (ESP32)"
-            : "Ngoại Tuyến / Mất kết nối"
+            : "Offline"
         }
         subtitle={`Uptime: ${
-          isEspConnected || isSimulation ? formatUptime(telemetry.uptime) : "00:00:00"
-        } • CPU: ${isEspConnected || isSimulation ? telemetry.cpu_temp : "--"}°C`}
+          !isDeviceOffline && (isEspConnected || isSimulation) ? formatUptime(telemetry.uptime) : "00:00:00"
+        } • CPU: ${!isDeviceOffline && (isEspConnected || isSimulation) ? telemetry.cpu_temp : "--"}°C`}
         trend={{
-          value: isSimulation
+          value: isDeviceOffline
+            ? "Thiết bị ngắt kết nối"
+            : isSimulation
             ? `${telemetry.wifi_band}`
             : isEspConnected
             ? `${telemetry.wifi_band}`
             : "Đang chờ dữ liệu từ ESP32...",
-          positive: isSimulation ? true : isEspConnected,
+          positive: !isDeviceOffline && (isSimulation ? true : isEspConnected),
         }}
-        color={isSimulation ? "purple" : isEspConnected ? "emerald" : "rose"}
+        color={isDeviceOffline || (!isEspConnected && !isSimulation) ? "slate" : isSimulation ? "purple" : "emerald"}
       />
 
       {/* KPI 4: Hiệu Suất Nhận Diện AI */}

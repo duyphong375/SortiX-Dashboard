@@ -93,9 +93,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    if (user?.id) {
+      fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      }).catch(() => {});
+    }
     setUser(null);
     try { localStorage.removeItem(STORAGE_KEY); } catch { /* storage may be disabled */ }
-  }, []);
+  }, [user]);
 
   const checkPermission = useCallback(
     (action: PermissionAction): boolean => {

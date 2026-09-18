@@ -12,18 +12,24 @@ export async function POST(req: NextRequest) {
   if (!hasValidInternalSecret(req)) return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
   if (!allowRequest(rateLimitCache, clientAddress(req))) return NextResponse.json({ success: false, message: "Too many requests" }, { status: 429 });
   try {
-    const { event_type, severity, description, device_id, timestamp } = await readAlertPayload(req);
+    const { event_type, severity, description, device_id, timestamp, mode } = await readAlertPayload(req);
     const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
     const chatId = process.env.TELEGRAM_CHAT_ID?.trim();
     if (!token || !chatId || token === "your_telegram_bot_token_here") return NextResponse.json({ success: false, message: "Chưa cấu hình TELEGRAM_BOT_TOKEN hoặc TELEGRAM_CHAT_ID hợp lệ trong file .env.local" }, { status: 400 });
     const severityLabel = severity === "critical" ? "🚨 KHẨN CẤP" : severity === "warning" ? "⚠️ CẢNH BÁO" : "ℹ️ THÔNG TIN";
+    const modeLabel = mode === "simulation" ? "🧪 MÔ PHỎNG (Simulation)" : "🏭 THỰC TẾ (Real-time IoT)";
     const formattedTime = new Date(timestamp).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
     const message = [
-      "<b>[HỆ THỐNG PHÂN LOẠI IOT - PBL3]</b>", `Trạng thái: <b>${severityLabel}</b>`, "━━━━━━━━━━━━━━━━━━━━",
+      "<b>[HỆ THỐNG PHÂN LOẠI IOT - PBL3]</b>",
+      `Trạng thái: <b>${severityLabel}</b>`,
+      `Môi trường: <b>${modeLabel}</b>`,
+      "━━━━━━━━━━━━━━━━━━━━",
       `📦 <b>Mã Thiết Bị:</b> <code>${escapeHtml(device_id)}</code>`,
       `⚙️ <b>Loại Sự Kiện:</b> <code>${escapeHtml(event_type)}</code>`,
-      `📝 <b>Chi Tiết:</b> ${escapeHtml(description)}`, `⏰ <b>Thời Gian:</b> ${escapeHtml(formattedTime)}`,
-      "━━━━━━━━━━━━━━━━━━━━", "<i>Khuyến cáo: Người vận hành vui lòng kiểm tra hiện trường băng chuyền.</i>",
+      `📝 <b>Chi Tiết:</b> ${escapeHtml(description)}`,
+      `⏰ <b>Thời Gian:</b> ${escapeHtml(formattedTime)}`,
+      "━━━━━━━━━━━━━━━━━━━━",
+      "<i>Khuyến cáo: Người vận hành vui lòng kiểm tra hiện trường băng chuyền.</i>",
     ].join("\n");
     const response = await fetch(`https://api.telegram.org/bot${encodeURIComponent(token)}/sendMessage`, {
       method: "POST", headers: { "Content-Type": "application/json" },

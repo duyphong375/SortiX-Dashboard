@@ -5,14 +5,22 @@ export const STORAGE_KEYS = {
   MODE: "pbl3_operating_mode", // "sim" | "real"
   SIM_RECORDS: "pbl3_sim_records",
   SIM_BIN_COUNTS: "pbl3_sim_bin_counts",
+  SIM_BIN_CAPACITIES: "pbl3_sim_bin_capacities",
   REAL_RECORDS: "pbl3_real_records",
   REAL_BIN_COUNTS: "pbl3_real_bin_counts",
+  REAL_BIN_CAPACITIES: "pbl3_real_bin_capacities",
   LEGACY_RECORDS: "pbl3_sorter_records_v1",
   ALERTS: "pbl3_sorter_alerts_v1",
   CONFIG: "pbl3_sorter_config_v1",
 } as const;
 
 export interface BinCounts {
+  bin1: number;
+  bin2: number;
+  bin3: number;
+}
+
+export interface BinCapacities {
   bin1: number;
   bin2: number;
   bin3: number;
@@ -59,12 +67,12 @@ export const DEFAULT_INITIAL_CONFIG: SorterConfig = {
  * @returns true nếu là Mô phỏng, false nếu là Thực tế
  */
 export function loadOperatingMode(): boolean {
-  if (typeof window === "undefined") return true;
+  if (typeof window === "undefined") return false;
   try {
     const saved = localStorage.getItem(STORAGE_KEYS.MODE);
-    return saved !== "real";
+    return saved === "sim";
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -227,6 +235,48 @@ export function saveBinCountsLocal(counts: BinCounts, isSim: boolean = true): vo
     localStorage.setItem(key, JSON.stringify(counts));
   } catch (err) {
     console.warn("Lỗi ghi LocalStorage bin counts:", err);
+  }
+}
+
+/**
+ * Lấy sức chứa định mức từng khay (mặc định 50, tùy chỉnh 5 - 50 SP)
+ */
+export function loadBinCapacitiesLocal(isSim: boolean = true): BinCapacities {
+  const defaultCapacities: BinCapacities = { bin1: 50, bin2: 50, bin3: 50 };
+  if (typeof window === "undefined") return defaultCapacities;
+
+  try {
+    const key = isSim ? STORAGE_KEYS.SIM_BIN_CAPACITIES : STORAGE_KEYS.REAL_BIN_CAPACITIES;
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const safeCapacity = (value: unknown) => {
+        const n = typeof value === "number" ? value : Number(value);
+        return Number.isFinite(n) ? Math.max(5, Math.min(Math.floor(n), 50)) : 50;
+      };
+      return {
+        bin1: safeCapacity(parsed.bin1),
+        bin2: safeCapacity(parsed.bin2),
+        bin3: safeCapacity(parsed.bin3),
+      };
+    }
+    return defaultCapacities;
+  } catch (err) {
+    console.warn("Lỗi đọc LocalStorage bin capacities:", err);
+    return defaultCapacities;
+  }
+}
+
+/**
+ * Lưu sức chứa định mức khay
+ */
+export function saveBinCapacitiesLocal(capacities: BinCapacities, isSim: boolean = true): void {
+  if (typeof window === "undefined") return;
+  try {
+    const key = isSim ? STORAGE_KEYS.SIM_BIN_CAPACITIES : STORAGE_KEYS.REAL_BIN_CAPACITIES;
+    localStorage.setItem(key, JSON.stringify(capacities));
+  } catch (err) {
+    console.warn("Lỗi ghi LocalStorage bin capacities:", err);
   }
 }
 

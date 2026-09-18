@@ -2,6 +2,78 @@
 
 Tất cả các thay đổi về kiến trúc, tính năng, sửa lỗi và nâng cấp chất lượng của dự án **SortiX Dashboard** được ghi lại tại tài liệu này theo tiêu chuẩn [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.3.0] - 2026-09-18 (Dung Lượng Khay Động 5-50 SP, Đồng Hồ Nhiệt Độ 2 Chế Độ, Báo Cáo 1 Ngày Làm Việc & MQTT Watchdog)
+
+### 🚀 Added (Thêm mới)
+- **Thanh Trượt Điều Chỉnh Độ Rộng / Sức Chứa Khay (Dynamic Bin Capacities 5 - 50 SP)**:
+  - Cho phép người dùng tùy chỉnh định mức chứa từ 5 đến 50 sản phẩm riêng biệt cho từng khay (Khay 1, Khay 2, Khay 3).
+  - Tự động đồng bộ hóa tức thời trên máng trượt Canvas 60fps (`ConveyorVisualizer.tsx`, `BinTrays.tsx`), widget giám sát (`LiveHealthAndBinWidget.tsx`), chẩn đoán (`ConfigAndDiagnostics.tsx`), `useSorterData.ts` và lưu trữ bền vững trên `localStorage ('sortix_bin_capacities')`.
+  - Cơ chế tự động kẹp giá trị an toàn (Clamping [5, 50] SP).
+- **Phân Định Rõ Ràng: Đầy Khay (`bin_full`) vs Kẹt Phôi (`jam_detected`)**:
+  - `bin_full`: Kích hoạt khi số lượng đạt tới sức chứa định mức của khay (`current_count >= max_capacity`, ví dụ 30/30 hoặc 50/50 SP), hiển thị banner vàng cam, còi báo đầy khay và nút "Xác nhận đã thay khay mới" reset khay về 0.
+  - `jam_detected`: Kích hoạt khi cảm biến quang học che khuất liên tục > 5 giây tại Cảm biến #02 / Zone A, dừng băng tải tức thì, còi hú báo kẹt và hiển thị banner đỏ kẹt phôi.
+- **Đồng Hồ Đo Nhiệt Độ Bán Nguyệt 2 Chế Độ (Dual-Mode Temperature Gauge Dial)**:
+  - `TemperatureGaugeWidget.tsx`: Tự động phân định giao diện theo chế độ vận hành:
+    - *Chế độ Mô phỏng*: Hiển thị thanh trượt nhiệt độ ảo (30°C - 95°C) và các nút preset (42.5°C, 72.0°C, 78.5°C) để thử nghiệm phản ứng quá nhiệt.
+    - *Chế độ Thực tế*: Tự động ẩn thanh trượt giả lập, hiển thị bảng telemetry cảm biến phần cứng thật (ESP32 DS18B20) với cờ `[PHẦN CỨNG THẬT]` và kim đo phản ánh dữ liệu cảm biến thực tế.
+- **Giám Sát Mất Kết Nối MQTT Broker (`mqtt_disconnected`)**:
+  - Watchdog 5 giây debounce chống nhấp nháy mạng ngắn hạn.
+  - Tự động chuyển đổi huy hiệu trên TopHeader: `MQTT: ONLINE (Xanh)` <-> `MQTT: DISCONNECTED (Đỏ chớp nháy)`.
+  - Phát âm thanh cảnh báo ngắt kết nối và lịch trình tự động kết nối lại theo chu kỳ backoff (3s -> 5s -> 10s).
+  - Toast phục hồi màu xanh kèm âm thanh chime khi kết nối lại thành công.
+  - Nút thử nghiệm "Ngắt kết nối MQTT Client" / "Khôi phục kết nối MQTT" trong trang Cấu hình và Thiết bị (chỉ hoạt động ở chế độ Mô phỏng).
+- **Báo Cáo 1 Ngày Làm Việc (Shift Summary / Daily Work Report)**:
+  - Chuẩn hóa tên gọi thành **`[BÁO CÁO 1 NGÀY LÀM VIỆC]`**.
+  - Tự động đồng bộ hóa trực tiếp số liệu thời gian thực từ 3 khay chứa, số sản phẩm đạt/lỗi, thời gian vận hành và số lần dừng khẩn cấp.
+  - Modal trực quan hóa số liệu, nút Tải báo cáo CSV có UTF-8 BOM hiển thị tiếng Việt chuẩn trên Excel, và mẫu in ấn chuẩn.
+- **Nâng Cấp Bộ Kiểm Thử Tự Động Toàn Diện**:
+  - Bổ sung 9 bộ test suites mới:
+    - `tests/bin_sliders_sync.test.cjs` (8 tests)
+    - `tests/mqtt_disconnected.test.cjs` (12 tests)
+    - `tests/temperature_gauge_simulation_vs_real.test.cjs` (4 tests)
+    - `tests/daily_report_sync.test.cjs` (6 tests)
+    - `tests/temperature_warning.test.cjs` (8 tests)
+    - `tests/device_offline.test.cjs` (10 tests)
+    - `tests/shift_summary.test.cjs` (8 tests)
+    - `tests/bin_full.test.cjs` (7 tests)
+    - `tests/jam_simulation_audio.test.cjs` (5 tests)
+  - Toàn bộ hệ thống đạt mốc kiểm thử kỷ lục: **108/108 Tests PASS (100% - 15 Test Suites)**.
+
+---
+
+## [2.2.0] - 2026-09-18 (Hệ Thống An Toàn E-Stop, Cảnh Báo Kẹt Phôi, SSE & Cô Lập Mô Phỏng)
+
+### 🚀 Added (Thêm mới)
+- **Hệ Thống Dừng Khẩn Cấp (Industrial E-Stop Safety System)**:
+  - `backend/src/services/safetyService.ts`: Quản lý trạng thái an toàn hệ thống (`is_locked`), lưu trữ sự cố khẩn cấp, xác thực mở khóa chỉ dành cho Admin và cơ chế chống kẹt loop echo 5s.
+  - `backend/src/controllers/safetyController.ts` & `backend/src/routes/safetyRoutes.ts`: Endpoints `/api/safety/estop`, `/api/safety/unlock`, `/api/safety/status`.
+  - `frontend/src/components/layout/EmergencyStopBanner.tsx`: Banner cảnh báo toàn màn hình khi băng chuyền bị khóa khẩn cấp.
+  - `frontend/src/components/ui/EmergencyConfirmModal.tsx`: Hộp thoại xác nhận kích hoạt dừng khẩn cấp từ Web.
+  - `frontend/src/components/ui/EmergencyUnlockToast.tsx`: Giao diện mở khóa an toàn yêu cầu quyền Quản trị viên và nhập lý do hiện trường.
+- **Hệ Thống Cảnh Báo Kẹt Phôi (Jam Detection System)**:
+  - `conveyor/sensor/jam`: Topic MQTT phát hiện vật thể đứng yên/che khuất liên tục quá 5 giây tại Cảm biến quang học #02 (Zone A).
+  - `/api/safety/jam`: Endpoint ghi nhận sự cố kẹt phôi và lưu trữ bền vững.
+  - Toast thông báo màu đỏ cảnh báo kẹt phôi kèm hướng dẫn xử lý và dừng băng tải.
+  - Cơ cấu chuyển hướng nâng cấp: Đổi sang kiểu **Piston đẩy thụt ra thụt vô** thay vì servo gạt xoay truyền thống.
+  - Tính năng **Dọn khay chủ động**: Bấm dọn khay bất kỳ lúc nào ngay trên máng trượt (không cần chờ đủ định mức 50 SP).
+- **Server-Sent Events (SSE Real-time Event Stream)**:
+  - `backend/src/services/sseService.ts` & `/api/events`: Stream sự kiện thời gian thực (E-Stop, Jam Detected, Safety Unlocked) tới tất cả các client đang mở.
+- **Kho Dữ Liệu Thông Báo Bền Vững (Notifications Persistence)**:
+  - `data/notifications.json` & `backend/src/models/notificationModel.ts`: Lưu trữ vĩnh viễn các thông báo dừng khẩn cấp và kẹt phôi với trạng thái `unprocessed` / `processed`.
+- **Gắn Nhãn Chế Độ Trong Cảnh Báo Tự Động**:
+  - Email (SMTP) và Telegram Bot tự động kèm nhãn định danh: `🧪 Chế độ Giả Lập` hoặc `🔴 Phần cứng Thực Tế`.
+- **3 Bộ Kiểm Thử Mới**:
+  - `tests/estop_safety.test.cjs`: 5 tests kiểm tra toàn bộ luồng E-Stop, thông báo và phân quyền mở khóa.
+  - `tests/jam_detection.test.cjs`: 6 tests kiểm tra sự cố kẹt phôi, Zod validation, SSE broadcast và topic MQTT.
+  - `tests/simulation_mode_guard.test.cjs`: 3 tests kiểm tra cô lập kiểm thử giữa Mô phỏng và Thực tế.
+
+### 🛡️ Security & Reliability (Bảo mật & Độ tin cậy)
+- **Cô lập Tuyệt đối Chế độ Mô phỏng (Strict Simulation Isolation)**:
+  - Các nút test giả lập kẹt phôi, giả lập E-Stop, nạp phôi mẫu, tạo dữ liệu demo hoàn toàn bị ẩn và bị chặn thực thi khi ở chế độ Thực tế (Real Hardware Mode).
+  - Động cơ vật lý canvas không tự sinh kẹt phôi giả khi đang kết nối máy thật; 100% dữ liệu dựa trên cảm biến quang học thật qua MQTT.
+- Chống kẹt lặp bản tin E-Stop: Bỏ qua các tín hiệu dừng lặp lại trong thời gian ân hạn 5 giây sau khi Admin đã mở khóa an toàn.
+- Toàn bộ hệ thống nâng mốc kiểm thử tự động từ 26 lên **40/40 Tests PASS (100%)**.
+
 ---
 
 ## [2.1.0] - 2026-09-18 (Hệ Thống Xác Thực Đa Lớp, Phân Quyền RBAC & Database Migrations)

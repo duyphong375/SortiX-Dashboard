@@ -13,8 +13,11 @@ import {
   AlertOctagon,
   BarChart2,
   ArrowRight,
+  Boxes,
+  SlidersHorizontal,
 } from "lucide-react";
 import { TelemetryData, CATALOG_BRANDS } from "@/lib/types";
+import { TemperatureGaugeWidget } from "@/components/ui/TemperatureGaugeWidget";
 
 const MAX_BIN_CAPACITY = 50;
 
@@ -25,10 +28,14 @@ export interface LiveHealthAndBinWidgetProps {
   isSimulation: boolean;
   isRunning: boolean;
   binCounts: { bin1: number; bin2: number; bin3: number };
+  binCapacities?: { bin1: number; bin2: number; bin3: number };
   bin1Brands: string[];
   bin2Brands: string[];
   handleToggleRun: () => void;
   handleEmergencyStop: () => void;
+  isDeviceOffline?: boolean;
+  onSetBinCount?: (binIndex: 1 | 2 | 3, count: number) => void;
+  onSetBinCapacity?: (binIndex: 1 | 2 | 3, capacity: number) => void;
 }
 
 export function LiveHealthAndBinWidget({
@@ -38,11 +45,18 @@ export function LiveHealthAndBinWidget({
   isSimulation,
   isRunning,
   binCounts,
+  binCapacities = { bin1: 50, bin2: 50, bin3: 50 },
   bin1Brands,
   bin2Brands,
   handleToggleRun,
   handleEmergencyStop,
+  isDeviceOffline = false,
+  onSetBinCount,
+  onSetBinCapacity,
 }: LiveHealthAndBinWidgetProps) {
+  const cap1 = binCapacities.bin1 || 50;
+  const cap2 = binCapacities.bin2 || 50;
+  const cap3 = binCapacities.bin3 || 50;
   return (
     <div className="relate-card flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm dark:border-white/[0.07] dark:bg-[#161822]">
       <div>
@@ -69,7 +83,7 @@ export function LiveHealthAndBinWidget({
           <div className="flex items-center gap-2">
             <span
               className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                !isEspConnected && !isSimulation
+                isDeviceOffline || (!isEspConnected && !isSimulation)
                   ? "border-slate-500/30 bg-slate-500/10 text-slate-600 dark:text-slate-400"
                   : telemetry.estop_pressed
                   ? "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400"
@@ -81,14 +95,14 @@ export function LiveHealthAndBinWidget({
               <span className="relative flex h-2 w-2">
                 <span
                   className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                    (isEspConnected || isSimulation) && isRunning && !telemetry.estop_pressed
+                    !isDeviceOffline && (isEspConnected || isSimulation) && isRunning && !telemetry.estop_pressed
                       ? "animate-ping bg-emerald-400"
                       : ""
                   }`}
                 />
                 <span
                   className={`relative inline-flex h-2 w-2 rounded-full ${
-                    !isEspConnected && !isSimulation
+                    isDeviceOffline || (!isEspConnected && !isSimulation)
                       ? "bg-slate-500"
                       : telemetry.estop_pressed
                       ? "bg-rose-500"
@@ -99,8 +113,8 @@ export function LiveHealthAndBinWidget({
                 />
               </span>
               <span>
-                {!isEspConnected && !isSimulation
-                  ? "Chưa Kết Nối"
+                {isDeviceOffline || (!isEspConnected && !isSimulation)
+                  ? "Offline"
                   : telemetry.estop_pressed
                   ? "E-Stop Kích Hoạt"
                   : isRunning
@@ -121,29 +135,15 @@ export function LiveHealthAndBinWidget({
             <span className="text-[10px] font-mono text-slate-400">Node: {telemetry.device_id}</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            {/* 1. Nhiệt độ */}
-            <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-white/[0.05] dark:bg-white/[0.02] flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 shrink-0">
-                  <Thermometer className="h-4 w-4" />
-                </div>
-                <div>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">Nhiệt độ CPU</span>
-                  <p className="font-mono text-sm font-bold text-slate-900 dark:text-white">
-                    {isEspConnected || isSimulation ? `${telemetry.cpu_temp}°C` : "--°C"}
-                  </p>
-                </div>
-              </div>
-              <span
-                className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-                  isEspConnected || isSimulation
-                    ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
-                    : "text-slate-500 bg-slate-500/10"
-                }`}
-              >
-                {isEspConnected || isSimulation ? "Bình thường" : "N/A"}
-              </span>
-            </div>
+            {/* 1. Nhiệt độ Đồng hồ Gauge */}
+            <TemperatureGaugeWidget
+              compact={true}
+              currentTemp={telemetry.cpu_temp}
+              thresholdTemp={75.0}
+              deviceName="Động cơ / CPU"
+              isOnline={!isDeviceOffline && (isEspConnected || isSimulation)}
+              isSimulation={isSimulation}
+            />
 
             {/* 2. Sóng Wi-Fi 6 */}
             <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-white/[0.05] dark:bg-white/[0.02] flex items-center justify-between">
@@ -154,18 +154,18 @@ export function LiveHealthAndBinWidget({
                 <div>
                   <span className="text-[11px] text-slate-500 dark:text-slate-400">Sóng Wi-Fi 6</span>
                   <p className="font-mono text-sm font-bold text-slate-900 dark:text-white truncate max-w-[110px]" title={telemetry.wifi_band}>
-                    {isEspConnected || isSimulation ? `${telemetry.wifi_rssi} dBm` : "-- dBm"}
+                    {!isDeviceOffline && (isEspConnected || isSimulation) ? `${telemetry.wifi_rssi} dBm` : "-- dBm"}
                   </p>
                 </div>
               </div>
               <span
                 className={`text-[10px] font-semibold px-1.5 py-0.5 rounded font-mono ${
-                  isEspConnected || isSimulation
+                  !isDeviceOffline && (isEspConnected || isSimulation)
                     ? "text-cyan-600 dark:text-cyan-400 bg-cyan-500/10"
                     : "text-slate-500 bg-slate-500/10"
                 }`}
               >
-                {isEspConnected || isSimulation ? "5.0 GHz" : "N/A"}
+                {!isDeviceOffline && (isEspConnected || isSimulation) ? "5.0 GHz" : "Offline"}
               </span>
             </div>
 
@@ -204,15 +204,23 @@ export function LiveHealthAndBinWidget({
         {/* THANH TIẾN ĐỘ DUNG LƯỢNG 3 KHAY CHỨA TỨC THỜI */}
         <div className="mt-5 space-y-3.5">
           <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-            <span>Dung Lượng 3 Khay Chứa (Định mức {MAX_BIN_CAPACITY} SP / Khay)</span>
+            <span>Dung Lượng 3 Khay Chứa (Định mức tùy chỉnh)</span>
             <span>Tỉ lệ đầy khay</span>
           </div>
 
           {/* Khay 1 (Gạt 1) */}
-          <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 dark:border-rose-500/20 dark:bg-rose-950/15">
+          <div className={`rounded-xl border p-3 transition-all ${
+            binCounts.bin1 >= cap1
+              ? "border-amber-500/50 bg-amber-500/10 dark:border-amber-500/40 dark:bg-amber-950/20 animate-pulse"
+              : "border-rose-500/20 bg-rose-500/5 dark:border-rose-500/20 dark:bg-rose-950/15"
+          }`}>
             <div className="flex items-center justify-between text-xs mb-1.5">
               <div className="flex items-center gap-2 font-bold text-rose-600 dark:text-rose-400">
-                <span className="h-2.5 w-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]" />
+                {binCounts.bin1 >= cap1 ? (
+                  <Boxes className="h-4 w-4 text-amber-500 animate-bounce shrink-0" />
+                ) : (
+                  <span className="h-2.5 w-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]" />
+                )}
                 <span>
                   Khay 1 (
                   {bin1Brands.length > 0
@@ -221,24 +229,93 @@ export function LiveHealthAndBinWidget({
                   / Gạt 1)
                 </span>
               </div>
-              <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                {binCounts.bin1}/{MAX_BIN_CAPACITY} SP (
-                {Math.min(100, Math.round((binCounts.bin1 / MAX_BIN_CAPACITY) * 100))}%)
-              </span>
+              {binCounts.bin1 >= cap1 ? (
+                <span className="font-mono font-black text-amber-800 dark:text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
+                  100% ĐẦY ({binCounts.bin1}/{cap1} SP) - CẦN THAY
+                </span>
+              ) : (
+                <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                  {binCounts.bin1}/{cap1} SP (
+                  {Math.min(100, Math.round((binCounts.bin1 / cap1) * 100))}%)
+                </span>
+              )}
             </div>
             <div className="h-2.5 w-full rounded-full bg-slate-200/80 dark:bg-white/[0.08] overflow-hidden">
               <div
-                className="h-full rounded-full bg-rose-500 transition-all duration-500 shadow-[0_0_8px_#f43f5e]"
-                style={{ width: `${Math.min(100, (binCounts.bin1 / MAX_BIN_CAPACITY) * 100)}%` }}
+                className={`h-full rounded-full transition-all duration-500 ${
+                  binCounts.bin1 >= cap1
+                    ? "bg-amber-500 shadow-[0_0_10px_#f59e0b] animate-pulse"
+                    : "bg-rose-500 shadow-[0_0_8px_#f43f5e]"
+                }`}
+                style={{ width: `${Math.min(100, (binCounts.bin1 / cap1) * 100)}%` }}
               />
             </div>
+
+            {/* Thanh trượt điều chỉnh sức chứa định mức Khay 1 */}
+            {(onSetBinCapacity || onSetBinCount) && (
+              <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-white/[0.06] space-y-1">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400 font-medium">
+                    <SlidersHorizontal className="h-3 w-3 text-rose-500" />
+                    Sức chứa Khay 1:
+                  </span>
+                  <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
+                    {cap1} SP (Tối đa)
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="50"
+                  step="1"
+                  value={cap1}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (onSetBinCapacity) onSetBinCapacity(1, val);
+                    else if (onSetBinCount) onSetBinCount(1, val);
+                  }}
+                  className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-rose-500"
+                />
+                <div className="flex items-center justify-between text-[9px] font-mono text-slate-400">
+                  <button
+                    type="button"
+                    onClick={() => onSetBinCapacity ? onSetBinCapacity(1, 10) : onSetBinCount?.(1, 10)}
+                    className="hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer transition-colors"
+                  >
+                    10 SP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSetBinCapacity ? onSetBinCapacity(1, 30) : onSetBinCount?.(1, 30)}
+                    className="hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer font-bold transition-colors"
+                  >
+                    30 SP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSetBinCapacity ? onSetBinCapacity(1, 50) : onSetBinCount?.(1, 50)}
+                    className="hover:text-amber-500 font-bold cursor-pointer transition-colors"
+                  >
+                    50 SP (Chuẩn)
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Khay 2 (Gạt 2) */}
-          <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 dark:border-blue-500/20 dark:bg-blue-950/15">
+          <div className={`rounded-xl border p-3 transition-all ${
+            binCounts.bin2 >= cap2
+              ? "border-amber-500/50 bg-amber-500/10 dark:border-amber-500/40 dark:bg-amber-950/20 animate-pulse"
+              : "border-blue-500/20 bg-blue-500/5 dark:border-blue-500/20 dark:bg-blue-950/15"
+          }`}>
             <div className="flex items-center justify-between text-xs mb-1.5">
               <div className="flex items-center gap-2 font-bold text-blue-600 dark:text-blue-400">
-                <span className="h-2.5 w-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]" />
+                {binCounts.bin2 >= cap2 ? (
+                  <Boxes className="h-4 w-4 text-amber-500 animate-bounce shrink-0" />
+                ) : (
+                  <span className="h-2.5 w-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]" />
+                )}
                 <span>
                   Khay 2 (
                   {bin2Brands.length > 0
@@ -247,37 +324,167 @@ export function LiveHealthAndBinWidget({
                   / Gạt 2)
                 </span>
               </div>
-              <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                {binCounts.bin2}/{MAX_BIN_CAPACITY} SP (
-                {Math.min(100, Math.round((binCounts.bin2 / MAX_BIN_CAPACITY) * 100))}%)
-              </span>
+              {binCounts.bin2 >= cap2 ? (
+                <span className="font-mono font-black text-amber-800 dark:text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
+                  100% ĐẦY ({binCounts.bin2}/{cap2} SP) - CẦN THAY
+                </span>
+              ) : (
+                <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                  {binCounts.bin2}/{cap2} SP (
+                  {Math.min(100, Math.round((binCounts.bin2 / cap2) * 100))}%)
+                </span>
+              )}
             </div>
             <div className="h-2.5 w-full rounded-full bg-slate-200/80 dark:bg-white/[0.08] overflow-hidden">
               <div
-                className="h-full rounded-full bg-blue-500 transition-all duration-500 shadow-[0_0_8px_#3b82f6]"
-                style={{ width: `${Math.min(100, (binCounts.bin2 / MAX_BIN_CAPACITY) * 100)}%` }}
+                className={`h-full rounded-full transition-all duration-500 ${
+                  binCounts.bin2 >= cap2
+                    ? "bg-amber-500 shadow-[0_0_10px_#f59e0b] animate-pulse"
+                    : "bg-blue-500 shadow-[0_0_8px_#3b82f6]"
+                }`}
+                style={{ width: `${Math.min(100, (binCounts.bin2 / cap2) * 100)}%` }}
               />
             </div>
+
+            {/* Thanh trượt điều chỉnh sức chứa định mức Khay 2 */}
+            {(onSetBinCapacity || onSetBinCount) && (
+              <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-white/[0.06] space-y-1">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400 font-medium">
+                    <SlidersHorizontal className="h-3 w-3 text-blue-500" />
+                    Sức chứa Khay 2:
+                  </span>
+                  <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
+                    {cap2} SP (Tối đa)
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="50"
+                  step="1"
+                  value={cap2}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (onSetBinCapacity) onSetBinCapacity(2, val);
+                    else if (onSetBinCount) onSetBinCount(2, val);
+                  }}
+                  className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-blue-500"
+                />
+                <div className="flex items-center justify-between text-[9px] font-mono text-slate-400">
+                  <button
+                    type="button"
+                    onClick={() => onSetBinCapacity ? onSetBinCapacity(2, 10) : onSetBinCount?.(2, 10)}
+                    className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors"
+                  >
+                    10 SP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSetBinCapacity ? onSetBinCapacity(2, 30) : onSetBinCount?.(2, 30)}
+                    className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer font-bold transition-colors"
+                  >
+                    30 SP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSetBinCapacity ? onSetBinCapacity(2, 50) : onSetBinCount?.(2, 50)}
+                    className="hover:text-amber-500 font-bold cursor-pointer transition-colors"
+                  >
+                    50 SP (Chuẩn)
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Khay 3 (Mặc định) */}
-          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 dark:border-amber-500/20 dark:bg-amber-950/15">
+          <div className={`rounded-xl border p-3 transition-all ${
+            binCounts.bin3 >= cap3
+              ? "border-amber-500/50 bg-amber-500/10 dark:border-amber-500/40 dark:bg-amber-950/20 animate-pulse"
+              : "border-amber-500/20 bg-amber-500/5 dark:border-amber-500/20 dark:bg-amber-950/15"
+          }`}>
             <div className="flex items-center justify-between text-xs mb-1.5">
               <div className="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-400">
-                <span className="h-2.5 w-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]" />
+                {binCounts.bin3 >= cap3 ? (
+                  <Boxes className="h-4 w-4 text-amber-500 animate-bounce shrink-0" />
+                ) : (
+                  <span className="h-2.5 w-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]" />
+                )}
                 <span>Khay 3 (Mặc định)</span>
               </div>
-              <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                {binCounts.bin3}/{MAX_BIN_CAPACITY} SP (
-                {Math.min(100, Math.round((binCounts.bin3 / MAX_BIN_CAPACITY) * 100))}%)
-              </span>
+              {binCounts.bin3 >= cap3 ? (
+                <span className="font-mono font-black text-amber-800 dark:text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
+                  100% ĐẦY ({binCounts.bin3}/{cap3} SP) - CẦN THAY
+                </span>
+              ) : (
+                <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                  {binCounts.bin3}/{cap3} SP (
+                  {Math.min(100, Math.round((binCounts.bin3 / cap3) * 100))}%)
+                </span>
+              )}
             </div>
             <div className="h-2.5 w-full rounded-full bg-slate-200/80 dark:bg-white/[0.08] overflow-hidden">
               <div
-                className="h-full rounded-full bg-amber-500 transition-all duration-500 shadow-[0_0_8px_#f59e0b]"
-                style={{ width: `${Math.min(100, (binCounts.bin3 / MAX_BIN_CAPACITY) * 100)}%` }}
+                className={`h-full rounded-full transition-all duration-500 ${
+                  binCounts.bin3 >= cap3
+                    ? "bg-amber-500 shadow-[0_0_10px_#f59e0b] animate-pulse"
+                    : "bg-amber-500 shadow-[0_0_8px_#f59e0b]"
+                }`}
+                style={{ width: `${Math.min(100, (binCounts.bin3 / cap3) * 100)}%` }}
               />
             </div>
+
+            {/* Thanh trượt điều chỉnh sức chứa định mức Khay 3 */}
+            {(onSetBinCapacity || onSetBinCount) && (
+              <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-white/[0.06] space-y-1">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400 font-medium">
+                    <SlidersHorizontal className="h-3 w-3 text-amber-500" />
+                    Sức chứa Khay 3:
+                  </span>
+                  <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                    {cap3} SP (Tối đa)
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="50"
+                  step="1"
+                  value={cap3}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (onSetBinCapacity) onSetBinCapacity(3, val);
+                    else if (onSetBinCount) onSetBinCount(3, val);
+                  }}
+                  className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-amber-500"
+                />
+                <div className="flex items-center justify-between text-[9px] font-mono text-slate-400">
+                  <button
+                    type="button"
+                    onClick={() => onSetBinCapacity ? onSetBinCapacity(3, 10) : onSetBinCount?.(3, 10)}
+                    className="hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer transition-colors"
+                  >
+                    10 SP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSetBinCapacity ? onSetBinCapacity(3, 30) : onSetBinCount?.(3, 30)}
+                    className="hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer font-bold transition-colors"
+                  >
+                    30 SP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSetBinCapacity ? onSetBinCapacity(3, 50) : onSetBinCount?.(3, 50)}
+                    className="hover:text-amber-500 font-bold cursor-pointer transition-colors"
+                  >
+                    50 SP (Chuẩn)
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -287,7 +494,8 @@ export function LiveHealthAndBinWidget({
         <div className="flex items-center gap-2">
           <button
             onClick={handleToggleRun}
-            className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all shadow-xs ${
+            disabled={telemetry.estop_pressed}
+            className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all shadow-xs disabled:opacity-40 disabled:cursor-not-allowed ${
               isRunning
                 ? "border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-400 dark:hover:bg-amber-500/25"
                 : "border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-400 dark:hover:bg-emerald-500/25"
@@ -299,10 +507,14 @@ export function LiveHealthAndBinWidget({
 
           <button
             onClick={handleEmergencyStop}
-            className="flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 px-3.5 py-2 text-xs font-bold text-rose-800 transition-all hover:bg-rose-100 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-400 dark:hover:bg-rose-500/25 shadow-xs"
+            className={`flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition-all shadow-xs ${
+              telemetry.estop_pressed
+                ? "border-rose-600 bg-rose-600 text-white animate-pulse shadow-[0_0_12px_rgba(244,63,94,0.6)]"
+                : "border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-400 dark:hover:bg-rose-500/25"
+            }`}
           >
             <AlertOctagon className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
-            <span>E-Stop Khẩn Cấp</span>
+            <span>{telemetry.estop_pressed ? "E-STOP ĐANG BẬT" : "E-Stop Khẩn Cấp"}</span>
           </button>
         </div>
 

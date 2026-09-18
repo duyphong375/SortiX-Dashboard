@@ -1,4 +1,4 @@
-// Khởi tạo và quản lý kết nối MQTT WebSocket, đăng ký và xuất bản bản tin
+// Khởi tạo và quản lý kết nối MQTT WebSocket, đăng ký, xuất bản và xử lý tự động kết nối lại (Auto-reconnect)
 import mqtt, { MqttClient } from "mqtt";
 
 export interface MQTTCallbacks {
@@ -6,6 +6,9 @@ export interface MQTTCallbacks {
   onDisconnect?: () => void;
   onError?: (err: Error) => void;
   onMessage?: (topic: string, message: string) => void;
+  onMqttDisconnectedAlert?: (attempt: number, durationSeconds: number) => void;
+  onMqttReconnectedAlert?: () => void;
+  onReconnectAttempt?: (attempt: number, delaySeconds: number) => void;
 }
 
 export class SorterMQTTService {
@@ -16,6 +19,15 @@ export class SorterMQTTService {
   private subscribedTopics = new Set<string>();
   private callbacks: MQTTCallbacks = {};
   private closing = false;
+
+  // Watchdog 5 giây & Quản lý Auto-reconnect (3s, 5s, 10s)
+  private disconnectStartTime = 0;
+  private disconnectDebounceTimer: NodeJS.Timeout | null = null;
+  private reconnectTimer: NodeJS.Timeout | null = null;
+  private reconnectAttempt = 0;
+  private isAlertTriggered = false;
+  private isSimulatedDisconnect = false;
+  private simReconnectInterval: NodeJS.Timeout | null = null;
 
   constructor(brokerUrl?: string, clientId?: string) {
     this.brokerUrl =
@@ -32,6 +44,18 @@ export class SorterMQTTService {
     this.callbacks = callbacks;
   }
 
+  /**
+   * Tính toán khoảng thời gian chờ thử lại (Backoff):
+   * Lần 1: 3 giây
+   * Lần 2: 5 giây
+   * Lần 3 trở đi: 10 giây
+   */
+  public getReconnectDelay(attempt: number): number {
+    if (attempt <= 1) return 3000;
+    if (attempt === 2) return 5000;
+    return 10000;
+  }
+
   public connect(topicsToSubscribe: string[] = []): MqttClient | null {
     if (typeof window === "undefined") return null;
 
@@ -39,14 +63,22 @@ export class SorterMQTTService {
       if (typeof topic === "string" && topic.trim()) this.subscribedTopics.add(topic.trim());
     }
 
-    // mqtt.js automatically reconnects. Reusing the existing client avoids a
-    // second socket and duplicate event handlers while the first one is
-    // reconnecting.
     if (this.client) {
-      if (this.client.connected && this.subscribedTopics.size > 0) {
-        this.subscribe(Array.from(this.subscribedTopics));
+      if (this.client.connected) {
+        if (this.subscribedTopics.size > 0) {
+          this.subscribe(Array.from(this.subscribedTopics));
+        }
+        return this.client;
       }
-      return this.client;
+      // Đang có client nhưng ngắt kết nối -> gọi reconnect
+      if (!this.isSimulatedDisconnect) {
+        try {
+          this.client.reconnect();
+          return this.client;
+        } catch {
+          // fallback tạo mới
+        }
+      }
     }
 
     try {
@@ -55,12 +87,25 @@ export class SorterMQTTService {
         clientId: this.clientId,
         clean: true,
         connectTimeout: 5000,
-        reconnectPeriod: 4000,
+        reconnectPeriod: 0, // Tự quản lý auto-reconnect theo nhịp 3s, 5s, 10s
       });
 
       this.client.on("connect", () => {
         console.log(`[MQTT] Đã kết nối tới broker: ${this.brokerUrl}`);
+        this.clearTimers();
+
+        const wasAlertActive = this.isAlertTriggered;
+        this.isAlertTriggered = false;
+        this.disconnectStartTime = 0;
+        this.reconnectAttempt = 0;
+        this.isSimulatedDisconnect = false;
+
         if (this.callbacks.onConnect) this.callbacks.onConnect();
+
+        // Nếu trước đó đang cảnh báo mất kết nối -> kích hoạt thông báo phục hồi xanh
+        if (wasAlertActive) {
+          this.callbacks.onMqttReconnectedAlert?.();
+        }
 
         if (this.subscribedTopics.size > 0) {
           this.subscribe(Array.from(this.subscribedTopics));
@@ -76,11 +121,15 @@ export class SorterMQTTService {
       this.client.on("error", (err) => {
         console.error("[MQTT] Lỗi kết nối:", err);
         if (this.callbacks.onError) this.callbacks.onError(err);
+        this.handleDisconnectOrError();
       });
 
       this.client.on("close", () => {
         console.log("[MQTT] Mất kết nối broker");
-        if (!this.closing) this.callbacks.onDisconnect?.();
+        if (!this.closing) {
+          this.callbacks.onDisconnect?.();
+          this.handleDisconnectOrError();
+        }
       });
 
       return this.client;
@@ -88,8 +137,145 @@ export class SorterMQTTService {
       console.error("[MQTT] Không thể khởi tạo:", e);
       const error = e instanceof Error ? e : new Error(String(e));
       if (this.callbacks.onError) this.callbacks.onError(error);
+      this.handleDisconnectOrError();
       return null;
     }
+  }
+
+  /**
+   * Xử lý khi mất kết nối hoặc gặp lỗi socket:
+   * - Bắt đầu tính giờ mất kết nối
+   * - Sau 5 giây kích hoạt cảnh báo CRITICAL mqtt_disconnected
+   * - Lên lịch Auto-reconnect sau 3s, 5s, 10s
+   */
+  private handleDisconnectOrError() {
+    if (this.closing && !this.isSimulatedDisconnect) return;
+
+    if (this.disconnectStartTime === 0) {
+      this.disconnectStartTime = Date.now();
+    }
+
+    // Khởi động watchdog 5 giây nếu chưa có
+    if (!this.disconnectDebounceTimer && !this.isAlertTriggered) {
+      this.disconnectDebounceTimer = setTimeout(() => {
+        if (!this.isConnected()) {
+          this.isAlertTriggered = true;
+          this.callbacks.onMqttDisconnectedAlert?.(
+            Math.max(1, this.reconnectAttempt),
+            5
+          );
+        }
+      }, 5000);
+    }
+
+    // Lên lịch thử kết nối lại tự động nếu không phải đang ngắt bằng tay
+    if (!this.isSimulatedDisconnect) {
+      this.scheduleNextReconnect();
+    }
+  }
+
+  private scheduleNextReconnect() {
+    if (this.reconnectTimer) return;
+
+    const nextAttempt = this.reconnectAttempt + 1;
+    const delay = this.getReconnectDelay(nextAttempt);
+    const delaySec = Math.round(delay / 1000);
+
+    this.callbacks.onReconnectAttempt?.(nextAttempt, delaySec);
+
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      if (!this.isConnected() && !this.closing && !this.isSimulatedDisconnect) {
+        this.reconnectAttempt = nextAttempt;
+
+        // Nếu đã quá 5 giây -> cập nhật thông báo cảnh báo lần thử thứ N
+        const elapsed = this.disconnectStartTime > 0 ? Math.round((Date.now() - this.disconnectStartTime) / 1000) : 5;
+        if (elapsed >= 5) {
+          this.isAlertTriggered = true;
+          this.callbacks.onMqttDisconnectedAlert?.(this.reconnectAttempt, elapsed);
+        }
+
+        console.log(`[MQTT Auto-Reconnect] Đang thử kết nối lại lần thứ ${this.reconnectAttempt}...`);
+        try {
+          if (this.client) {
+            this.client.reconnect();
+          } else {
+            this.connect(Array.from(this.subscribedTopics));
+          }
+        } catch (err) {
+          console.warn("[MQTT Auto-Reconnect] Thử kết nối lại thất bại:", err);
+          this.handleDisconnectOrError();
+        }
+      }
+    }, delay);
+  }
+
+  private clearTimers() {
+    if (this.disconnectDebounceTimer) {
+      clearTimeout(this.disconnectDebounceTimer);
+      this.disconnectDebounceTimer = null;
+    }
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    if (this.simReconnectInterval) {
+      clearTimeout(this.simReconnectInterval);
+      this.simReconnectInterval = null;
+    }
+  }
+
+  /**
+   * Phương thức Demo: Giả lập ngắt kết nối MQTT Client
+   */
+  public simulateDisconnect() {
+    this.isSimulatedDisconnect = true;
+    this.clearTimers();
+    this.disconnectStartTime = Date.now();
+    this.reconnectAttempt = 0;
+
+    // Ngắt kết nối socket thật
+    if (this.client) {
+      try {
+        this.client.end(true);
+      } catch {}
+    }
+    if (this.callbacks.onDisconnect) this.callbacks.onDisconnect();
+
+    // Bắt đầu đếm 5 giây để kích hoạt cảnh báo CRITICAL
+    this.disconnectDebounceTimer = setTimeout(() => {
+      this.isAlertTriggered = true;
+      this.reconnectAttempt = 1;
+      this.callbacks.onMqttDisconnectedAlert?.(1, 5);
+
+      // Bắt đầu chu trình mô phỏng tăng dần số lần thử kết nối lại (3s, 5s, 10s...)
+      this.scheduleSimulatedReconnectSequence();
+    }, 5000);
+  }
+
+  private scheduleSimulatedReconnectSequence() {
+    if (!this.isSimulatedDisconnect) return;
+
+    const nextAttempt = this.reconnectAttempt + 1;
+    const delay = this.getReconnectDelay(nextAttempt);
+
+    this.simReconnectInterval = setTimeout(() => {
+      if (this.isSimulatedDisconnect) {
+        this.reconnectAttempt = nextAttempt;
+        const elapsed = this.disconnectStartTime > 0 ? Math.round((Date.now() - this.disconnectStartTime) / 1000) : 5;
+        this.callbacks.onMqttDisconnectedAlert?.(this.reconnectAttempt, elapsed);
+        this.scheduleSimulatedReconnectSequence();
+      }
+    }, delay);
+  }
+
+  /**
+   * Phương thức Demo / Manual: Khôi phục kết nối MQTT
+   */
+  public reconnectManual() {
+    this.isSimulatedDisconnect = false;
+    this.clearTimers();
+    this.connect(Array.from(this.subscribedTopics));
   }
 
   public subscribe(topics: string | string[]) {
@@ -149,10 +335,19 @@ export class SorterMQTTService {
   }
 
   public isConnected(): boolean {
-    return !!(this.client && this.client.connected);
+    return !!(this.client && this.client.connected && !this.isSimulatedDisconnect);
+  }
+
+  public isSimulated(): boolean {
+    return this.isSimulatedDisconnect;
+  }
+
+  public getReconnectAttempt(): number {
+    return this.reconnectAttempt;
   }
 
   public disconnect() {
+    this.clearTimers();
     if (this.client) {
       this.closing = true;
       this.client.end(true);

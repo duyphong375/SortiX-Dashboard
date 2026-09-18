@@ -236,3 +236,85 @@ export const ResetPasswordSchema = z.object({
   path: ["confirm_password"],
 });
 
+// Emergency Stop & Safety Schemas
+export const EmergencyStopPayloadSchema = z.object({
+  event: z.literal("emergency_stop"),
+  station_id: nonEmptyString.default("STATION_01"),
+  triggered_by: nonEmptyString.default("Physical E-Stop Button #1"),
+  timestamp: nonEmptyString.default(() => new Date().toISOString()),
+  mode: z.enum(["realtime", "simulation"]).default("realtime"),
+}).passthrough();
+
+export const UnlockSystemSchema = z.object({
+  note: z.string().trim().max(255).optional(),
+}).passthrough();
+
+export const JamDetectedPayloadSchema = z.object({
+  event: z.literal("jam_detected"),
+  section: nonEmptyString.default("Conveyor_Belt_Zone_A"),
+  duration_seconds: finiteNumber.positive().default(5),
+  sensor_id: nonEmptyString.default("OPTICAL_JAM_02"),
+  mode: z.enum(["realtime", "simulation"]).default("realtime"),
+  timestamp: z.string().optional().default(() => new Date().toISOString()),
+}).passthrough();
+
+export const BinFullPayloadSchema = z.object({
+  event: z.literal("bin_full"),
+  bin_id: nonEmptyString.default("BIN_RED_01"),
+  category: nonEmptyString.default("Sản phẩm loại A"),
+  current_count: finiteNumber.int().nonnegative().default(50),
+  max_capacity: finiteNumber.int().positive().default(50),
+  mode: z.enum(["realtime", "simulation"]).default("realtime"),
+  timestamp: z.string().optional().default(() => new Date().toISOString()),
+}).passthrough();
+
+export const TemperatureWarningPayloadSchema = z.object({
+  event: z.literal("temperature_warning"),
+  device_name: nonEmptyString.default("Main_Drive_Motor / Edge_AI_Box"),
+  current_temp: finiteNumber.default(78.5),
+  threshold_temp: finiteNumber.default(75.0),
+  unit: nonEmptyString.default("°C"),
+  mode: z.enum(["realtime", "simulation"]).default("realtime"),
+  timestamp: z.string().optional().default(() => new Date().toISOString()),
+}).passthrough();
+
+export const DeviceOfflinePayloadSchema = z.object({
+  event: z.literal("device_offline"),
+  device_id: nonEmptyString.default("ESP32_MAIN_CONTROLLER"),
+  ip_address: nonEmptyString.default("192.168.1.105"),
+  last_seen: nonEmptyString.default("15 giây trước"),
+  mode: z.enum(["realtime", "simulation"]).default("realtime"),
+  timestamp: z.string().optional().default(() => new Date().toISOString()),
+}).passthrough();
+
+export const HeartbeatPayloadSchema = z.object({
+  device_id: z.string().default("ESP32_MAIN_CONTROLLER"),
+  ip_address: z.string().default("192.168.1.105"),
+  uptime: z.number().default(0),
+  timestamp: z.string().optional().default(() => new Date().toISOString()),
+}).passthrough();
+
+export const ShiftSummaryPayloadSchema = z.object({
+  event: z.literal("shift_summary"),
+  shift_name: nonEmptyString.default("Ca 1 - Buổi sáng"),
+  total_products: finiteNumber.int().nonnegative().default(1250),
+  sorted_good: finiteNumber.int().nonnegative().default(1180),
+  sorted_defect: finiteNumber.int().nonnegative().default(70),
+  accuracy_rate: nonEmptyString.default("94.4%"),
+  emergency_stops_count: finiteNumber.int().nonnegative().default(1),
+  operating_hours: nonEmptyString.default("7.5 giờ"),
+  mode: z.enum(["realtime", "simulation"]).default("realtime"),
+  timestamp: z.string().optional().default(() => new Date().toISOString()),
+}).passthrough();
+
+export const MqttDisconnectedPayloadSchema = z.object({
+  event: z.literal("mqtt_disconnected"),
+  broker_url: nonEmptyString.default("wss://broker.emqx.io:8084/mqtt"),
+  disconnected_duration_seconds: finiteNumber.default(5),
+  reconnect_attempt: finiteNumber.int().nonnegative().default(1),
+  mode: z.enum(["realtime", "simulation"]).default("realtime"),
+  timestamp: z.string().optional().default(() => new Date().toISOString()),
+}).passthrough();
+
+
+

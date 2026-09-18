@@ -8,6 +8,7 @@ import { formatUptime } from "@/lib/dataProcessor";
 import {
   Cpu,
   Wifi,
+  WifiOff,
   Radio,
   Thermometer,
   Activity,
@@ -20,6 +21,7 @@ import {
   RotateCcw,
   Sliders,
 } from "lucide-react";
+
 
 function DiagCard({
   icon: Icon,
@@ -52,7 +54,16 @@ function DiagCard({
 }
 
 export default function DevicesPage() {
-  const { telemetry, mqttStatus, pingMs, handleResetActuatorStates, sorterConfig } = useDashboard();
+  const {
+    telemetry,
+    mqttStatus,
+    pingMs,
+    handleResetActuatorStates,
+    sorterConfig,
+    isMqttAlertActive,
+    handleSimulateMqttDisconnect,
+    handleReconnectMqtt,
+  } = useDashboard();
   const [resetFeedback, setResetFeedback] = useState<string | null>(null);
   const canView = usePermission("devices.view");
   const router = useRouter();
@@ -96,8 +107,25 @@ export default function DevicesPage() {
 
       {/* MQTT Status */}
       <div className="relate-card rounded-2xl border border-slate-200/80 bg-white/95 p-5 dark:border-white/[0.07] dark:bg-[#161822]">
-        <h3 className="mb-4 text-sm font-bold tracking-tight text-slate-900 dark:text-white">Kết Nối MQTT WebSocket</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">Kết Nối MQTT WebSocket</h3>
+          <button
+            type="button"
+            data-testid="btn-toggle-mqtt-devices"
+            onClick={isMqttAlertActive ? handleReconnectMqtt : handleSimulateMqttDisconnect}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
+              isMqttAlertActive
+                ? "bg-emerald-600 hover:bg-emerald-500 text-white animate-pulse"
+                : "bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-500/30 dark:bg-rose-950/20 dark:text-rose-300 dark:hover:bg-rose-900/40"
+            }`}
+            title="Ngắt hoặc khôi phục kết nối MQTT Client"
+          >
+            <WifiOff className="h-3.5 w-3.5" />
+            <span>{isMqttAlertActive ? "⚡ Khôi phục kết nối MQTT" : "🔌 Ngắt kết nối MQTT Client"}</span>
+          </button>
+        </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+
           <DiagCard
             icon={Radio}
             label="Trạng thái MQTT"

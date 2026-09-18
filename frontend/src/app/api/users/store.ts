@@ -16,6 +16,8 @@ export function toSafeUser(user: StoredUserAccount): SafeUser {
     email: user.email,
     role: user.role,
     status: user.status,
+    is_online: user.is_online,
+    last_login_at: user.last_login_at,
     created_at: user.created_at,
     updated_at: user.updated_at,
   };
@@ -326,6 +328,21 @@ export const NextUsersStore = {
     users[index] = user;
     saveUsers(users);
     return user;
+  },
+
+  setOnline(id: string, isOnline = true): void {
+    const users = loadUsers();
+    const user = users.find(
+      (u) => u.id === id || u.username.toLowerCase() === id.toLowerCase() || u.email.toLowerCase() === id.toLowerCase()
+    );
+    if (user) {
+      user.is_online = isOnline;
+      if (isOnline) {
+        user.last_login_at = new Date().toISOString();
+      }
+      user.updated_at = new Date().toISOString();
+      saveUsers(users);
+    }
   },
 
   delete(targetId: string, requestingUserId: string): { success: boolean; message?: string } {

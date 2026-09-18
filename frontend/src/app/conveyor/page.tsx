@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useDashboard } from "@/components/layout/DashboardLayout";
-import { useAuth, usePermission } from "@/contexts/AuthContext";
+import { usePermission } from "@/contexts/AuthContext";
 import { ConveyorVisualizer } from "@/components/ConveyorVisualizer";
 import { ShieldAlert } from "lucide-react";
 
@@ -25,6 +25,16 @@ export default function ConveyorPage() {
     toggleSimulationMode,
     generateSimulationDemoData,
     handleClearBin,
+    isJammed,
+    jamIncident,
+    handleTriggerJam,
+    handleClearJam,
+    isBinFull,
+    fullBinIndex,
+    handleConfirmBinReplaced,
+    handleSetBinCount,
+    binCapacities,
+    handleSetBinCapacity,
   } = useDashboard();
 
   const canEstop = usePermission("conveyor.estop");
@@ -54,15 +64,24 @@ export default function ConveyorPage() {
         onToggleRun={handleToggleRun}
         onEmergencyStop={wrappedEmergencyStop}
         onSpeedChange={handleSpeedChange}
-        onSpawnPackage={spawnVisualPackage}
+        onSpawnPackage={isSimulation ? spawnVisualPackage : undefined}
         arm1Active={arm1Active}
         arm2Active={arm2Active}
         binCounts={binCounts}
         brandCounts={brandCounts}
         isSimulation={isSimulation}
         onToggleSimulationMode={toggleSimulationMode}
-        onGenerateDemoData={generateSimulationDemoData}
+        onGenerateDemoData={isSimulation ? generateSimulationDemoData : undefined}
         onClearBin={handleClearBin}
+        isJammed={isJammed}
+        jamIncident={jamIncident}
+        onClearJam={handleClearJam}
+        isBinFull={isBinFull}
+        fullBinIndex={fullBinIndex}
+        onConfirmBinReplaced={handleConfirmBinReplaced}
+        onSetBinCount={handleSetBinCount}
+        binCapacities={binCapacities}
+        onSetBinCapacity={handleSetBinCapacity}
       />
     </div>
   );

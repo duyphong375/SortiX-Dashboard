@@ -12,6 +12,7 @@ import {
   Send,
   Cpu,
   Wifi,
+  WifiOff,
   Radio,
   BellRing,
   Mail,
@@ -22,6 +23,12 @@ import {
   Layers,
   Code,
   RotateCcw,
+  OctagonAlert,
+  Boxes,
+  Thermometer,
+  Flame,
+  Wind,
+  ClipboardCheck,
 } from "lucide-react";
 
 interface ConfigAndDiagnosticsProps {
@@ -33,7 +40,30 @@ interface ConfigAndDiagnosticsProps {
   applyStatusText?: string;
   onClearAlerts: () => void;
   onResetDefaultConfig?: () => void;
+  onSimulateEStop?: () => void;
+  onSimulateJam?: () => void;
+  isJammed?: boolean;
+  onClearJam?: () => void;
+  onSimulateBinFull?: (binIndex?: 1 | 2 | 3) => void;
+  isBinFull?: boolean;
+  onConfirmBinReplaced?: () => void;
+  onSimulateTemperatureChange?: (temp: number) => void;
+  isTempWarning?: boolean;
+  onCoolDownTemperature?: () => void;
+  onSimulateDeviceOffline?: () => void;
+  isDeviceOffline?: boolean;
+  onReconnectDevice?: () => void;
+  onSimulateShiftSummary?: () => void;
+  onSimulateMqttDisconnect?: () => void;
+  onReconnectMqtt?: () => void;
+  isMqttAlertActive?: boolean;
+  isSimulation?: boolean;
+  binCounts?: { bin1: number; bin2: number; bin3: number };
+  onSetBinCount?: (binIndex: 1 | 2 | 3, count: number) => void;
+  binCapacities?: { bin1: number; bin2: number; bin3: number };
+  onSetBinCapacity?: (binIndex: 1 | 2 | 3, capacity: number) => void;
 }
+
 
 export const ConfigAndDiagnostics: React.FC<ConfigAndDiagnosticsProps> = ({
   config,
@@ -44,7 +74,33 @@ export const ConfigAndDiagnostics: React.FC<ConfigAndDiagnosticsProps> = ({
   applyStatusText,
   onClearAlerts,
   onResetDefaultConfig,
+  onSimulateEStop,
+  onSimulateJam,
+  isJammed = false,
+  onClearJam,
+  onSimulateBinFull,
+  isBinFull = false,
+  onConfirmBinReplaced,
+  onSimulateTemperatureChange,
+  isTempWarning = false,
+  onCoolDownTemperature,
+  onSimulateDeviceOffline,
+  isDeviceOffline = false,
+  onReconnectDevice,
+  onSimulateShiftSummary,
+  onSimulateMqttDisconnect,
+  onReconnectMqtt,
+  isMqttAlertActive = false,
+  isSimulation = false,
+  binCounts = { bin1: 0, bin2: 0, bin3: 0 },
+  onSetBinCount,
+  binCapacities = { bin1: 50, bin2: 50, bin3: 50 },
+  onSetBinCapacity,
 }) => {
+  const cap1 = binCapacities?.bin1 || 50;
+  const cap2 = binCapacities?.bin2 || 50;
+  const cap3 = binCapacities?.bin3 || 50;
+
   const [bin1Brand, setBin1Brand] = useState<string>(
     config.bins[0]?.brand_ids?.[0] || "brand_c"
   );
@@ -121,6 +177,7 @@ export const ConfigAndDiagnostics: React.FC<ConfigAndDiagnosticsProps> = ({
       device_id: "sorter_01",
       description: "Thử nghiệm kết nối Bot Telegram từ Task Cài đặt & Chẩn đoán IoT PBL3.",
       timestamp: new Date().toISOString(),
+      mode: isSimulation ? "simulation" : "realtime",
     };
     const res = await sendTelegramAlert(testAlert, true);
     setAlertResult(res);
@@ -137,6 +194,7 @@ export const ConfigAndDiagnostics: React.FC<ConfigAndDiagnosticsProps> = ({
       device_id: "sorter_01",
       description: "Thử nghiệm gửi email báo cáo sự cố qua SMTP từ Task Cài đặt & Chẩn đoán.",
       timestamp: new Date().toISOString(),
+      mode: isSimulation ? "simulation" : "realtime",
     };
     const res = await sendEmailAlert(testAlert, true);
     setAlertResult(res);
@@ -379,7 +437,391 @@ export const ConfigAndDiagnostics: React.FC<ConfigAndDiagnosticsProps> = ({
                   Email SMTP
                 </button>
               </div>
+
+              {/* Nút Giả Lập Bấm E-Stop cho Demo & Kiểm Thử (Chỉ hiển thị ở chế độ Mô Phỏng) */}
+              {onSimulateEStop && isSimulation && (
+                <button
+                  type="button"
+                  onClick={onSimulateEStop}
+                  disabled={telemetry.estop_pressed}
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-rose-500/50 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/25 py-2.5 px-3 text-xs font-black uppercase tracking-wider transition-all shadow-sm active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <OctagonAlert className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0 animate-pulse" />
+                  <span>{telemetry.estop_pressed ? "E-Stop Đang Kích Hoạt" : "🚨 Giả Lập Bấm E-Stop (Simulation)"}</span>
+                </button>
+              )}
+
+              {/* Nút Giả Lập Cảnh Báo Kẹt Phôi (Chỉ hiển thị ở chế độ Mô Phỏng) */}
+              {onSimulateJam && isSimulation && (
+                <button
+                  type="button"
+                  onClick={isJammed ? onClearJam : onSimulateJam}
+                  disabled={telemetry.estop_pressed}
+                  className={`mt-2 flex w-full items-center justify-center gap-2 rounded-xl border-2 py-2.5 px-3 text-xs font-black uppercase tracking-wider transition-all shadow-sm active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
+                    isJammed
+                      ? "border-amber-500 bg-amber-100 text-amber-900 dark:border-amber-400 dark:bg-amber-500/25 dark:text-amber-200 animate-pulse"
+                      : "border-amber-500/50 bg-amber-50 hover:bg-amber-100 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300 dark:hover:bg-amber-500/25"
+                  }`}
+                  title="Giả lập cảm biến phát hiện tắc nghẽn / kẹt phôi trên băng chuyền"
+                >
+                  <AlertTriangle className={`h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 ${isJammed ? "animate-bounce" : ""}`} />
+                  <span>{isJammed ? "⚠️ Đang Bị Kẹt Phôi • Bấm để Gỡ Kẹt" : "⚠️ Giả Lập Kẹt Phôi (Simulation)"}</span>
+                </button>
+              )}
+
+              {/* Nút Giả Lập Đầy Khay 50/50 SP (Chỉ hiển thị ở chế độ Mô Phỏng) */}
+              {onSimulateBinFull && isSimulation && (
+                <button
+                  type="button"
+                  onClick={isBinFull ? onConfirmBinReplaced : () => onSimulateBinFull(1)}
+                  disabled={telemetry.estop_pressed}
+                  className={`mt-2 flex w-full items-center justify-center gap-2 rounded-xl border-2 py-2.5 px-3 text-xs font-black uppercase tracking-wider transition-all shadow-sm active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
+                    isBinFull
+                      ? "border-amber-500 bg-amber-100 text-amber-900 dark:border-amber-400 dark:bg-amber-500/25 dark:text-amber-200 animate-pulse"
+                      : "border-amber-500/50 bg-amber-50 hover:bg-amber-100 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300 dark:hover:bg-amber-500/25"
+                  }`}
+                  title="Giả lập đếm nhanh số lượng để kích hoạt cảnh báo đầy khay chứa 50/50 cái"
+                >
+                  <Boxes className={`h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 ${isBinFull ? "animate-bounce" : ""}`} />
+                  <span>{isBinFull ? "📥 Khay Đang Đầy 50/50 • Bấm để Thay Khay" : "📥 Giả Lập Đầy Khay 50/50 (Simulation)"}</span>
+                </button>
+              )}
+
+              {/* Thanh trượt điều chỉnh độ rộng / sức chứa định mức của từng khay (Khay 1, 2, 3) */}
+              {onSetBinCapacity && (
+                <div className="mt-3 rounded-xl border border-indigo-500/40 bg-indigo-500/5 p-3 dark:border-indigo-500/30 dark:bg-indigo-950/15 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
+                      <SlidersHorizontal className="h-4 w-4 text-indigo-500" />
+                      Độ Rộng / Sức Chứa Định Mức Khay:
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      Giới hạn: 5 - 50 SP/Khay
+                    </span>
+                  </div>
+
+                  {/* Sức chứa Khay 1 */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-semibold text-rose-600 dark:text-rose-400">
+                        Khay 1 ({config.bins[0]?.brand_ids?.[0] ? (CATALOG_BRANDS[config.bins[0].brand_ids[0]]?.name || config.bins[0].brand_ids[0]) : "Coca"}):
+                      </span>
+                      <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
+                        {cap1} SP (Tối đa)
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="5"
+                      max="50"
+                      step="1"
+                      value={cap1}
+                      onChange={(e) => onSetBinCapacity(1, parseInt(e.target.value, 10))}
+                      className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-rose-500"
+                    />
+                    <div className="flex justify-between text-[9px] font-mono text-slate-400">
+                      <button type="button" onClick={() => onSetBinCapacity(1, 10)} className="hover:text-rose-600 cursor-pointer">10 SP</button>
+                      <button type="button" onClick={() => onSetBinCapacity(1, 30)} className="hover:text-rose-600 font-bold cursor-pointer">30 SP</button>
+                      <button type="button" onClick={() => onSetBinCapacity(1, 50)} className="hover:text-amber-500 font-bold cursor-pointer">50 SP (Chuẩn)</button>
+                    </div>
+                  </div>
+
+                  {/* Sức chứa Khay 2 */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-semibold text-blue-600 dark:text-blue-400">
+                        Khay 2 ({config.bins[1]?.brand_ids?.[0] ? (CATALOG_BRANDS[config.bins[1].brand_ids[0]]?.name || config.bins[1].brand_ids[0]) : "Pepsi"}):
+                      </span>
+                      <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
+                        {cap2} SP (Tối đa)
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="5"
+                      max="50"
+                      step="1"
+                      value={cap2}
+                      onChange={(e) => onSetBinCapacity(2, parseInt(e.target.value, 10))}
+                      className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-blue-500"
+                    />
+                    <div className="flex justify-between text-[9px] font-mono text-slate-400">
+                      <button type="button" onClick={() => onSetBinCapacity(2, 10)} className="hover:text-blue-600 cursor-pointer">10 SP</button>
+                      <button type="button" onClick={() => onSetBinCapacity(2, 30)} className="hover:text-blue-600 font-bold cursor-pointer">30 SP</button>
+                      <button type="button" onClick={() => onSetBinCapacity(2, 50)} className="hover:text-amber-500 font-bold cursor-pointer">50 SP (Chuẩn)</button>
+                    </div>
+                  </div>
+
+                  {/* Sức chứa Khay 3 */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-semibold text-amber-600 dark:text-amber-400">
+                        Khay 3 (Mặc định / Khác):
+                      </span>
+                      <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                        {cap3} SP (Tối đa)
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="5"
+                      max="50"
+                      step="1"
+                      value={cap3}
+                      onChange={(e) => onSetBinCapacity(3, parseInt(e.target.value, 10))}
+                      className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-amber-500"
+                    />
+                    <div className="flex justify-between text-[9px] font-mono text-slate-400">
+                      <button type="button" onClick={() => onSetBinCapacity(3, 10)} className="hover:text-amber-600 cursor-pointer">10 SP</button>
+                      <button type="button" onClick={() => onSetBinCapacity(3, 30)} className="hover:text-amber-600 font-bold cursor-pointer">30 SP</button>
+                      <button type="button" onClick={() => onSetBinCapacity(3, 50)} className="hover:text-amber-500 font-bold cursor-pointer">50 SP (Chuẩn)</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Thanh trượt điều chỉnh mức số lượng hiện tại (Simulation) */}
+              {onSetBinCount && isSimulation && (
+                <div className="mt-3 rounded-xl border border-slate-300/60 bg-slate-500/5 p-3 dark:border-white/10 dark:bg-white/[0.02] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
+                      <Boxes className="h-4 w-4 text-cyan-500" />
+                      Số Lượng Hiện Tại Trong Khay (Simulation):
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {binCounts.bin1}/{cap1} • {binCounts.bin2}/{cap2} • {binCounts.bin3}/{cap3} SP
+                    </span>
+                  </div>
+
+                  {/* Slider Khay 1 */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-semibold text-rose-600 dark:text-rose-400">
+                        Khay 1:
+                      </span>
+                      <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
+                        {binCounts?.bin1 ?? 0}/{cap1} SP
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max={cap1}
+                      step="1"
+                      value={binCounts?.bin1 ?? 0}
+                      onChange={(e) => onSetBinCount(1, parseInt(e.target.value, 10))}
+                      className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-rose-500"
+                    />
+                    <div className="flex justify-between text-[9px] font-mono text-slate-400">
+                      <button type="button" onClick={() => onSetBinCount(1, 0)} className="hover:text-rose-600 cursor-pointer">0 (Rỗng)</button>
+                      <button type="button" onClick={() => onSetBinCount(1, Math.round(cap1 / 2))} className="hover:text-rose-600 cursor-pointer">{Math.round(cap1 / 2)} (50%)</button>
+                      <button type="button" onClick={() => onSetBinCount(1, cap1)} className="hover:text-amber-500 font-bold cursor-pointer">{cap1} (Đầy ⚠️)</button>
+                    </div>
+                  </div>
+
+                  {/* Slider Khay 2 */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-semibold text-blue-600 dark:text-blue-400">
+                        Khay 2:
+                      </span>
+                      <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
+                        {binCounts?.bin2 ?? 0}/{cap2} SP
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max={cap2}
+                      step="1"
+                      value={binCounts?.bin2 ?? 0}
+                      onChange={(e) => onSetBinCount(2, parseInt(e.target.value, 10))}
+                      className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-blue-500"
+                    />
+                    <div className="flex justify-between text-[9px] font-mono text-slate-400">
+                      <button type="button" onClick={() => onSetBinCount(2, 0)} className="hover:text-blue-600 cursor-pointer">0 (Rỗng)</button>
+                      <button type="button" onClick={() => onSetBinCount(2, Math.round(cap2 / 2))} className="hover:text-blue-600 cursor-pointer">{Math.round(cap2 / 2)} (50%)</button>
+                      <button type="button" onClick={() => onSetBinCount(2, cap2)} className="hover:text-blue-500 font-bold cursor-pointer">{cap2} (Đầy ⚠️)</button>
+                    </div>
+                  </div>
+
+                  {/* Slider Khay 3 */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-semibold text-amber-600 dark:text-amber-400">
+                        Khay 3:
+                      </span>
+                      <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                        {binCounts?.bin3 ?? 0}/{cap3} SP
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max={cap3}
+                      step="1"
+                      value={binCounts?.bin3 ?? 0}
+                      onChange={(e) => onSetBinCount(3, parseInt(e.target.value, 10))}
+                      className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-amber-500"
+                    />
+                    <div className="flex justify-between text-[9px] font-mono text-slate-400">
+                      <button type="button" onClick={() => onSetBinCount(3, 0)} className="hover:text-amber-600 cursor-pointer">0 (Rỗng)</button>
+                      <button type="button" onClick={() => onSetBinCount(3, Math.round(cap3 / 2))} className="hover:text-amber-600 cursor-pointer">{Math.round(cap3 / 2)} (50%)</button>
+                      <button type="button" onClick={() => onSetBinCount(3, cap3)} className="hover:text-amber-500 font-bold cursor-pointer">{cap3} (Đầy ⚠️)</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Slider Điều chỉnh Nhiệt Độ Ảo (Chỉ hiển thị ở chế độ Mô Phỏng) */}
+              {onSimulateTemperatureChange && isSimulation && (
+                <div className="mt-3 rounded-xl border border-orange-500/40 bg-orange-50/5 p-3 dark:border-orange-500/30 dark:bg-orange-950/15">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
+                      <Thermometer className="h-4 w-4 text-orange-500" />
+                      Nhiệt Độ Ảo Động Cơ / CPU (Simulation):
+                    </span>
+                    <span
+                      className={`font-mono text-xs font-black px-2 py-0.5 rounded-md border ${
+                        telemetry.cpu_temp > 75.0
+                          ? "bg-rose-500/20 text-rose-600 border-rose-500/40 animate-pulse"
+                          : telemetry.cpu_temp >= 60.0
+                          ? "bg-amber-500/20 text-amber-600 border-amber-500/40"
+                          : "bg-emerald-500/20 text-emerald-600 border-emerald-500/40"
+                      }`}
+                    >
+                      {telemetry.cpu_temp.toFixed(1)}°C
+                    </span>
+                  </div>
+
+                  {/* Thanh trượt Slider nhiệt độ */}
+                  <div className="mt-2.5 space-y-1.5">
+                    <input
+                      type="range"
+                      min="30.0"
+                      max="95.0"
+                      step="0.5"
+                      value={telemetry.cpu_temp}
+                      onChange={(e) => onSimulateTemperatureChange(parseFloat(e.target.value))}
+                      className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-orange-500"
+                    />
+                    <div className="flex justify-between text-[10px] font-mono text-slate-400">
+                      <span>30°C (Mát)</span>
+                      <span className="font-bold text-amber-500">Ngưỡng: 75°C</span>
+                      <span className="text-rose-500">95°C (Cực nóng)</span>
+                    </div>
+                  </div>
+
+                  {/* Cụm nút gán nhanh nhiệt độ */}
+                  <div className="mt-2.5 grid grid-cols-3 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onSimulateTemperatureChange(42.5)}
+                      className="rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-[#111319] py-1 text-[10px] font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all shadow-2xs active:scale-95"
+                    >
+                      ❄️ 42.5°C An toàn
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onSimulateTemperatureChange(72.0)}
+                      className="rounded-lg border border-amber-500/30 bg-amber-50 dark:bg-amber-950/20 py-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-all shadow-2xs active:scale-95"
+                    >
+                      ⚠️ 72.0°C Cận ngưỡng
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onSimulateTemperatureChange(78.5)}
+                      className="rounded-lg border border-rose-500/40 bg-rose-50 dark:bg-rose-950/30 py-1 text-[10px] font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all shadow-2xs active:scale-95"
+                    >
+                      🔥 78.5°C Quá nhiệt
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Thông báo Chế độ Thực Tế khi không ở Mô Phỏng */}
+              {!isSimulation && (
+                <div className="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-50/50 p-3 dark:border-emerald-500/15 dark:bg-emerald-950/15">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
+                      <Thermometer className="h-4 w-4 text-emerald-500" />
+                      Nhiệt Độ Cảm Biến Thực Tế (Hardware Telemetry):
+                    </span>
+                    <span
+                      className={`font-mono text-xs font-black px-2 py-0.5 rounded-md border ${
+                        telemetry.cpu_temp > 75.0
+                          ? "bg-rose-500/20 text-rose-600 border-rose-500/40 animate-pulse"
+                          : telemetry.cpu_temp >= 60.0
+                          ? "bg-amber-500/20 text-amber-600 border-amber-500/40"
+                          : "bg-emerald-500/20 text-emerald-600 border-emerald-500/40"
+                      }`}
+                    >
+                      {telemetry.cpu_temp.toFixed(1)}°C
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-[10px] text-slate-500 dark:text-slate-400">
+                    📡 Chế độ Thực Tế: Nhiệt độ được đo đạc tự động từ cảm biến phần cứng qua MQTT. Thanh trượt chỉnh nhiệt độ ảo chỉ khả dụng ở chế độ Mô Phỏng.
+                  </p>
+                </div>
+              )}
+
+              {/* Nút Giả Lập Mất Kết Nối ESP32 (Chỉ hiển thị ở chế độ Mô Phỏng) */}
+              {onSimulateDeviceOffline && isSimulation && (
+                <button
+                  type="button"
+                  onClick={isDeviceOffline ? onReconnectDevice : onSimulateDeviceOffline}
+                  className={`mt-2 flex w-full items-center justify-center gap-2 rounded-xl border-2 py-2.5 px-3 text-xs font-black uppercase tracking-wider transition-all shadow-sm active:scale-95 ${
+                    isDeviceOffline
+                      ? "border-emerald-500 bg-emerald-100 text-emerald-900 dark:border-emerald-400 dark:bg-emerald-500/25 dark:text-emerald-200 animate-pulse"
+                      : "border-slate-500/50 bg-slate-100 hover:bg-slate-200 text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                  }`}
+                  title="Giả lập vi điều khiển ESP32 ngừng gửi heartbeat ping để kiểm thử Watchdog 6s"
+                >
+                  <WifiOff className={`h-4 w-4 ${isDeviceOffline ? "text-emerald-600 dark:text-emerald-400 animate-bounce" : "text-slate-600 dark:text-slate-400"}`} />
+                  <span>
+                    {isDeviceOffline
+                      ? "⚡ Khôi Phục Kết Nối ESP32 (Online)"
+                      : "🔌 Giả Lập Mất Kết Nối ESP32 (Offline Test)"}
+                  </span>
+                </button>
+              )}
+
+              {/* Nút Giả Lập Báo Cáo Cuối Ca (Chỉ hiển thị ở chế độ Mô Phỏng) */}
+              {onSimulateShiftSummary && isSimulation && (
+                <button
+                  type="button"
+                  onClick={onSimulateShiftSummary}
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-500/40 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-950/25 dark:text-emerald-300 dark:hover:bg-emerald-900/40 py-2.5 px-3 text-xs font-black uppercase tracking-wider transition-all shadow-sm active:scale-95"
+                  title="Kích hoạt sự kiện Báo cáo tổng kết ca làm việc shift_summary"
+                >
+                  <ClipboardCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>📋 Giả Lập Báo Cáo Cuối Ca (Shift Summary)</span>
+                </button>
+              )}
+
+              {/* Nút Demo: Ngắt kết nối MQTT Client */}
+              {onSimulateMqttDisconnect && (
+                <button
+                  type="button"
+                  data-testid="btn-disconnect-mqtt"
+                  onClick={isMqttAlertActive ? onReconnectMqtt : onSimulateMqttDisconnect}
+                  className={`mt-2 flex w-full items-center justify-center gap-2 rounded-xl border-2 py-2.5 px-3 text-xs font-black uppercase tracking-wider transition-all shadow-sm active:scale-95 ${
+                    isMqttAlertActive
+                      ? "border-emerald-500 bg-emerald-100 text-emerald-900 dark:border-emerald-400 dark:bg-emerald-500/25 dark:text-emerald-200 animate-pulse"
+                      : "border-rose-500/50 bg-rose-50 hover:bg-rose-100 text-rose-800 dark:border-rose-600/50 dark:bg-rose-950/25 dark:text-rose-300 dark:hover:bg-rose-900/40"
+                  }`}
+                  title="Ngắt kết nối MQTT Client để demo cảnh báo mất kết nối quá 5 giây và Auto-reconnect 3s, 5s, 10s"
+                >
+                  <WifiOff className={`h-4 w-4 ${isMqttAlertActive ? "text-emerald-600 dark:text-emerald-400 animate-bounce" : "text-rose-600 dark:text-rose-400"}`} />
+                  <span>
+                    {isMqttAlertActive
+                      ? "⚡ Khôi Phục Kết Nối MQTT (Online)"
+                      : "🔌 Ngắt kết nối MQTT Client"}
+                  </span>
+                </button>
+              )}
             </div>
+
 
             {/* Kết quả test */}
             {alertResult && (

@@ -8,7 +8,8 @@
     "build": "npm run build --workspace=frontend",
     "start": "npm run start --workspace=frontend",
     "lint": "npm run lint --workspace=frontend",
-    "test": "node tests/history.test.cjs && node tests/api_schemas.test.cjs && node tests/users.test.cjs"
+    "test": "node tests/history.test.cjs && node tests/api_schemas.test.cjs && node tests/users.test.cjs && node tests/estop_safety.test.cjs && node tests/jam_detection.test.cjs && node tests/simulation_mode_guard.test.cjs && node tests/jam_simulation_audio.test.cjs && node tests/bin_full.test.cjs && node tests/temperature_warning.test.cjs && node tests/device_offline.test.cjs && node tests/shift_summary.test.cjs && node tests/bin_sliders_sync.test.cjs && node tests/mqtt_disconnected.test.cjs && node tests/temperature_gauge_simulation_vs_real.test.cjs && node tests/daily_report_sync.test.cjs"
+
   },
   "dependencies": {
     "clsx": "^2.1.1",

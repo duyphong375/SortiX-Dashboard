@@ -43,7 +43,7 @@ Tài liệu này quy định các tiêu chuẩn kỹ thuật, ràng buộc kiế
 - **Chống Tấn Công Leo Thang Đặc Quyền (Privilege Escalation Prevention)**:
   - Endpoint đăng ký tự do (`/api/auth/register`) luôn luôn gán cứng `role: 'user'`, bỏ qua bất kỳ trường `role` nào được gửi từ client.
 - **Phân Quyền Vai Trò (RBAC)**:
-  - Mọi endpoint tác động đến cấu hình máy (`/api/config`), xóa lịch sử (`DELETE /api/history`), và quản trị người dùng (`/api/users/*`) bắt buộc phải đi qua middleware kiểm tra quyền Admin (`requireAdmin`). Người dùng thường vi phạm sẽ nhận mã `403 Forbidden`.
+  - Mọi endpoint tác động đến cấu hình máy (`/api/config`), xóa lịch sử (`DELETE /api/history`), quản trị người dùng (`/api/users/*`), và mở khóa an toàn sau dừng khẩn cấp (`/api/safety/unlock`) bắt buộc phải đi qua middleware kiểm tra quyền Admin (`requireAdmin`). Người dùng thường vi phạm sẽ nhận mã `403 Forbidden`.
 - **Ràng Buộc An Toàn Dành Cho Admin**:
   - Admin **không được phép tự xóa tài khoản của chính mình** khi đang trong phiên đăng nhập.
   - Tuyệt đối **không được phép xóa tài khoản Admin nếu số lượng Admin trong hệ thống còn lại $\le 1$** (đảm bảo hệ thống luôn có người quản trị).
@@ -54,23 +54,59 @@ Tài liệu này quy định các tiêu chuẩn kỹ thuật, ràng buộc kiế
 
 ---
 
-## 5. Truyền Thông IoT & Cách Ly Mô Phỏng
-- **Tách biệt 2 chế độ**:
-  - **Mô phỏng (Simulation Mode)**: Toàn bộ quá trình nạp phôi và di chuyển trên băng tải chỉ diễn ra trên HTML5 Canvas. Tuyệt đối **không publish payload giả** lên các topic MQTT thật để không làm sai lệch dữ liệu sản xuất.
-  - **Máy thật (Live Hardware Mode)**: Lắng nghe tín hiệu thực từ ESP32-C5. Xử lý timeout khi mất tín hiệu và kiểm soát nút dừng khẩn cấp (E-Stop).
-- **Bảo mật Broker**: Tuyệt đối không hardcode URL, username, password của MQTT Broker vào mã nguồn. Luôn nạp qua biến môi trường `.env`.
+## 5. An Toàn Công Nghiệp & Cô Lập Mô Phỏng (Industrial Safety & Simulation Isolation)
+- **An Toàn Dừng Khẩn Cấp (E-Stop)**:
+  - Khi kích hoạt Dừng khẩn cấp: Lập tức ngắt băng tải (`isRunning = false`), bật còi hú liên tục, hiển thị banner toàn màn hình khóa hệ thống và lưu bản ghi vào `data/notifications.json`.
+  - **Mở khóa an toàn (Safe Unlock)**: Chỉ Quản trị viên (Admin) mới có quyền mở khóa, bắt buộc nhập ghi chú xác nhận hiện trường.
+  - **Chống Kẹt Loop Echo**: Áp dụng thời gian ân hạn 5 giây sau khi mở khóa an toàn để bỏ qua tín hiệu dừng lặp lại từ MQTT/SSE.
+- **Phân Định Rõ Ràng: Đầy Khay (`bin_full`) vs Kẹt Phôi (`jam_detected`)**:
+  - **Kẹt phôi**: Cảm biến quang học che khuất liên tục > 5 giây tại Cảm biến #02 / Zone A (MQTT `conveyor/sensor/jam`), bật còi hú báo kẹt, dừng băng chuyền và hiển thị banner đỏ kẹt phôi.
+  - **Đầy khay**: Số lượng sản phẩm đạt tới sức chứa định mức của khay (`current_count >= max_capacity`, biên độ 5 - 50 SP), bật còi chuông cảnh báo, banner vàng cam và nút "Xác nhận đã thay khay mới" reset khay về 0.
+- **Độ Rộng / Dung Lượng Khay Động (Dynamic Bin Capacities 5 - 50 SP)**:
+  - Mỗi khay cho phép tùy biến định mức từ 5 đến 50 SP. Mọi giá trị cập nhật phải được kẹp an toàn qua clamp logic [5, 50] và đồng bộ đồng thời qua `useSorterData`, Context, các máng trượt Canvas 60fps và `localStorage ('sortix_bin_capacities')`.
+- **Đồng Hồ Nhiệt Độ Bán Nguyệt 2 Chế Độ (Gauge Dial Mode Isolation)**:
+  - Chế độ Mô phỏng: Cung cấp thanh trượt nhiệt độ ảo (30°C - 95°C) và nút preset phục vụ thử nghiệm cảnh báo quá nhiệt (> 75°C).
+  - Chế độ Thực tế: Ẩn tuyệt đối thanh trượt ảo, hiển thị bảng telemetry cảm biến phần cứng thật (ESP32 DS18B20) với nhãn `[PHẦN CỨNG THẬT]` và kim đo phản ánh dữ liệu cảm biến thực tế.
+- **Mất Kết Nối MQTT Broker (`mqtt_disconnected`)**:
+  - Watchdog 5 giây debounce. Khi mất kết nối quá 5s, đổi huy hiệu TopHeader sang `MQTT: DISCONNECTED (Đỏ chớp nháy)`, phát còi báo và áp dụng lịch trình tự động kết nối lại (3s -> 5s -> 10s).
+- **Chuẩn Hóa Báo Cáo 1 Ngày Làm Việc**:
+  - Bắt buộc sử dụng tiền tố **`[BÁO CÁO 1 NGÀY LÀM VIỆC]`** trong tiêu đề và nội dung thông báo.
+  - Dữ liệu báo cáo phải được đồng bộ trực tiếp từ số liệu thời gian thực của 3 khay chứa và lịch sử phân loại.
+- **Quy Tắc Cô Lập Kiểm Thử Tuyệt Đối (Strict Simulation Isolation)**:
+  - Các chức năng test giả lập (nút *Bấm test giả lập kẹt phôi*, *Giả lập bấm E-Stop*, *Thả lon phôi mẫu*, *Tạo dữ liệu demo*, *Test ngắt kết nối MQTT*, *Thanh trượt nhiệt độ ảo*) **CHỈ ĐƯỢC PHÉP XUẤT HIỆN VÀ THỰC THI Ở CHẾ ĐỘ MÔ PHỎNG (`isSimulation === true`)**.
+  - Khi ở chế độ Thực tế (`isSimulation === false`):
+    - Giao diện ẩn hoàn toàn tất cả các nút test và nạp phôi ảo.
+    - Tất cả các hàm xử lý phải chặn các yêu cầu có nguồn gốc từ `user_action` hoặc `physics_in`, đảm bảo dữ liệu 100% đến từ cảm biến và camera phần cứng thực tế.
+- **Bảo Mật Broker**: Tuyệt đối không hardcode URL, username, password của MQTT Broker vào mã nguồn. Luôn nạp qua biến môi trường `.env`.
 
 ---
 
 ## 6. Đảm Bảo Chất Lượng & Bảo Vệ Kiểm Thử (Testing Gates)
 - **BẢO VỆ TUYỆT ĐỐI THƯ MỤC `tests/`**:
-  - Tuyệt đối không được xóa, đổi tên hoặc sửa đổi logic để "lách" các bài test trong 3 bộ kiểm thử:
+  - Tuyệt đối không được xóa, đổi tên hoặc sửa đổi logic để "lách" các bài test trong 15 bộ kiểm thử:
     1. `tests/history.test.cjs` (9 tests: Bounded buffer, migration, normalization)
     2. `tests/api_schemas.test.cjs` (3 tests: Schema validation, passthrough)
     3. `tests/users.test.cjs` (14 tests: Bcrypt, OTP, RBAC, Privilege Escalation, Admin deletion constraints)
-- **Tiêu chuẩn nghiệm thu**: Toàn bộ **26/26 tests bắt buộc phải PASS 100%**:
+    4. `tests/estop_safety.test.cjs` (5 tests: Dừng khẩn cấp, admin unlock, chống loop echo 5s)
+    5. `tests/jam_detection.test.cjs` (6 tests: Cảm biến quang kẹt phôi, broadcast SSE, MQTT topic)
+    6. `tests/jam_simulation_audio.test.cjs` (5 tests: Còi báo kẹt phôi, còi khay đầy, UI Guard)
+    7. `tests/bin_full.test.cjs` (7 tests: Đầy khay chứa, MQTT bin_status, SSE broadcast)
+    8. `tests/temperature_warning.test.cjs` (8 tests: Quá nhiệt thiết bị, MQTT temp, Edge AI label)
+    9. `tests/device_offline.test.cjs` (10 tests: ESP32 offline watchdog 6s, heartbeat ping 2s)
+    10. `tests/shift_summary.test.cjs` (8 tests: Tổng kết ca làm việc, CSV UTF-8 BOM, admin gate)
+    11. `tests/bin_sliders_sync.test.cjs` (8 tests: Thanh trượt sức chứa 5-50 SP, clamp logic, đồng bộ UI)
+    12. `tests/mqtt_disconnected.test.cjs` (12 tests: Mất kết nối MQTT 5s, auto-reconnect backoff, âm thanh báo)
+    13. `tests/temperature_gauge_simulation_vs_real.test.cjs` (4 tests: Chuyển đổi giao diện Mô phỏng vs Thực tế)
+    14. `tests/daily_report_sync.test.cjs` (6 tests: Đồng bộ số liệu live Báo Cáo 1 Ngày Làm Việc)
+    15. `tests/simulation_mode_guard.test.cjs` (3 tests: Cô lập chế độ Mô phỏng và Thực tế)
+- **Tiêu chuẩn nghiệm thu**: Toàn bộ **108/108 tests bắt buộc phải PASS 100%**:
   ```powershell
   npm test
+  ```
+- **Kiểm tra TypeScript & Linting**:
+  ```powershell
+  npx tsc --noEmit --pretty false
+  npx eslint src/
   ```
 
 ---

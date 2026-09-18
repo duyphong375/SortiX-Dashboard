@@ -14,9 +14,12 @@ export interface VisualItem {
   deflected?: boolean;
   sorted?: boolean;
   s1Triggered?: boolean;
+  s2Triggered?: boolean;
+  s3Triggered?: boolean;
   isSim: boolean; // true = phôi mô phỏng, false = phôi thực từ Camera AI
   confidence?: number;
   timestamp?: string;
+  isJammed?: boolean; // Đánh dấu phôi bị kẹt tại trạm cảm biến
 }
 
 export interface BrandInfo {
@@ -148,12 +151,14 @@ export interface AlertEvent {
     | "mqtt_disconnected"
     | "device_offline"
     | "temperature_warning"
-    | "bin_full";
+    | "bin_full"
+    | "shift_summary";
   severity: AlertSeverity;
   device_id: string;
   description: string;
   timestamp: string;
   resolved?: boolean;
+  mode?: "simulation" | "realtime";
 }
 
 export interface ThroughputPoint {
@@ -179,6 +184,8 @@ export interface UserAccount {
   plain_password?: string;
   role: UserRole;
   status: UserStatus;
+  is_online?: boolean;
+  last_login_at?: string | null;
   reset_otp?: string | null;
   reset_otp_expires_at?: string | null;
   created_at: string;
@@ -254,3 +261,121 @@ export interface AdminUpdateUserInput {
   new_password?: string;
 }
 
+// Emergency Stop (E-Stop) & Safety Domain Types
+export type SystemSafetyStatus = "OPERATIONAL" | "SYSTEM_LOCKED" | "HALTED";
+
+export interface EmergencyStopPayload {
+  event: "emergency_stop";
+  station_id: string;
+  triggered_by: string;
+  timestamp: string;
+  mode: "realtime" | "simulation";
+}
+
+export type NotificationStatus = "unprocessed" | "acknowledged" | "resolved";
+
+export interface NotificationRecord {
+  id: string;
+  event: string;
+  severity: "critical" | "warning" | "info" | "error";
+  station_id: string;
+  triggered_by: string;
+  description: string;
+  timestamp: string;
+  mode: "realtime" | "simulation";
+  status: NotificationStatus;
+  resolved_at?: string | null;
+  resolved_by?: string | null;
+}
+
+export interface SafetyStatusResponse {
+  success: boolean;
+  status: SystemSafetyStatus;
+  is_locked: boolean;
+  active_incident?: EmergencyStopPayload | null;
+  last_notification?: NotificationRecord | null;
+  unprocessed_count: number;
+}
+
+export interface UnlockSystemInput {
+  note?: string;
+}
+
+export interface JamDetectedPayload {
+  event: "jam_detected";
+  section: string;
+  duration_seconds: number;
+  sensor_id: string;
+  mode: "realtime" | "simulation";
+  timestamp?: string;
+}
+
+export interface BinFullPayload {
+  event: "bin_full";
+  bin_id: string;
+  category: string;
+  current_count: number;
+  max_capacity: number;
+  mode: "realtime" | "simulation";
+  timestamp?: string;
+}
+
+export interface TemperatureWarningPayload {
+  event: "temperature_warning";
+  device_name: string;
+  current_temp: number;
+  threshold_temp: number;
+  unit: string;
+  mode: "realtime" | "simulation";
+  timestamp?: string;
+}
+
+export interface DeviceOfflinePayload {
+  event: "device_offline";
+  device_id: string;
+  ip_address: string;
+  last_seen: string;
+  mode: "realtime" | "simulation";
+  timestamp?: string;
+}
+
+export interface HeartbeatPayload {
+  device_id: string;
+  ip_address?: string;
+  uptime?: number;
+  timestamp?: string;
+}
+
+export interface ShiftSummaryPayload {
+  event: "shift_summary";
+  shift_name: string;
+  total_products: number;
+  sorted_good: number;
+  sorted_defect: number;
+  accuracy_rate: string;
+  emergency_stops_count: number;
+  operating_hours: string;
+  timestamp?: string;
+  mode?: "realtime" | "simulation";
+}
+
+export interface MqttDisconnectedPayload {
+  event: "mqtt_disconnected";
+  broker_url?: string;
+  disconnected_duration_seconds: number;
+  reconnect_attempt: number;
+  timestamp?: string;
+  mode?: "realtime" | "simulation";
+}
+
+export interface BinCounts {
+  bin1: number;
+  bin2: number;
+  bin3: number;
+}
+
+export interface BinCapacities {
+  bin1: number;
+  bin2: number;
+  bin3: number;
+}

@@ -24,6 +24,7 @@ export const AlertPayloadSchema = z
     description: z.string().trim().min(1).max(4000),
     timestamp: z.string().datetime({ offset: true }),
     resolved: z.boolean().optional(),
+    mode: z.enum(["simulation", "realtime"]).optional(),
   })
   .strict();
 
