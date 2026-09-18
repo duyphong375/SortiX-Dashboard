@@ -43,6 +43,7 @@ import { ShiftSummaryToast } from "@/components/ui/ShiftSummaryToast";
 import { ShiftSummaryModal } from "@/components/ui/ShiftSummaryModal";
 import { MqttDisconnectedToast } from "@/components/ui/MqttDisconnectedToast";
 import { EmergencyConfirmModal } from "@/components/ui/EmergencyConfirmModal";
+import { DashboardIncidentLayer } from "./DashboardIncidentLayer";
 import { ApiSafetyClient } from "@/services/apiSafetyClient";
 
 
@@ -1793,110 +1794,46 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         </div>
       </div>
 
-      {/* Toast cảnh báo đỏ nổi kèm nút mở khóa kiểm tra an toàn */}
-      <EmergencyUnlockToast
-        isOpen={isSystemLocked}
-        incident={estopIncident}
-        onUnlock={handleUnlockSystem}
-      />
-
-      {/* Toast cảnh báo kẹt phôi nổi góc dưới bên phải kèm nút gỡ kẹt & modal xác nhận an toàn (Chỉ hiển thị 1 lần) */}
-      <JamUnlockToast
-        isOpen={isJammed}
-        incident={jamIncident}
+      {/* Tầng hiển thị tập trung các Cảnh báo, Toasts, Modals và Dialogs */}
+      <DashboardIncidentLayer
+        isSystemLocked={isSystemLocked}
+        estopIncident={estopIncident}
+        onUnlockSystem={handleUnlockSystem}
+        estopConfirmModalOpen={estopConfirmModalOpen}
+        onConfirmEstopAction={handleConfirmEstopAction}
+        onCancelEstopAction={handleCancelEstopAction}
+        isJammed={isJammed}
+        jamIncident={jamIncident}
         onClearJam={handleClearJam}
-        isSystemLocked={isSystemLocked}
-      />
-
-      {/* Toast cảnh báo đầy khay chứa nổi góc dưới bên phải (Chỉ hiển thị 1 lần) */}
-      <BinFullToast
-        isOpen={isBinFull}
-        incident={fullBinIncident}
-        binNumber={fullBinIndex || 1}
-        onConfirmReplace={() => handleConfirmBinReplaced()}
-        isSystemLocked={isSystemLocked}
-        isJammed={isJammed}
-      />
-
-      {/* Toast cảnh báo quá nhiệt động cơ / CPU máy chủ (Chỉ hiển thị 1 lần) */}
-      <TemperatureWarningToast
-        isOpen={isTempWarning}
-        incident={tempIncident}
-        onAcknowledge={handleAcknowledgeTemperatureWarning}
-        onCoolDown={sorterData.isSimulation ? handleCoolDownTemperature : undefined}
-        isSystemLocked={isSystemLocked}
-        isJammed={isJammed}
         isBinFull={isBinFull}
-      />
-
-      {/* Toast cảnh báo thiết bị ngoại tuyến (Chỉ hiển thị 1 lần) */}
-      <DeviceOfflineToast
-        isOpen={isDeviceOffline}
-        incident={deviceOfflineIncident}
-        onAcknowledge={handleAcknowledgeDeviceOffline}
-        onReconnect={sorterData.isSimulation ? handleReconnectDevice : undefined}
-        isSystemLocked={isSystemLocked}
-        isJammed={isJammed}
-        isBinFull={isBinFull}
+        fullBinIncident={fullBinIncident}
+        fullBinIndex={fullBinIndex}
+        onConfirmBinReplaced={() => handleConfirmBinReplaced()}
         isTempWarning={isTempWarning}
-      />
-
-      {/* Toast thông báo Báo cáo ca làm việc cuối ngày (Xanh lá / Cyan - Severity INFO) */}
-      <ShiftSummaryToast
-        isOpen={isShiftSummaryToastOpen}
-        incident={shiftSummaryIncident}
-        onOpenDetails={handleOpenShiftSummaryModal}
-        onClose={handleCloseShiftSummaryToast}
-        isSystemLocked={isSystemLocked}
-        isJammed={isJammed}
-        isBinFull={isBinFull}
-        isTempWarning={isTempWarning}
+        tempIncident={tempIncident}
+        onAcknowledgeTemperatureWarning={handleAcknowledgeTemperatureWarning}
+        onCoolDownTemperature={handleCoolDownTemperature}
+        isSimulation={sorterData.isSimulation}
         isDeviceOffline={isDeviceOffline}
-      />
-
-      {/* Toast cảnh báo mất kết nối MQTT Broker (Đỏ CRITICAL & Phục hồi xanh) */}
-      <MqttDisconnectedToast
-        isOpen={mqtt.isMqttAlertActive}
-        incident={mqtt.mqttDisconnectedIncident}
-        reconnectAttempt={mqtt.reconnectAttempt}
-        onForceReconnect={mqtt.reconnectManual}
-        isSystemLocked={isSystemLocked}
-        isJammed={isJammed}
-        isBinFull={isBinFull}
-        isTempWarning={isTempWarning}
-        isDeviceOffline={isDeviceOffline}
-      />
-
-      {/* Modal Báo cáo tổng kết ca làm việc chi tiết kèm biểu đồ tròn & nút Tải PDF/Excel */}
-      <ShiftSummaryModal
-
-        isOpen={isShiftSummaryModalOpen}
-        summary={shiftSummaryIncident}
-        onClose={handleCloseShiftSummaryModal}
-      />
-
-      {/* Modal xác nhận Dừng Khẩn Cấp kèm còi kêu liên tục */}
-      <EmergencyConfirmModal
-        isOpen={estopConfirmModalOpen}
-        onConfirm={handleConfirmEstopAction}
-        onCancel={handleCancelEstopAction}
-      />
-
-      {/* Confirm Dialog: Xóa lịch sử phân loại */}
-      <ConfirmDialog
-        isOpen={clearHistoryDialogOpen}
-        title="Xác nhận xóa lịch sử"
-        message={`Bạn có chắc chắn muốn xóa toàn bộ lịch sử phân loại trong chế độ ${
-          sorterData.isSimulation ? "MÔ PHỎNG" : "THỰC TẾ"
-        }? Hành động này sẽ đặt lại bộ đếm sản phẩm và không thể hoàn tác.`}
-        confirmText="Xóa dữ liệu"
-        cancelText="Hủy bỏ"
-        type="danger"
-        onConfirm={() => {
+        deviceOfflineIncident={deviceOfflineIncident}
+        onAcknowledgeDeviceOffline={handleAcknowledgeDeviceOffline}
+        onReconnectDevice={handleReconnectDevice}
+        isShiftSummaryToastOpen={isShiftSummaryToastOpen}
+        isShiftSummaryModalOpen={isShiftSummaryModalOpen}
+        shiftSummaryIncident={shiftSummaryIncident}
+        onOpenShiftSummaryModal={handleOpenShiftSummaryModal}
+        onCloseShiftSummaryToast={handleCloseShiftSummaryToast}
+        onCloseShiftSummaryModal={handleCloseShiftSummaryModal}
+        isMqttAlertActive={mqtt.isMqttAlertActive}
+        mqttDisconnectedIncident={mqtt.mqttDisconnectedIncident}
+        mqttReconnectAttempt={mqtt.reconnectAttempt}
+        onForceReconnectMqtt={mqtt.reconnectManual}
+        clearHistoryDialogOpen={clearHistoryDialogOpen}
+        onConfirmClearHistory={() => {
           setClearHistoryDialogOpen(false);
           confirmClearHistoryAction();
         }}
-        onCancel={() => setClearHistoryDialogOpen(false)}
+        onCancelClearHistory={() => setClearHistoryDialogOpen(false)}
       />
     </DashboardContext.Provider>
   );
