@@ -19,6 +19,8 @@ import {
   ChevronLeft,
   ChevronRight,
   KeyRound,
+  FlaskConical,
+  Radio,
 } from "lucide-react";
 import { ChangePasswordModal } from "@/components/ui/ChangePasswordModal";
 
@@ -39,6 +41,8 @@ interface SidebarProps {
   alertCount?: number;
   mobileOpen?: boolean;
   onCloseMobile?: () => void;
+  isSimulation?: boolean;
+  onToggleSimulationMode?: (targetMode?: boolean) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -47,6 +51,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   alertCount = 0,
   mobileOpen = false,
   onCloseMobile,
+  isSimulation = true,
+  onToggleSimulationMode,
 }) => {
   const pathname = usePathname();
   const { user, logout } = useAuth();
@@ -100,6 +106,41 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
         </div>
+
+        {/* Chuyển Chế độ Vận hành (Mô phỏng <-> Thực tế) - Hiển thị rõ ràng trên Menu Mobile */}
+        {!collapsed && onToggleSimulationMode && (
+          <div className="px-3 pt-3 pb-1 border-b border-slate-200/60 dark:border-white/[0.05]">
+            <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              Chế độ vận hành
+            </p>
+            <div className="flex items-center rounded-xl border border-slate-200/90 bg-slate-100/90 p-1 dark:border-white/[0.08] dark:bg-[#161822] shadow-xs">
+              <button
+                type="button"
+                onClick={() => onToggleSimulationMode(true)}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-bold transition-all ${
+                  isSimulation
+                    ? "bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 text-white shadow-xs"
+                    : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                }`}
+              >
+                <FlaskConical className="h-3.5 w-3.5" />
+                <span>Mô phỏng</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onToggleSimulationMode(false)}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-bold transition-all ${
+                  !isSimulation
+                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xs"
+                    : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                }`}
+              >
+                <Radio className="h-3.5 w-3.5" />
+                <span>Thực tế</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Navigation */}
         <nav aria-label="Các trang trong hệ thống" className="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin">

@@ -158,6 +158,36 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             </span>
           </div>
 
+          {/* Nút Chuyển Chế độ Nhanh trên Mobile */}
+          {!isOperatorUser && onToggleSimulationMode && (
+            <button
+              type="button"
+              onClick={() => onToggleSimulationMode(!isSimulation)}
+              className={`flex shrink-0 sm:hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-extrabold border transition-all ${
+                isSimulation
+                  ? "bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 text-white border-purple-400/40 shadow-xs"
+                  : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40 shadow-xs"
+              }`}
+              title="Chạm để chuyển đổi Chế độ Mô phỏng / Thực tế"
+            >
+              {isSimulation ? (
+                <>
+                  <FlaskConical className="h-3.5 w-3.5 animate-pulse text-purple-200" />
+                  <span>Mô phỏng</span>
+                </>
+              ) : (
+                <>
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]" />
+                  </span>
+                  <Radio className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                  <span>Thực tế</span>
+                </>
+              )}
+            </button>
+          )}
+
           {/* MQTT Status Badge: MQTT: ONLINE (Xanh) ➔ MQTT: DISCONNECTED (Đỏ chớp nháy) */}
           {mqttStatus === "connected" && !isMqttAlertActive ? (
             <div

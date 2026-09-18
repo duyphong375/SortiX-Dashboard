@@ -4,6 +4,33 @@ Tất cả các thay đổi về kiến trúc, tính năng, sửa lỗi và nân
 
 ---
 
+## [2.5.0] - 2026-09-19 (Đóng Gói Mobile App Android với Capacitor, Hỗ Trợ iOS PWA & Tối Ưu Giao Diện Mobile)
+
+### 🚀 Added (Thêm mới)
+- **Đóng Gói Ứng Dụng Di Động Android (Native APK qua Capacitor 8)**:
+  - Tích hợp các thư viện `@capacitor/core`, `@capacitor/android`, `@capacitor/cli` vào `frontend/`.
+  - Khởi tạo thành công dự án Native Android trong `frontend/android/` với package ID `com.pbl3.dashboard` và tên ứng dụng `SortiX Dashboard`.
+  - Xây dựng thành công file APK cài đặt độc lập: `SortiX-Dashboard.apk` (khoảng 4.1 MB) thông qua Android Studio pipeline.
+  - Bổ sung các lệnh thuận tiện trong `package.json`: `npm run cap:sync` (đồng bộ build vào Android project) và `npm run cap:open` (mở Android Studio).
+- **Mô Hình 1-Codebase Hybrid Webview Container**:
+  - Duy trì 100% mã nguồn Next.js 14 App Router dùng chung giữa Desktop Web, Vercel Cloud, Android APK và iOS PWA.
+  - Không sử dụng chế độ tĩnh `output: 'export'` nhằm bảo vệ toàn vẹn 18 dynamic Route Handlers và SSE stream `/api/events`.
+  - Cấu hình cầu nối `frontend/capacitor.config.ts` hỗ trợ linh hoạt máy ảo Android (`http://10.0.2.2:3000`), IP mạng LAN (`http://192.168.1.4:3000`) và production Vercel domain.
+  - Tạo trang fallback ngoại tuyến `frontend/out/index.html` bảo đảm app không bị sập khi chưa có mạng.
+- **Tối Ưu Trải Nghiệm & Viewport Di Động (Next.js 14 Viewport & iOS PWA)**:
+  - Xuất cấu hình `Viewport` trong `frontend/src/app/layout.tsx`: `maximumScale: 1, userScalable: false, viewportFit: "cover", themeColor: "#070b14"`.
+  - Hỗ trợ cài đặt PWA Standalone toàn màn hình trên iPhone thông qua Safari ("Thêm vào MH chính") với trải nghiệm mượt mà không cần Mac/Xcode.
+- **Điều Hướng & Chuyển Đổi Chế Độ Trên Màn Hình Nhỏ (Mobile Navigation)**:
+  - Bổ sung nút bấm viên nang nhanh `[🧪 Mô phỏng]` / `[📡 Thực tế]` (`flex shrink-0 sm:hidden`) ngay trên thanh `TopHeader.tsx`.
+  - Bổ sung khối "CHẾ ĐỘ VẬN HÀNH" kích thước lớn, trực quan ngay trên đầu menu ngăn kéo `Sidebar.tsx` khi mở nút Hamburger trên điện thoại.
+  - Phân quyền chặt chẽ: Nút Mô phỏng chỉ hiển thị cho Quản trị viên (Admin), tài khoản Người vận hành (User) luôn bị khóa cứng ở chế độ Thực tế trên mọi nền tảng.
+
+### 🛡️ Security & Configuration (Bảo mật & Cấu hình)
+- Cấu hình `android:usesCleartextTraffic="true"` trong `frontend/android/app/src/main/AndroidManifest.xml` hỗ trợ kết nối HTTP máy chủ cục bộ và telemetry vi điều khiển.
+- Cập nhật `.gitignore` loại bỏ triệt để các file build tạm của Android Gradle (`.gradle/`, `build/`, `local.properties`, `*.apk`, `*.aab`).
+
+---
+
 ## [2.4.0] - 2026-09-19 (Tích Hợp Toàn Diện, Chuẩn Hóa Monorepo & Khóa Kiểm Thử Cuối)
 
 ### 🚀 Added (Thêm mới)

@@ -127,3 +127,29 @@ Tài liệu này quy định các tiêu chuẩn kỹ thuật, ràng buộc kiế
   npm test
   ```
   Tất cả **108/108 bài kiểm thử phải đạt PASS 100%**.
+
+---
+
+## 7. Nguyên Tắc Phát Triển Mobile App & Đồng Bộ 1-Codebase
+
+- **Quy Tắc 1-Codebase Bất Biến**:
+  - Mọi tính năng mới, sửa lỗi hay tinh chỉnh giao diện đều phải được thực hiện trên codebase chung Next.js 14 (`frontend/src/`).
+  - Tuyệt đối không tạo mã nguồn frontend riêng biệt hay phân mảnh logic cho Mobile.
+- **Nghiêm Cấm Bật `output: 'export'`**:
+  - Không được thêm `output: 'export'` vào `next.config.mjs` vì sẽ vô hiệu hóa 18 dynamic API routes nội bộ (`/api/safety`, `/api/auth`, `/api/history`, v.v.) và SSE stream thời gian thực (`/api/events`).
+  - Ứng dụng di động luôn sử dụng Capacitor WebView kết nối tới `server.url` (máy chủ Next.js).
+- **Tương Thích Đa Màn Hình & Cảm Ứng Di Động**:
+  - Mọi giao diện phải đáp ứng tốt cả màn hình Desktop lớn (>= 1024px) và màn hình điện thoại di động (< 640px).
+  - Không để các phần tử tràn ngang làm vỡ layout (sử dụng `truncate`, `shrink-0`, `flex-wrap` hợp lý).
+  - Đảm bảo Viewport cấu hình `maximumScale: 1, userScalable: false` để chống zoom ngoài ý muốn khi thao tác trên Canvas 60fps.
+- **Quy Trình Đồng Bộ Capacitor (Capacitor Sync Workflow)**:
+  - Khi có thay đổi Frontend cần phản ánh vào bản build Android Native, bắt buộc thực hiện theo trình tự:
+    ```powershell
+    npm run build
+    npm run cap:sync
+    ```
+  - Sau đó mở Android Studio qua `npm run cap:open` để build APK mới.
+- **Địa Chỉ Mạng Cho Thiết Bị Thử Nghiệm**:
+  - Máy ảo Android Studio Emulator bắt buộc sử dụng IP host: `http://10.0.2.2:3000`.
+  - Thiết bị thật thử nghiệm qua Wi-Fi cục bộ sử dụng IP LAN máy chủ: `http://<LAN_IP>:3000`.
+  - Không dùng `http://localhost:3000` trong cấu hình Capacitor vì môi trường máy ảo sẽ hiểu nhầm localhost là chính nó.

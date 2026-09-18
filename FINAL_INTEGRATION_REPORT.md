@@ -44,6 +44,8 @@
 | 8 | **Chữ Ký Session** | Session token chưa được ký số đồng nhất | Tích hợp module `authToken.ts` tạo token ký số an toàn và xác thực role | ✅ Đã sửa |
 | 9 | **Dung Lượng Khay** | Sức chứa khay bị fix cứng 50 SP | Triển khai Dynamic Bin Capacities 5 - 50 SP đồng bộ trên Canvas, Widget, Config | ✅ Đã sửa |
 | 10 | **Nhiệt Độ Bán Nguyệt** | Đồng hồ nhiệt độ hiển thị thanh trượt ở cả chế độ máy thật | Tách biệt hoàn toàn: Slider ảo ở Mô phỏng, Bảng telemetry DS18B20 ở Thực tế | ✅ Đã sửa |
+| 11 | **Mobile Android App** | Cần đóng gói Mobile App cho di động mà không được làm hỏng Web Next.js | Tích hợp Capacitor 8 Hybrid Bridge, xuất file APK 4.1MB, bảo vệ 100% web routes | ✅ Đã sửa |
+| 12 | **Điều Hướng Mobile** | Nút chuyển đổi Chế độ Mô phỏng bị ẩn trên màn hình di động hẹp (<640px) | Bổ sung nút viên nang trên TopHeader và khối chuyển đổi lớn trong Sidebar Drawer | ✅ Đã sửa |
 
 ---
 

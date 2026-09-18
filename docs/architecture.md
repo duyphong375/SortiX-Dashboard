@@ -1,12 +1,16 @@
 # THIẾT KẾ KIẾN TRÚC HỆ THỐNG (SORTIX SYSTEM ARCHITECTURE)
 
-> **Tài liệu Kỹ Thuật Đồ Án PBL3**: Hệ thống điều khiển, giám sát và phân loại sản phẩm trên băng chuyền tự động thông minh tích hợp vi điều khiển IoT (ESP32-C5) & Thị giác máy tính (Vision AI).
+> **Tài liệu Kỹ Thuật Đồ Án PBL3**: Hệ thống điều khiển, giám sát và phân loại sản phẩm trên băng chuyền tự động thông minh tích hợp vi điều khiển IoT (ESP32-C5) & Thị giác máy tính (Vision AI) với kiến trúc 1-Codebase đa nền tảng (Desktop Web, Android APK & iOS PWA).
 
 ---
 
 ## 📌 Mục Lục
 1. [Tổng Quan Kiến Trúc (High-Level Architecture)](#1-tổng-quan-kiến-trúc-high-level-architecture)
 2. [Phân Tích Chi Tiết Từng Tầng (Layer Breakdown)](#2-phân-tích-chi-tiết-từng-tầng-layer-breakdown)
+   - 2.1. Shared Layer (`shared/`)
+   - 2.2. Backend Layer (`backend/`)
+   - 2.3. Frontend Web Layer (`frontend/`)
+   - 2.4. Mobile Shell Layer (Capacitor Android & iOS PWA)
 3. [Các Luồng Dữ Liệu Cốt Lõi (Core Data Flows)](#3-các-luồng-dữ-liệu-cốt-lõi-core-data-flows)
 4. [Kiến Trúc Luồng Sự Kiện Thời Gian Thực (SSE & MQTT Architecture)](#4-kiến-trúc-luồng-sự-kiện-thời-gian-thực-sse--mqtt-architecture)
 5. [Kiến Trúc Lưu Trữ & Chuyển Đổi Dữ Liệu (Persistence & Migrations)](#5-kiến-trúc-lưu-trữ--chuyển-đổi-dữ-liệu-persistence--migrations)
@@ -17,28 +21,38 @@
 
 ## 1. Tổng Quan Kiến Trúc (High-Level Architecture)
 
-Hệ thống **SortiX Dashboard** được thiết kế theo mô hình kiến trúc phân tầng chuyên biệt (**Layered Architecture**) và quản lý mã nguồn dưới dạng **Monorepo (npm workspaces)**. Kiến trúc phân định rõ 4 khối chức năng:
+Hệ thống **SortiX Dashboard** được thiết kế theo mô hình kiến trúc phân tầng chuyên biệt (**Layered Architecture**) và quản lý mã nguồn dưới dạng **Monorepo (npm workspaces)**. Kiến trúc phân định 5 khối chức năng liên kết chặt chẽ:
 
-1. **Frontend (Giao diện Client)**: Ứng dụng Next.js 14 App Router, chịu trách nhiệm trực quan hóa đồ họa Canvas 60fps, âm thanh công nghiệp tổng hợp qua Web Audio API, đồng hồ nhiệt độ bán nguyệt 2 chế độ, các thanh trượt điều chỉnh dung lượng khay (5-50 SP) và tương tác người dùng.
-2. **Backend (Máy chủ Dịch vụ API)**: Máy chủ Express/Node.js độc lập xử lý xác thực, phân quyền RBAC, giám sát an toàn công nghiệp (E-Stop, Kẹt phôi, Khay đầy, Quá nhiệt, Thiết bị offline, Mất kết nối MQTT, Báo cáo 1 ngày làm việc), broadcast SSE và lưu trữ dữ liệu bền vững.
-3. **Shared Layer (Tầng Dùng Chung)**: Định nghĩa kiểu dữ liệu (Types), Zod Schemas và hằng số hệ thống dùng chung giữa Frontend và Backend.
-4. **IoT & Vision Gateway**: Cầu nối truyền thông hai chiều thời gian thực giữa vi điều khiển ESP32-C5, cụm cảm biến/cơ cấu piston đẩy và MQTT Broker qua Wi-Fi 6.
+1. **Frontend Web (Giao diện Client)**: Ứng dụng Next.js 14 App Router, chịu trách nhiệm trực quan hóa đồ họa Canvas 60fps, âm thanh công nghiệp tổng hợp qua Web Audio API, đồng hồ nhiệt độ bán nguyệt 2 chế độ, các thanh trượt điều chỉnh dung lượng khay (5-50 SP) và tương tác người dùng.
+2. **Mobile Shell Layer (Ứng Dụng Di Động)**: Vỏ bọc Hybrid đa nền tảng sử dụng **Capacitor 8** để đóng gói thành ứng dụng **Android APK** native và hỗ trợ **iOS PWA Standalone** toàn màn hình từ cùng 1 codebase.
+3. **Backend API Server**: Máy chủ Express/Node.js độc lập xử lý xác thực, phân quyền RBAC, giám sát an toàn công nghiệp (E-Stop, Kẹt phôi, Khay đầy, Quá nhiệt, Thiết bị offline, Mất kết nối MQTT, Báo cáo 1 ngày làm việc), broadcast SSE và lưu trữ dữ liệu bền vững.
+4. **Shared Layer (Tầng Dùng Chung)**: Định nghĩa kiểu dữ liệu (Types), Zod Schemas và hằng số hệ thống dùng chung giữa Frontend, Mobile và Backend.
+5. **IoT & Vision Gateway**: Cầu nối truyền thông hai chiều thời gian thực giữa vi điều khiển ESP32-C5, cụm cảm biến/cơ cấu piston đẩy và MQTT Broker qua Wi-Fi 6.
 
 ```
-                  ┌────────────────────────────────────────────────────────┐
-                  │                 FRONTEND (Client / UI)                 │
-                  │  Next.js 14 App Router • TailwindCSS • Recharts       │
-                  │  Web Audio Industrial Sound Synthesizer                │
-                  │  HTML5 Canvas 60fps Physics & Piston Sorter Loop       │
-                  │  Dynamic Bin Capacities (5 - 50 SP) Sync Sliders       │
-                  │  Dual-Mode Temperature Gauge Dial (Sim vs Real)        │
-                  │  Báo Cáo 1 Ngày Làm Việc (Shift Summary Live Sync)     │
-                  │  Banners: E-Stop, Jam Incident, Bin Full Incident      │
-                  │  Auth Context, Profile & Safety State Management       │
-                  └───────────┬───────────────────┬────────────┬───────────┘
-                              │ Fetch REST API    │ SSE Stream │ WSS (Browser)
-                              │ (via Clients)     │ /api/events│
-                              ▼                   ▼            ▼
+      ┌────────────────────────────────────────────────────────┐
+      │               CROSS-PLATFORM CLIENTS                   │
+      │  ┌──────────────────┐            ┌──────────────────┐  │
+      │  │ Desktop Browser  │            │ Android App (APK)│  │
+      │  │ Chrome/Edge/Brave│            │ Capacitor Bridge │  │
+      │  └────────┬─────────┘            └────────┬─────────┘  │
+      │           │    ┌──────────────────┐       │            │
+      │           └───>│  iOS PWA Safari  │<──────┘            │
+      │                │  Standalone Mode │                    │
+      │                └────────┬─────────┘                    │
+      └─────────────────────────┼──────────────────────────────┘
+                                │
+                                ▼
+      ┌────────────────────────────────────────────────────────┐
+      │                 FRONTEND (Next.js 14 App Router)       │
+      │  TailwindCSS • HTML5 Canvas 60fps Physics Piston Loop  │
+      │  Web Audio Industrial Sound • Dynamic Bin Capacities   │
+      │  Dual-Mode Gauge Dial • Báo Cáo 1 Ngày Làm Việc        │
+      │  Mobile Drawer Sidebar • Header Quick-Toggle Pill      │
+      └───────────┬───────────────────┬────────────┬───────────┘
+                  │ Fetch REST API    │ SSE Stream │ WSS (Browser)
+                  │ (via Clients)     │ /api/events│
+                  ▼                   ▼            ▼
 ┌─────────────────────────────────────────────┐   ┌────────────────────────┐
 │            BACKEND (Server Layer)           │   │    MQTT BROKER / IoT   │
 │  - Routes: /api/auth, /api/safety, ...      │   │  (EMQX / Mosquitto)    │
@@ -108,7 +122,7 @@ Hệ thống **SortiX Dashboard** được thiết kế theo mô hình kiến tr
   - `validateMiddleware.ts`: Kiểm định đầu vào JSON qua Zod Schema trước khi chạm tới Controller.
   - `errorMiddleware.ts`: Bắt và định dạng lỗi ngoại lệ đồng nhất (`{ success: false, message: ... }`).
 
-### 2.3. Frontend Layer (`frontend/`)
+### 2.3. Frontend Web Layer (`frontend/`)
 Xây dựng trên nền tảng Next.js 14 App Router với hiệu năng tối ưu:
 - **Trực quan hóa vật lý 60fps & Piston Chuyển Hướng (`useConveyorPhysics.ts`)**:
   - Vòng lặp `requestAnimationFrame` tính toán tọa độ di chuyển của vật thể trên băng chuyền.
@@ -133,6 +147,27 @@ Xây dựng trên nền tảng Next.js 14 App Router với hiệu năng tối ư
   - Ứng dụng Web Audio API thuần của trình duyệt để sinh sóng âm công nghiệp (Sine/Square Oscillator).
   - Hỗ trợ còi báo động khẩn cấp E-Stop hú liên tục, còi báo kẹt phôi, còi báo đầy khay, còi cảnh báo quá nhiệt, âm cảnh báo mất kết nối MQTT và chime phục hồi kết nối.
 
+### 2.4. Mobile Shell Layer (Capacitor Android & iOS PWA)
+- **Mô hình 1-Codebase Hybrid Bridge**:
+  - Đóng gói giao diện Next.js 14 thành ứng dụng Native Android qua **Capacitor 8**.
+  - Không sử dụng chế độ tĩnh `output: 'export'` tĩnh để bảo vệ toàn vẹn 18 dynamic API routes và SSE stream `/api/events`.
+  - Kết nối thông qua cấu hình `server.url` linh hoạt:
+    - Máy ảo Android Studio: `http://10.0.2.2:3000` (địa chỉ loopback máy host).
+    - Thiết bị thật qua Wi-Fi cục bộ: `http://192.168.1.4:3000` (LAN IP).
+    - Triển khai Cloud: URL Vercel / Custom Domain.
+  - Trang dự phòng ngoại tuyến `frontend/out/index.html` bảo đảm app không bị sập khi chưa có kết nối mạng.
+- **Cấu hình Quyền & Mạng (`AndroidManifest.xml`)**:
+  - Kích hoạt `android:usesCleartextTraffic="true"` cho phép giao tiếp HTTP nội bộ trong quá trình phát triển và kết nối vi điều khiển qua IP cục bộ.
+  - Cấp các quyền mạng cần thiết: `INTERNET`, `ACCESS_NETWORK_STATE`.
+- **Tối ưu Viewport & Giao Diện Cảm Ứng Di Động**:
+  - Tích hợp chuẩn Next.js 14 `Viewport` trong `frontend/src/app/layout.tsx`:
+    - `viewportFit: "cover"`: Tràn viền thích ứng tai thỏ và đảo Dynamic Island trên thiết bị mới.
+    - `maximumScale: 1, userScalable: false`: Vô hiệu hóa tính năng zoom vô tình làm biến dạng Canvas 60fps khi người dùng chạm thao tác nhanh trên băng tải.
+    - `themeColor: "#070b14"`: Đồng bộ màu sắc thanh trạng thái điện thoại với theme tối công nghiệp.
+- **Điều Hướng & Chuyển Đổi Chế Độ Trên Màn Hình Nhỏ**:
+  - **TopHeader Quick-Toggle Pill**: Nút bấm nhỏ gọn dạng viên nang trên thanh tiêu đề di động (`flex shrink-0 sm:hidden`) cho phép Admin chuyển đổi nhanh chế độ Mô phỏng / Thực tế chỉ bằng một chạm.
+  - **Sidebar Drawer Switcher**: Ngăn kéo menu trượt từ cạnh trái (kích hoạt qua nút Hamburger) bố trí khối "CHẾ ĐỘ VẬN HÀNH" kích thước lớn, trực quan ngay đầu danh mục điều hướng.
+
 ---
 
 ## 3. Các Luồng Dữ Liệu Cốt Lõi (Core Data Flows)
@@ -145,7 +180,7 @@ Xây dựng trên nền tảng Next.js 14 App Router với hiệu năng tối ư
      [MQTT Broker]
             │
             ▼ (WebSocket Subscribe)
-      [Dashboard Frontend]
+ [Web & Mobile Frontend]
             ├──> Cập nhật tọa độ & kích hoạt piston đẩy trên Canvas 60fps
             ├──> Phát âm thanh khí nén / cảm biến qua Web Audio API
             ├──> Kiểm tra sức chứa từng khay (5 - 50 SP) -> Cảnh báo nếu đầy khay
@@ -154,7 +189,7 @@ Xây dựng trên nền tảng Next.js 14 App Router với hiệu năng tối ư
 
 ### 3.2. Luồng Dừng Khẩn Cấp (E-Stop) & Mở Khóa An Toàn (Safe Unlock)
 ```
-[Nút E-Stop Vật Lý (IO10) / Web UI]
+[Nút E-Stop Vật Lý (IO10) / Web UI / Mobile App]
             │
             ├──> Dừng ngay lập tức băng chuyền (isRunning = false)
             ├──> Bật còi báo động hú liên tục (Continuous Alarm)
@@ -164,7 +199,7 @@ Xây dựng trên nền tảng Next.js 14 App Router với hiệu năng tối ư
      [Safety Service]
             ├──> Lưu trữ sự cố vào data/notifications.json
             ├──> Gửi Email & Telegram cảnh báo
-            └──> Broadcast SSE: event "emergency_stop" tới tất cả Clients
+            └──> Broadcast SSE: event "emergency_stop" tới tất cả Clients (Web & Mobile)
             
                         ═════════════════════════════
                         
@@ -186,7 +221,7 @@ Hệ thống kết hợp cả hai mô hình truyền thông thời gian thực:
 2. **Server-Sent Events (SSE)**: Dành cho các sự kiện trạng thái hệ thống, cảnh báo an toàn và đồng bộ đa màn hình từ máy chủ xuống client.
 
 ```
-[IoT Hardware / Controller] ──(MQTT)──> [MQTT Broker] ──(WSS)──> [Frontend Clients]
+[IoT Hardware / Controller] ──(MQTT)──> [MQTT Broker] ──(WSS)──> [Web & Mobile Clients]
                                                                         ▲
 [Backend Safety Engine] ─────(SSE /api/events Broadcast)────────────────┘
 ```

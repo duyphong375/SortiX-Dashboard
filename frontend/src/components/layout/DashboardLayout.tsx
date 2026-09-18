@@ -1733,6 +1733,8 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
           alertCount={sorterData.unresolvedAlertCount}
           mobileOpen={mobileMenuOpen}
           onCloseMobile={() => setMobileMenuOpen(false)}
+          isSimulation={user?.role === "user" ? false : sorterData.isSimulation}
+          onToggleSimulationMode={user?.role === "user" ? undefined : handleToggleSimulationMode}
         />
 
         {/* Mobile backdrop overlay */}
