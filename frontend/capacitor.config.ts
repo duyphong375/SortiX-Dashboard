@@ -19,8 +19,7 @@ const config: CapacitorConfig = {
   appName: 'SortiX Dashboard',
   webDir: 'out',
   server: {
-    // Điền URL Vercel của bạn hoặc biến môi trường CAPACITOR_SERVER_URL:
-    // url: 'https://your-sortix-dashboard.vercel.app',
+    url: process.env.CAPACITOR_SERVER_URL || 'http://192.168.1.4:3000',
     cleartext: true,
     androidScheme: 'https',
   },

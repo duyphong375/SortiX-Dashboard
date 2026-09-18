@@ -5,6 +5,7 @@ import { VisualItem, TelemetryData, SorterConfig, CATALOG_BRANDS, JamDetectedPay
 import { determineTargetBin } from "@/lib/dataProcessor";
 import { industrialAudio } from "@/lib/audioService";
 import { useToast } from "@/components/ui/Toast";
+import { updateSyncState, syncSpawnItemToServer } from "@/services/apiSyncClient";
 
 export interface UseConveyorPhysicsProps {
   telemetryRef: React.MutableRefObject<TelemetryData>;
@@ -120,6 +121,7 @@ export function useConveyorPhysics({
       };
       setVisualItems((prev) => [...prev, newItem]);
       industrialAudio.playClick();
+      void syncSpawnItemToServer(newItem);
     },
     [configRef, isSimulationRef, simRecordsRef, setVisualItems]
   );
@@ -131,6 +133,7 @@ export function useConveyorPhysics({
     setIsRunning(nextState);
     setTelemetry((prev) => ({ ...prev, conveyor_running: nextState }));
     onPublishCommand?.(nextState ? "START" : "STOP");
+    void updateSyncState({ isRunning: nextState });
   }, [onPublishCommand, setTelemetry]);
 
   const handleEmergencyStop = useCallback(() => {
@@ -159,6 +162,7 @@ export function useConveyorPhysics({
       setConveyorSpeed(newSpeed);
       setTelemetry((prev) => ({ ...prev, conveyor_speed: newSpeed }));
       onPublishCommand?.("SET_SPEED", newSpeed);
+      void updateSyncState({ speed: newSpeed });
     },
     [onPublishCommand, setTelemetry]
   );

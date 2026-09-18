@@ -45,6 +45,7 @@ import { MqttDisconnectedToast } from "@/components/ui/MqttDisconnectedToast";
 import { EmergencyConfirmModal } from "@/components/ui/EmergencyConfirmModal";
 import { DashboardIncidentLayer } from "./DashboardIncidentLayer";
 import { ApiSafetyClient } from "@/services/apiSafetyClient";
+import { fetchSyncData, myClientId } from "@/services/apiSyncClient";
 
 
 // Custom Hooks (Refactored Architecture)
@@ -351,6 +352,14 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     conveyor.setVisualItems((prev) => [...prev, item]);
   };
   setIsRunningRef.current = conveyor.setIsRunning;
+  const setConveyorSpeedRef = useRef(conveyor.setConveyorSpeed);
+  setConveyorSpeedRef.current = conveyor.setConveyorSpeed;
+  const applyIncomingSyncStateRef = useRef(sorterData.applyIncomingSyncState);
+  applyIncomingSyncStateRef.current = sorterData.applyIncomingSyncState;
+  const applyIncomingSyncRecordsRef = useRef(sorterData.applyIncomingSyncRecords);
+  applyIncomingSyncRecordsRef.current = sorterData.applyIncomingSyncRecords;
+  const applyIncomingClearHistoryRef = useRef(sorterData.applyIncomingClearHistory);
+  applyIncomingClearHistoryRef.current = sorterData.applyIncomingClearHistory;
 
   // Tài khoản người dùng (role: user) chỉ có duy nhất chế độ thực tế, không có mô phỏng
   useEffect(() => {
@@ -1095,6 +1104,20 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
+    // 1.1 Khôi phục trạng thái đồng bộ ban đầu từ máy chủ
+    fetchSyncData().then((res) => {
+      if (res.success && res.state) {
+        if (res.state.isRunning !== undefined) {
+          setIsRunningRef.current(res.state.isRunning);
+          setTelemetry((prev) => ({ ...prev, conveyor_running: res.state!.isRunning }));
+        }
+        if (res.state.speed !== undefined) {
+          setConveyorSpeedRef.current(res.state.speed);
+          setTelemetry((prev) => ({ ...prev, conveyor_speed: res.state!.speed }));
+        }
+      }
+    });
+
     // 2. Kênh sự kiện SSE /api/events
     let eventSource: EventSource | null = null;
     try {
@@ -1199,6 +1222,60 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
           }
         } catch (err) {
           console.warn("Lỗi phân tích SSE status:", err);
+        }
+      });
+
+      // Kênh đồng bộ đa thiết bị (PC Web <-> iPhone Safari <-> Android App)
+      eventSource.addEventListener("state_sync", (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data?.senderId !== myClientId && data?.state) {
+            const s = data.state;
+            applyIncomingSyncStateRef.current(s);
+            if (s.isRunning !== undefined) {
+              setIsRunningRef.current(s.isRunning);
+              setTelemetry((prev) => ({ ...prev, conveyor_running: s.isRunning }));
+            }
+            if (s.speed !== undefined) {
+              setConveyorSpeedRef.current(s.speed);
+              setTelemetry((prev) => ({ ...prev, conveyor_speed: s.speed }));
+            }
+          }
+        } catch (err) {
+          console.warn("Lỗi phân tích SSE state_sync:", err);
+        }
+      });
+
+      eventSource.addEventListener("history_sync", (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data?.senderId !== myClientId && data?.records) {
+            applyIncomingSyncRecordsRef.current(data.records, data.binCounts);
+          }
+        } catch (err) {
+          console.warn("Lỗi phân tích SSE history_sync:", err);
+        }
+      });
+
+      eventSource.addEventListener("history_cleared", (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data?.senderId !== myClientId) {
+            applyIncomingClearHistoryRef.current();
+          }
+        } catch (err) {
+          console.warn("Lỗi phân tích SSE history_cleared:", err);
+        }
+      });
+
+      eventSource.addEventListener("spawn_item", (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data?.senderId !== myClientId && data?.item) {
+            spawnRealItemRef.current(data.item);
+          }
+        } catch (err) {
+          console.warn("Lỗi phân tích SSE spawn_item:", err);
         }
       });
     } catch (err) {

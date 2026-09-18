@@ -11,8 +11,9 @@ import { SSEService, shutdownSSE } from "./services/sseService";
 import { initBackendMQTT, shutdownBackendMQTT } from "./services/mqttService";
 import { resolveUserFromRequest, checkRolePermission, requireAdmin } from "./middlewares/authMiddleware";
 import { ENV } from "./config/env";
-import { formatErrorResponse } from "./middlewares/errorMiddleware";
 import { HistoryQuerySchema } from "@shared/schemas";
+import { SyncService } from "./services/syncService";
+import { HistoryModel } from "./models/historyModel";
 
 function parseJsonBody(req: http.IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
@@ -369,6 +370,43 @@ const server = http.createServer(async (req, res) => {
       const statusParam = parsedUrl.searchParams.get("status") || undefined;
       const result = SafetyRoutes.handleGetNotifications(statusParam);
       sendJson(res, result.status, result.body);
+      return;
+    }
+
+    // Sync Routes (Cross-Device Realtime Sync)
+    if (pathname === "/api/sync" && method === "GET") {
+      sendJson(res, 200, {
+        success: true,
+        state: SyncService.getState(),
+        history: HistoryModel.getAll(),
+      });
+      return;
+    }
+
+    if (pathname === "/api/sync" && method === "POST") {
+      const body = await parseJsonBody(req);
+      const { type, state, records, binCounts, item, senderId } = (body as any) || {};
+      if (type === "update_state" && state) {
+        const updated = SyncService.updateState(state, senderId);
+        sendJson(res, 200, { success: true, state: updated });
+        return;
+      }
+      if (type === "sync_records" && Array.isArray(records)) {
+        SyncService.syncRecords(records, binCounts, senderId);
+        sendJson(res, 200, { success: true, state: SyncService.getState() });
+        return;
+      }
+      if (type === "clear_history") {
+        SyncService.clearHistory(senderId);
+        sendJson(res, 200, { success: true, state: SyncService.getState() });
+        return;
+      }
+      if (type === "spawn_item" && item) {
+        SyncService.spawnItem(item, senderId);
+        sendJson(res, 200, { success: true });
+        return;
+      }
+      sendJson(res, 400, { success: false, error: "Invalid sync action type" });
       return;
     }
 
