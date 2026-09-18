@@ -72,7 +72,7 @@ export default function ConfigPage() {
           403 Forbidden - Truy cập bị từ chối
         </h2>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-md">
-          Trang <b>Cấu Hình Hệ Thống</b> yêu cầu quyền <b>Quản Trị Viên (Admin)</b>. Tài khoản Người Dùng (User) không được phép truy cập hoặc chỉnh sửa thông số thiết bị.
+          Trang <b>Cấu hình</b> yêu cầu quyền <b>quản trị viên</b>. Tài khoản người dùng không được phép truy cập hoặc chỉnh sửa thông số thiết bị.
         </p>
         <p className="text-xs text-slate-400 mt-2 font-mono">
           Tự động quay về trang chủ trong {countdown}s...
@@ -82,7 +82,7 @@ export default function ConfigPage() {
           className="mt-5 inline-flex items-center gap-2 rounded-xl bg-slate-900 dark:bg-white dark:text-slate-900 text-white px-4 py-2 text-xs font-bold shadow-sm hover:opacity-90 transition-opacity"
         >
           <ArrowLeft className="h-4 w-4" />
-          Quay về Trang Chủ
+          Quay về trang chủ
         </Link>
       </div>
     );

@@ -96,9 +96,7 @@ export async function triggerAlertDispatch(alert: AlertEvent) {
 
   // Đối với mức độ nghiêm trọng, chủ động gửi đồng thời cả Telegram và email
   if (alert.severity === "critical") {
-    Promise.allSettled([sendTelegramAlert(alert), sendEmailAlert(alert)]).then((results) => {
-      console.log("Đã phân phối cảnh báo:", results);
-    });
+    void Promise.allSettled([sendTelegramAlert(alert), sendEmailAlert(alert)]);
   } else {
     // Với cảnh báo thường, ưu tiên gửi Telegram
     sendTelegramAlert(alert).catch((e) => console.warn(e));

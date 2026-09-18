@@ -7,11 +7,12 @@ import { AlertRoutes } from "./routes/alertRoutes";
 import { UserRoutes } from "./routes/userRoutes";
 import { AuthRoutes } from "./routes/authRoutes";
 import { SafetyRoutes } from "./routes/safetyRoutes";
-import { SSEService } from "./services/sseService";
-import { initBackendMQTT } from "./services/mqttService";
-import { resolveUserFromRequest, checkRolePermission } from "./middlewares/authMiddleware";
+import { SSEService, shutdownSSE } from "./services/sseService";
+import { initBackendMQTT, shutdownBackendMQTT } from "./services/mqttService";
+import { resolveUserFromRequest, checkRolePermission, requireAdmin } from "./middlewares/authMiddleware";
 import { ENV } from "./config/env";
 import { formatErrorResponse } from "./middlewares/errorMiddleware";
+import { HistoryQuerySchema } from "@shared/schemas";
 
 function parseJsonBody(req: http.IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
@@ -20,7 +21,8 @@ function parseJsonBody(req: http.IncomingMessage): Promise<unknown> {
       body += chunk.toString();
       if (body.length > 1e6) {
         req.destroy();
-        reject(new Error("Payload Too Large"));
+        const error = Object.assign(new Error("Payload Too Large"), { statusCode: 413 });
+        reject(error);
       }
     });
     req.on("end", () => {
@@ -31,7 +33,7 @@ function parseJsonBody(req: http.IncomingMessage): Promise<unknown> {
       try {
         resolve(JSON.parse(body));
       } catch (err) {
-        reject(err);
+        reject(Object.assign(new Error("Invalid JSON body"), { statusCode: 400, cause: err }));
       }
     });
     req.on("error", (err) => reject(err));
@@ -89,6 +91,11 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (pathname === "/api/auth/logout" && method === "POST") {
+      sendJson(res, 200, { success: true, message: "Đăng xuất thành công" });
+      return;
+    }
+
     if (pathname === "/api/auth/forgot-password" && method === "POST") {
       const body = await parseJsonBody(req);
       const result = AuthRoutes.handleForgotPassword(body);
@@ -110,13 +117,20 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       if (method === "POST") {
+        const adminAuth = requireAdmin(req);
+        if ("status" in adminAuth) {
+          sendJson(res, adminAuth.status, { success: false, message: adminAuth.error });
+          return;
+        }
         const perm = checkRolePermission(authUser.role, ["admin"]);
         if (!perm.allowed) {
           sendJson(res, perm.status || 403, { success: false, message: perm.error });
           return;
         }
         const body = await parseJsonBody(req);
-        const result = ConfigRoutes.handlePost(body);
+        const result = typeof body === "object" && body !== null && (body as Record<string, unknown>).action === "reset"
+          ? ConfigRoutes.handleReset()
+          : ConfigRoutes.handlePost(body);
         sendJson(res, result.success ? 200 : 400, result);
         return;
       }
@@ -126,14 +140,12 @@ const server = http.createServer(async (req, res) => {
     if (pathname === "/api/history") {
       if (method === "GET") {
         const queryParams = Object.fromEntries(parsedUrl.searchParams.entries());
-        const result = HistoryRoutes.handleGet({
-          limit: queryParams.limit ? Number(queryParams.limit) : undefined,
-          offset: queryParams.offset ? Number(queryParams.offset) : undefined,
-          brand: queryParams.brand,
-          bin: queryParams.bin ? Number(queryParams.bin) : undefined,
-          status: queryParams.status,
-          date: queryParams.date,
-        });
+        const validatedQuery = HistoryQuerySchema.safeParse(queryParams);
+        if (!validatedQuery.success) {
+          sendJson(res, 400, { success: false, message: "Tham số history không hợp lệ", errors: validatedQuery.error.format() });
+          return;
+        }
+        const result = HistoryRoutes.handleGet(validatedQuery.data);
         sendJson(res, 200, result);
         return;
       }
@@ -144,9 +156,9 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       if (method === "DELETE") {
-        const perm = checkRolePermission(authUser.role, ["admin"]);
-        if (!perm.allowed) {
-          sendJson(res, perm.status || 403, { success: false, message: perm.error });
+        const adminAuth = requireAdmin(req);
+        if ("status" in adminAuth) {
+          sendJson(res, adminAuth.status, { success: false, message: adminAuth.error });
           return;
         }
         sendJson(res, 200, HistoryRoutes.handleDelete());
@@ -186,8 +198,13 @@ const server = http.createServer(async (req, res) => {
     }
 
     // User & Account Routes (Self-Profile & Change Password)
-    // Dùng ID của user đã xác thực qua header/token, fallback admin-001 nếu chưa truyền header
-    const currentUserId = authUser.userId === "guest" ? "admin-001" : authUser.userId;
+    if (pathname === "/api/user/profile" || pathname === "/api/user/change-password") {
+      if (!authUser.isAuthenticated) {
+        sendJson(res, 401, { success: false, message: "Vui lòng đăng nhập để tiếp tục" });
+        return;
+      }
+    }
+    const currentUserId = authUser.userId;
 
     if (pathname === "/api/user/profile") {
       if (method === "GET") {
@@ -212,9 +229,9 @@ const server = http.createServer(async (req, res) => {
 
     // Quản trị toàn bộ người dùng (Yêu cầu 'admin')
     if (pathname === "/api/users") {
-      const perm = checkRolePermission(authUser.role, ["admin"]);
-      if (!perm.allowed) {
-        sendJson(res, perm.status || 403, { success: false, message: perm.error });
+      const adminAuth = requireAdmin(req);
+      if ("status" in adminAuth) {
+        sendJson(res, adminAuth.status, { success: false, message: adminAuth.error });
         return;
       }
 
@@ -235,9 +252,9 @@ const server = http.createServer(async (req, res) => {
     if (pathname.startsWith("/api/users/")) {
       const targetId = pathname.replace("/api/users/", "").trim();
       if (targetId) {
-        const perm = checkRolePermission(authUser.role, ["admin"]);
-        if (!perm.allowed) {
-          sendJson(res, perm.status || 403, { success: false, message: perm.error });
+        const adminAuth = requireAdmin(req);
+        if ("status" in adminAuth) {
+          sendJson(res, adminAuth.status, { success: false, message: adminAuth.error });
           return;
         }
 
@@ -333,10 +350,9 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (pathname === "/api/safety/unlock" && method === "POST") {
-
-      const perm = checkRolePermission(authUser.role, ["admin"]);
-      if (!perm.allowed) {
-        sendJson(res, perm.status || 403, { success: false, message: perm.error });
+      const adminAuth = requireAdmin(req);
+      if ("status" in adminAuth) {
+        sendJson(res, adminAuth.status, { success: false, message: adminAuth.error });
         return;
       }
       const body = await parseJsonBody(req);
@@ -359,7 +375,11 @@ const server = http.createServer(async (req, res) => {
     // 404 Not Found
     sendJson(res, 404, { success: false, message: "Route Not Found" });
   } catch (err: unknown) {
-    sendJson(res, 500, formatErrorResponse(err));
+    const statusCode = typeof err === "object" && err !== null && "statusCode" in err &&
+      typeof (err as { statusCode?: unknown }).statusCode === "number"
+      ? (err as { statusCode: number }).statusCode
+      : 500;
+    sendJson(res, statusCode, formatErrorResponse(err, statusCode === 400 ? "Bad Request" : undefined));
   }
 });
 
@@ -368,6 +388,19 @@ if (require.main === module) {
   server.listen(ENV.PORT, () => {
     console.log(`[SortiX Backend] Running on http://localhost:${ENV.PORT}`);
   });
+
+  let shuttingDown = false;
+  const shutdown = (signal: string) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`[SortiX Backend] Nhận ${signal}, đang đóng server an toàn...`);
+    shutdownBackendMQTT();
+    shutdownSSE();
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(1), 10_000).unref();
+  };
+  process.once("SIGINT", () => shutdown("SIGINT"));
+  process.once("SIGTERM", () => shutdown("SIGTERM"));
 }
 
 export { server };

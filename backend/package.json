@@ -4,13 +4,13 @@
   "private": true,
   "main": "src/server.ts",
   "scripts": {
-    "dev": "node src/server.js",
-    "build": "tsc",
-    "start": "node dist/server.js"
+    "dev": "npm run build && npm start",
+    "build": "tsc && node scripts/patch-dist-aliases.cjs",
+    "start": "node dist/backend/src/server.js"
   },
   "dependencies": {
-    "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^3.0.3",
+    "mqtt": "^5.10.1",
     "nodemailer": "^6.9.15",
     "zod": "^4.6.2"
   },

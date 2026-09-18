@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ClipboardCheck, Bell, ChevronRight, X, Sparkles, CheckCircle2 } from "lucide-react";
+import { ClipboardCheck, Bell, ChevronRight, X, Sparkles } from "lucide-react";
 import { ShiftSummaryPayload } from "@shared/types";
 
 interface ShiftSummaryToastProps {
@@ -100,7 +100,7 @@ export const ShiftSummaryToast: React.FC<ShiftSummaryToastProps> = ({
           {/* Chi tiết nhanh */}
           <div className="mt-2.5 flex items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-950/30 px-3 py-1.5 text-[11px] font-mono text-emerald-200">
             <span>Đạt: <strong className="text-emerald-300 font-bold">{incident.sorted_good.toLocaleString("vi-VN")}</strong></span>
-            <span>Lỗi: <strong className="text-rose-400 font-bold">{incident.sorted_defect.toLocaleString("vi-VN")}</strong></span>
+            <span>Lỗi: <strong className={incident.sorted_defect > 0 ? "text-rose-400 font-bold" : "text-emerald-300 font-bold"}>{incident.sorted_defect.toLocaleString("vi-VN")}</strong></span>
             <span>Thời gian: <strong className="text-white font-bold">{incident.operating_hours}</strong></span>
           </div>
 

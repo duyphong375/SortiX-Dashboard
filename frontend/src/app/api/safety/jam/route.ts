@@ -17,6 +17,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (validated.data.duration_seconds < 5) {
+      return NextResponse.json(
+        { success: false, message: "Cảnh báo kẹt phôi chỉ hợp lệ sau ít nhất 5 giây che khuất liên tục." },
+        { status: 422 }
+      );
+    }
+
     const result = SafetyService.triggerJamAlert(validated.data);
     return NextResponse.json({
       success: true,

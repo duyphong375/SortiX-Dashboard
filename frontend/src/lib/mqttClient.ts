@@ -91,7 +91,6 @@ export class SorterMQTTService {
       });
 
       this.client.on("connect", () => {
-        console.log(`[MQTT] Đã kết nối tới broker: ${this.brokerUrl}`);
         this.clearTimers();
 
         const wasAlertActive = this.isAlertTriggered;
@@ -125,7 +124,6 @@ export class SorterMQTTService {
       });
 
       this.client.on("close", () => {
-        console.log("[MQTT] Mất kết nối broker");
         if (!this.closing) {
           this.callbacks.onDisconnect?.();
           this.handleDisconnectOrError();
@@ -195,7 +193,6 @@ export class SorterMQTTService {
           this.callbacks.onMqttDisconnectedAlert?.(this.reconnectAttempt, elapsed);
         }
 
-        console.log(`[MQTT Auto-Reconnect] Đang thử kết nối lại lần thứ ${this.reconnectAttempt}...`);
         try {
           if (this.client) {
             this.client.reconnect();
@@ -288,7 +285,6 @@ export class SorterMQTTService {
 
     this.client.subscribe(topicList, { qos: 1 }, (err) => {
       if (!err) {
-        console.log("[MQTT] Đã đăng ký các topic:", topicList);
       } else {
         console.error("[MQTT] Lỗi đăng ký topic:", err);
       }
@@ -323,7 +319,6 @@ export class SorterMQTTService {
             console.error(`[MQTT] Lỗi xuất bản tới ${topicName}:`, err);
             resolve(false);
           } else {
-            console.log(`[MQTT] Đã xuất bản tới ${topicName}`);
             resolve(true);
           }
         });

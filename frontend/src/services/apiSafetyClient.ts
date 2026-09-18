@@ -1,9 +1,13 @@
 import { EmergencyStopPayload, JamDetectedPayload, BinFullPayload, TemperatureWarningPayload, DeviceOfflinePayload, ShiftSummaryPayload, SafetyStatusResponse, NotificationRecord, UnlockSystemInput } from "@shared/types";
+import { fetchWithTimeout } from "./apiFetch";
+
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "").replace(/\/$/, "");
+const endpoint = (path: string) => `${API_BASE_URL}${path}`;
 
 export const ApiSafetyClient = {
   async getStatus(): Promise<SafetyStatusResponse> {
     try {
-      const res = await fetch("/api/safety/status");
+      const res = await fetchWithTimeout(endpoint("/api/safety/status"));
       if (res.ok) {
         const json = await res.json();
         return json;
@@ -22,7 +26,7 @@ export const ApiSafetyClient = {
 
   async triggerEmergencyStop(payload: EmergencyStopPayload): Promise<{ success: boolean; message: string; data?: unknown }> {
     try {
-      const res = await fetch("/api/safety/estop", {
+      const res = await fetchWithTimeout(endpoint("/api/safety/estop"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -37,7 +41,7 @@ export const ApiSafetyClient = {
 
   async triggerJamAlert(payload: JamDetectedPayload): Promise<{ success: boolean; message: string; data?: unknown }> {
     try {
-      const res = await fetch("/api/safety/jam", {
+      const res = await fetchWithTimeout(endpoint("/api/safety/jam"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -52,7 +56,7 @@ export const ApiSafetyClient = {
 
   async triggerBinFullAlert(payload: BinFullPayload): Promise<{ success: boolean; message: string; data?: unknown }> {
     try {
-      const res = await fetch("/api/safety/bin-full", {
+      const res = await fetchWithTimeout(endpoint("/api/safety/bin-full"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -67,7 +71,7 @@ export const ApiSafetyClient = {
 
   async triggerTemperatureWarningAlert(payload: TemperatureWarningPayload): Promise<{ success: boolean; message: string; data?: unknown }> {
     try {
-      const res = await fetch("/api/safety/temp-warning", {
+      const res = await fetchWithTimeout(endpoint("/api/safety/temp-warning"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -82,7 +86,7 @@ export const ApiSafetyClient = {
 
   async triggerDeviceOfflineAlert(payload: DeviceOfflinePayload): Promise<{ success: boolean; message: string; data?: unknown }> {
     try {
-      const res = await fetch("/api/safety/device-offline", {
+      const res = await fetchWithTimeout(endpoint("/api/safety/device-offline"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -97,7 +101,7 @@ export const ApiSafetyClient = {
 
   async sendHeartbeat(deviceId = "ESP32_MAIN_CONTROLLER"): Promise<{ success: boolean; message: string }> {
     try {
-      const res = await fetch("/api/safety/heartbeat", {
+      const res = await fetchWithTimeout(endpoint("/api/safety/heartbeat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ device_id: deviceId, timestamp: new Date().toISOString() }),
@@ -112,7 +116,7 @@ export const ApiSafetyClient = {
 
   async triggerShiftSummary(payload: ShiftSummaryPayload): Promise<{ success: boolean; message: string; data?: unknown }> {
     try {
-      const res = await fetch("/api/safety/shift-summary", {
+      const res = await fetchWithTimeout(endpoint("/api/safety/shift-summary"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -126,15 +130,20 @@ export const ApiSafetyClient = {
   },
 
   async unlockSystem(
-    adminInfo: { userId?: string; role?: string },
+    _adminInfo: { userId?: string; role?: string },
     input?: UnlockSystemInput
   ): Promise<{ success: boolean; message: string; data?: unknown }> {
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (adminInfo.userId) headers["X-User-Id"] = adminInfo.userId;
-      if (adminInfo.role) headers["X-User-Role"] = adminInfo.role;
+      if (typeof window !== "undefined") {
+        const raw = localStorage.getItem("pbl3_auth_user");
+        if (raw) {
+          const parsed = JSON.parse(raw) as { sessionToken?: string };
+          if (parsed.sessionToken) headers.Authorization = `Bearer ${parsed.sessionToken}`;
+        }
+      }
 
-      const res = await fetch("/api/safety/unlock", {
+      const res = await fetchWithTimeout(endpoint("/api/safety/unlock"), {
         method: "POST",
         headers,
         body: JSON.stringify(input || {}),
@@ -154,8 +163,8 @@ export const ApiSafetyClient = {
 
   async getNotifications(status?: string): Promise<NotificationRecord[]> {
     try {
-      const url = status ? `/api/notifications?status=${encodeURIComponent(status)}` : "/api/notifications";
-      const res = await fetch(url);
+      const url = endpoint(status ? `/api/notifications?status=${encodeURIComponent(status)}` : "/api/notifications");
+      const res = await fetchWithTimeout(url);
       if (res.ok) {
         const json = await res.json();
         return json.data || [];

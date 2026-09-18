@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { ClassificationRecord, CATALOG_BRANDS } from "@/lib/types";
 import { exportClassificationToCSV } from "@/lib/exportCsv";
@@ -15,11 +15,8 @@ import {
   CornerDownRight,
   History,
   Calendar,
-  ChevronDown,
   X,
   FileSpreadsheet,
-  Layers,
-  Sparkles,
 } from "lucide-react";
 
 interface HistoryTableProps {
@@ -197,13 +194,6 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
     setShowConfirmModal(false);
   };
 
-  // Tính số lượng hôm nay
-  const todayCount = useMemo(() => {
-    return records.filter(
-      (r) => r.timestamp && r.timestamp.slice(0, 10) === todayKey
-    ).length;
-  }, [records, todayKey]);
-
   return (
     <div className="relate-card relative flex flex-col h-full rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 bg-white/95 dark:border-white/[0.07] dark:bg-[#161822] transition-all duration-300">
       {/* Modal xác nhận xóa lịch sử */}
@@ -216,7 +206,7 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
               </div>
               <div>
                 <h4 className="text-base font-bold text-slate-900 dark:text-white">
-                  Xác Nhận Xóa Lịch Sử
+                  Xác nhận xóa lịch sử
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Hành động này không thể hoàn tác
@@ -227,7 +217,7 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
             <p className="mt-4 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
               Bạn có chắc chắn muốn xóa toàn bộ{" "}
               <strong>{records.length} bản ghi</strong> lịch sử phân loại khỏi
-              bộ nhớ cục bộ? Bộ đếm mã sản phẩm (Mã SP) sẽ được reset về #1.
+              bộ nhớ cục bộ? Bộ đếm mã sản phẩm (Mã SP) sẽ được đặt lại về #1.
             </p>
 
             <div className="mt-5 flex items-center justify-end gap-2.5">
@@ -241,7 +231,7 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
                 onClick={handleConfirmClear}
                 className="rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors"
               >
-                Xác Nhận Xóa
+                Xác nhận xóa
               </button>
             </div>
           </div>
@@ -266,13 +256,13 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
           </div>
           <div>
             <h3 className="text-sm sm:text-base font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-              Nhật Ký Phân Loại Nhóm Theo Ngày
+              Lịch sử phân loại
               <span className="rounded-full bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 text-[10px] font-mono text-cyan-600 dark:text-cyan-400 font-bold">
                 {records.length} SP
               </span>
             </h3>
             <p className="text-[11px] font-normal text-slate-600 dark:text-slate-400">
-              Mã sản phẩm tự động reset từ số #1 cho từng ngày • Nhóm {groupedByDate.length} ngày vận hành
+              Nhóm theo ngày vận hành ({groupedByDate.length} ngày)
             </p>
           </div>
         </div>
@@ -286,7 +276,7 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
               className="flex items-center gap-1.5 rounded-xl border border-cyan-500/30 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 px-3 py-1.5 text-xs font-bold text-cyan-700 hover:bg-cyan-100/70 dark:text-cyan-300 dark:hover:bg-cyan-500/20 transition-all shadow-xs disabled:opacity-40"
             >
               <FileSpreadsheet className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
-              <span>Xuất File CSV</span>
+              <span>Xuất CSV</span>
             </button>
           </div>
 
@@ -297,7 +287,7 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
             className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-1.5 text-xs font-semibold text-rose-700 transition-all hover:bg-rose-100 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 disabled:opacity-40"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            <span>Xóa Lịch Sử</span>
+            <span>Xóa lịch sử</span>
           </button>
         </div>
       </div>
@@ -403,7 +393,7 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
                       <span>Ngày {group.formattedDate}</span>
                       {group.isToday && (
                         <span className="rounded-full bg-indigo-600 text-white dark:bg-cyan-500 dark:text-slate-950 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider shadow-xs">
-                          Hôm Nay
+                          Hôm nay
                         </span>
                       )}
                     </div>
@@ -436,7 +426,7 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
                     title={`Xuất file CSV riêng cho ngày ${group.formattedDate}`}
                   >
                     <Download className="h-3 w-3" />
-                    <span>Xuất CSV Ngày Này</span>
+                    <span>Xuất ngày này</span>
                   </button>
                 </div>
 
@@ -445,13 +435,13 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
                   <table className="w-full text-left text-xs">
                     <thead className="border-b border-slate-200/80 bg-white/60 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:border-white/[0.06] dark:bg-[#111319]/80 dark:text-slate-400">
                       <tr>
-                        <th className="px-4 py-2.5">Mã Sản Phẩm (Reset #1)</th>
-                        <th className="px-4 py-2.5">Thương Hiệu (AI)</th>
-                        <th className="px-4 py-2.5">Độ Tin Cậy</th>
-                        <th className="px-4 py-2.5">Khay Đích</th>
-                        <th className="px-4 py-2.5">Khay Thực Tế</th>
-                        <th className="px-4 py-2.5">Trạng Thái</th>
-                        <th className="px-4 py-2.5 text-right">Giờ Phân Loại</th>
+                        <th className="px-4 py-2.5">Mã sản phẩm</th>
+                        <th className="px-4 py-2.5">Thương hiệu AI</th>
+                        <th className="px-4 py-2.5">Độ tin cậy</th>
+                        <th className="px-4 py-2.5">Khay đích</th>
+                        <th className="px-4 py-2.5">Khay thực tế</th>
+                        <th className="px-4 py-2.5">Trạng thái</th>
+                        <th className="px-4 py-2.5 text-right">Thời gian</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200/60 dark:divide-white/[0.06] bg-white/90 dark:bg-[#161822]/90 font-medium">

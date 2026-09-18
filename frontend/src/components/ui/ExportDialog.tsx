@@ -109,7 +109,7 @@ export function ExportDialog({
           </div>
           <div className="flex-1 min-w-0 pr-4">
             <h3 id="export-dialog-title" className="text-base font-bold text-slate-900 dark:text-white">
-              Tùy Chọn Xuất File CSV
+              Xuất CSV
             </h3>
             <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
               Chọn khoảng thời gian để xuất {totalRecords > 0 ? `(${totalRecords} bản ghi)` : "dữ liệu"}.
@@ -172,7 +172,7 @@ export function ExportDialog({
               />
               <CalendarDays className="h-4 w-4 text-cyan-500" />
               <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                Xuất bảng theo tháng
+                Xuất theo tháng
               </span>
             </div>
             {exportType === "month" && (
@@ -213,7 +213,7 @@ export function ExportDialog({
               />
               <Layers className="h-4 w-4 text-cyan-500" />
               <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                Xuất tất cả dữ liệu
+                Xuất tất cả
               </span>
             </div>
           </label>
@@ -234,7 +234,7 @@ export function ExportDialog({
             className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-900/30 transition-all transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Download className="h-3.5 w-3.5" />
-            Tải xuống CSV
+            Xuất CSV
           </button>
         </div>
       </div>

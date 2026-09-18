@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomInt } from "node:crypto";
 import { ForgotPasswordSchema } from "@shared/schemas";
 import { NextUsersStore } from "@/app/api/users/store";
 
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
     }
 
     // 1. Sinh ngẫu nhiên mã OTP 6 chữ số (100000 đến 999999)
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = randomInt(100000, 1000000).toString();
 
     // 2. Thời hạn hiệu lực: 5 phút tính từ thời điểm tạo
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
@@ -55,10 +56,7 @@ export async function POST(request: Request) {
     // 3. Lưu mã OTP vào database/file users.json
     NextUsersStore.setResetOtp(user.username, otp, expiresAt);
 
-    // 4. In log ra console máy chủ để tiện theo dõi
-    console.log(`[MOCK OTP] Tài khoản ${user.username} (${user.email}) có mã OTP là: ${otp}`);
-
-    // 5. Trả về phản hồi kèm demo_otp để Frontend hiển thị Toast Notification
+    // 4. Trả về phản hồi kèm demo_otp để Frontend hiển thị Toast Notification
     return NextResponse.json(
       {
         success: true,

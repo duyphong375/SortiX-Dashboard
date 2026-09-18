@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Bell,
   Sun,
@@ -14,7 +15,6 @@ import {
   Clock,
   Wifi,
   WifiOff,
-  Command,
   X,
   LayoutDashboard,
   Layers,
@@ -30,25 +30,25 @@ import {
 
 // Map path → breadcrumb labels
 const BREADCRUMB_MAP: Record<string, string> = {
-  "/": "Tổng Quan",
-  "/conveyor": "Băng Tải",
-  "/analytics": "Thống Kê & Biểu Đồ",
-  "/history": "Lịch Sử Phân Loại",
-  "/alerts": "Cảnh Báo & Sự Cố",
-  "/config": "Cấu Hình Phân Luồng",
-  "/devices": "MQTT & Thiết Bị IoT",
-  "/users": "Quản Lý Người Dùng",
+  "/": "Tổng quan",
+  "/conveyor": "Băng tải",
+  "/analytics": "Thống kê",
+  "/history": "Lịch sử",
+  "/alerts": "Cảnh báo",
+  "/config": "Cấu hình",
+  "/devices": "Thiết bị & IoT",
+  "/users": "Người dùng",
 };
 
 const SEARCH_LINKS = [
-  { label: "Tổng Quan Hệ Thống", href: "/", icon: LayoutDashboard, group: "Điều Hướng" },
-  { label: "Băng Tải & Phân Loại 2D", href: "/conveyor", icon: Layers, group: "Điều Hướng" },
-  { label: "Thống Kê & Báo Cáo", href: "/analytics", icon: BarChart3, group: "Điều Hướng" },
-  { label: "Lịch Sử Phân Loại Chi Tiết", href: "/history", icon: History, group: "Điều Hướng" },
-  { label: "Trung Tâm Cảnh Báo & Sự Cố", href: "/alerts", icon: Bell, group: "Điều Hướng" },
-  { label: "Cấu Hình Phân Luồng Servo", href: "/config", icon: SlidersHorizontal, group: "Cài Đặt" },
-  { label: "Cấu Hình MQTT & Thiết Bị IoT", href: "/devices", icon: Cpu, group: "Cài Đặt" },
-  { label: "Quản Lý Tài Khoản & Phân Quyền", href: "/users", icon: Users, group: "Cài Đặt" },
+  { label: "Tổng quan", href: "/", icon: LayoutDashboard, group: "Điều hướng" },
+  { label: "Băng tải", href: "/conveyor", icon: Layers, group: "Điều hướng" },
+  { label: "Thống kê", href: "/analytics", icon: BarChart3, group: "Điều hướng" },
+  { label: "Lịch sử", href: "/history", icon: History, group: "Điều hướng" },
+  { label: "Cảnh báo", href: "/alerts", icon: Bell, group: "Điều hướng" },
+  { label: "Cấu hình", href: "/config", icon: SlidersHorizontal, group: "Hệ thống" },
+  { label: "Thiết bị & IoT", href: "/devices", icon: Cpu, group: "Hệ thống" },
+  { label: "Người dùng", href: "/users", icon: Users, group: "Hệ thống" },
 ];
 
 interface TopHeaderProps {
@@ -86,6 +86,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 }) => {
   const pathname = usePathname();
   const router = useRouter();
+  const { user } = useAuth();
+  const isOperatorUser = user?.role === "user";
 
   const [currentTime, setCurrentTime] = useState<string>("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -198,60 +200,77 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           )}
 
 
-          {/* NÚT CHUYỂN ĐỔI CHẾ ĐỘ VẬN HÀNH: MÔ PHỎNG <-> THỰC TẾ (Trượt 2 bên) */}
-          {onToggleSimulationMode && (
-            <div className="hidden sm:flex items-center rounded-full border border-slate-200/90 bg-slate-100/90 p-1 dark:border-white/[0.08] dark:bg-[#161822] shadow-xs">
-              {/* Chế độ 1: MÔ PHỎNG (Tím/Cyan) */}
-              <button
-                type="button"
-                aria-pressed={isSimulation}
-                onClick={() => {
-                  if (!isSimulation && onToggleSimulationMode) onToggleSimulationMode(true);
-                }}
-                className={`flex items-center gap-1.5 rounded-full px-2.5 sm:px-3 py-1 text-xs font-bold transition-all duration-300 ${
-                  isSimulation
-                    ? "bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 text-white shadow-md shadow-indigo-500/25 border border-purple-400/40"
-                    : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-                }`}
-                title="Chuyển sang Chế độ Mô phỏng (Simulation Mode) - Cho phép thả phôi ảo"
-              >
-                <FlaskConical className={`h-3.5 w-3.5 ${isSimulation ? "animate-pulse" : ""}`} />
-                <span className="tracking-wide">MÔ PHỎNG</span>
-              </button>
-
-              {/* Chế độ 2: THỰC TẾ (Emerald/Teal kèm đèn nhấp nháy Live Hardware) */}
-              <button
-                type="button"
-                aria-pressed={!isSimulation}
-                onClick={() => {
-                  if (isSimulation && onToggleSimulationMode) onToggleSimulationMode(false);
-                }}
-                className={`flex items-center gap-1.5 rounded-full px-2.5 sm:px-3 py-1 text-xs font-bold transition-all duration-300 ${
-                  !isSimulation
-                    ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-md shadow-emerald-500/25 border border-emerald-400/40"
-                    : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-                }`}
-                title="Chuyển sang Chế độ Thực tế (Real Hardware Mode) - Khóa nút ảo, nhận diện từ Camera/ESP32"
-              >
-                <span className="relative flex h-2 w-2">
-                  {!isSimulation && (
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                  )}
-                  <span
-                    className={`relative inline-flex h-2 w-2 rounded-full ${
-                      !isSimulation ? "bg-emerald-300 shadow-[0_0_6px_#34d399]" : "bg-slate-400 dark:bg-slate-600"
-                    }`}
-                  />
-                </span>
-                <Radio className="h-3.5 w-3.5" />
-                <span className="tracking-wide">THỰC TẾ</span>
-                {!isSimulation && (
-                  <span className="hidden xl:inline text-[9px] font-mono font-bold px-1 py-0.5 rounded bg-emerald-950/60 border border-emerald-400/40 text-emerald-200">
-                    LIVE
-                  </span>
-                )}
-              </button>
+          {/* NÚT CHUYỂN ĐỔI CHẾ ĐỘ VẬN HÀNH: MÔ PHỎNG <-> THỰC TẾ (User chỉ có duy nhất Thực tế) */}
+          {isOperatorUser ? (
+            <div
+              className="hidden sm:flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300 shadow-xs"
+              title="Chế độ Vận hành Thực tế (Real Hardware) - Dữ liệu trực tiếp từ cảm biến & Camera AI"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
+              </span>
+              <Radio className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span className="tracking-wide">Thực tế</span>
+              <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-400/40 text-emerald-200">
+                LIVE
+              </span>
             </div>
+          ) : (
+            onToggleSimulationMode && (
+              <div className="hidden sm:flex items-center rounded-full border border-slate-200/90 bg-slate-100/90 p-1 dark:border-white/[0.08] dark:bg-[#161822] shadow-xs">
+                {/* Chế độ 1: Mô phỏng */}
+                <button
+                  type="button"
+                  aria-pressed={isSimulation}
+                  onClick={() => {
+                    if (!isSimulation && onToggleSimulationMode) onToggleSimulationMode(true);
+                  }}
+                  className={`flex items-center gap-1.5 rounded-full px-2.5 sm:px-3 py-1 text-xs font-bold transition-all duration-300 ${
+                    isSimulation
+                      ? "bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 text-white shadow-md shadow-indigo-500/25 border border-purple-400/40"
+                      : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                  }`}
+                  title="Chuyển sang Chế độ Mô phỏng (Simulation Mode) - Cho phép thả phôi ảo"
+                >
+                  <FlaskConical className={`h-3.5 w-3.5 ${isSimulation ? "animate-pulse" : ""}`} />
+                  <span className="tracking-wide">Mô phỏng</span>
+                </button>
+
+                {/* Chế độ 2: Thực tế */}
+                <button
+                  type="button"
+                  aria-pressed={!isSimulation}
+                  onClick={() => {
+                    if (isSimulation && onToggleSimulationMode) onToggleSimulationMode(false);
+                  }}
+                  className={`flex items-center gap-1.5 rounded-full px-2.5 sm:px-3 py-1 text-xs font-bold transition-all duration-300 ${
+                    !isSimulation
+                      ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-md shadow-emerald-500/25 border border-emerald-400/40"
+                      : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                  }`}
+                  title="Chuyển sang Chế độ Thực tế (Real Hardware Mode) - Khóa nút ảo, nhận diện từ Camera/ESP32"
+                >
+                  <span className="relative flex h-2 w-2">
+                    {!isSimulation && (
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    )}
+                    <span
+                      className={`relative inline-flex h-2 w-2 rounded-full ${
+                        !isSimulation ? "bg-emerald-300 shadow-[0_0_6px_#34d399]" : "bg-slate-400 dark:bg-slate-600"
+                      }`}
+                    />
+                  </span>
+                  <Radio className="h-3.5 w-3.5" />
+                  <span className="tracking-wide">Thực tế</span>
+                  {!isSimulation && (
+                    <span className="hidden xl:inline text-[9px] font-mono font-bold px-1 py-0.5 rounded bg-emerald-950/60 border border-emerald-400/40 text-emerald-200">
+                      LIVE
+                    </span>
+                  )}
+                </button>
+              </div>
+            )
           )}
         </div>
 
@@ -266,7 +285,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               className="flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-500/20 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25 transition-all shadow-xs"
             >
               <ClipboardCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span className="hidden md:inline">Báo cáo 1 ngày làm việc</span>
+              <span className="hidden md:inline">Báo cáo ngày</span>
+              <span className="sr-only">Báo cáo 1 ngày làm việc</span>
             </button>
           )}
 

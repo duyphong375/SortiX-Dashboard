@@ -95,7 +95,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </span>
               </div>
               <p className="truncate text-[11px] font-normal text-slate-500 dark:text-slate-400">
-                Intelligent IoT Sorter
+                Phân loại thông minh
               </p>
             </div>
           )}
@@ -193,18 +193,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   {user.role === "admin" ? "AD" : "OP"}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
-                    {user.displayName}
+                  <p className="truncate text-xs font-bold text-slate-900 dark:text-white" title={user.displayName || user.username}>
+                    {user.displayName || user.username}
                   </p>
-                  <span
-                    className={`inline-block rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
-                      user.role === "admin"
-                        ? "bg-purple-500/15 text-purple-700 dark:text-purple-300"
-                        : "bg-teal-500/15 text-teal-700 dark:text-teal-300"
-                    }`}
-                  >
-                    {user.role === "admin" ? "Quản Trị Viên" : "Người Dùng"}
-                  </span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span
+                      className={`inline-block rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
+                        user.role === "admin"
+                          ? "bg-purple-500/15 text-purple-700 dark:text-purple-300"
+                          : "bg-teal-500/15 text-teal-700 dark:text-teal-300"
+                      }`}
+                    >
+                      {user.role === "admin" ? "Quản trị viên" : "Người dùng"}
+                    </span>
+                    {user.username && (
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono truncate">
+                        @{user.username}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -215,7 +222,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200/80 bg-white px-2 py-1.5 text-[11px] font-semibold text-slate-700 hover:text-cyan-600 hover:border-cyan-500/40 dark:border-white/[0.07] dark:bg-[#111319] dark:text-slate-300 dark:hover:text-cyan-400 transition-colors shadow-xs"
               >
                 <KeyRound className="h-3 w-3 text-cyan-500" />
-                <span>Đổi Mật Khẩu</span>
+                <span>Đổi mật khẩu</span>
               </button>
             </div>
           )}
@@ -246,7 +253,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-200/50 bg-rose-50/60 py-2 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-100/80 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20"
           >
             <LogOut className="h-4 w-4" />
-            {!collapsed && <span>Đăng Xuất</span>}
+            {!collapsed && <span>Đăng xuất</span>}
           </button>
         </div>
       </aside>

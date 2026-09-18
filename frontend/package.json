@@ -9,7 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "clsx": "^2.1.1",
     "lucide-react": "^0.441.0",
     "mqtt": "^5.10.1",
     "next": "14.2.15",
@@ -17,7 +16,6 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "recharts": "^2.13.0",
-    "tailwind-merge": "^2.5.2",
     "zod": "^4.6.2"
   },
   "devDependencies": {

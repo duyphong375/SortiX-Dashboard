@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { WifiOff, Radio, CheckCircle2, RotateCcw, AlertTriangle, RefreshCw, X } from "lucide-react";
+import { WifiOff, Radio, CheckCircle2, AlertTriangle, RefreshCw, X } from "lucide-react";
 import { MqttDisconnectedPayload } from "@shared/types";
 
 interface MqttDisconnectedToastProps {

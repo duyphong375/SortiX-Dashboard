@@ -1,4 +1,5 @@
 import { SafeUser, AdminCreateUserInput, AdminUpdateUserInput } from "@shared/types";
+import { fetchWithTimeout } from "./apiFetch";
 
 export interface ApiUsersResponse<T = unknown> {
   success: boolean;
@@ -6,28 +7,19 @@ export interface ApiUsersResponse<T = unknown> {
   message?: string;
 }
 
-const BACKEND_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+const BACKEND_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
 
-function getStoredAuthHeaders() {
+function getStoredAuthHeaders(): Record<string, string> {
   if (typeof window === "undefined") return {};
   try {
     const raw = localStorage.getItem("pbl3_auth_user");
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     const headers: Record<string, string> = {};
+    if (parsed.sessionToken) headers["Authorization"] = `Bearer ${parsed.sessionToken}`;
     if (parsed.role) headers["x-user-role"] = parsed.role;
     if (parsed.id) headers["x-user-id"] = parsed.id;
-
-    const token = Buffer.from(
-      JSON.stringify({
-        id: parsed.id || "admin-001",
-        role: parsed.role || "admin",
-        username: parsed.username || "admin1",
-        issuedAt: Date.now(),
-      })
-    ).toString("base64");
-
-    headers["Authorization"] = `Bearer ${token}`;
+    if (parsed.username) headers["x-user-username"] = parsed.username;
     return headers;
   } catch {
     return {};
@@ -40,7 +32,7 @@ export const ApiUsersClient = {
 
     // 1. Thử gọi Express Backend nếu có
     try {
-      const res = await fetch(`${BACKEND_BASE_URL}/api/users`, {
+      const res = await fetchWithTimeout(`${BACKEND_BASE_URL}/api/users`, {
         method: "GET",
         headers: { "Content-Type": "application/json", ...authHeaders },
         signal: AbortSignal.timeout(1500),
@@ -58,7 +50,7 @@ export const ApiUsersClient = {
 
     // 2. Gọi Next.js App Router nội bộ
     try {
-      const res = await fetch("/api/users", {
+      const res = await fetchWithTimeout("/api/users", {
         method: "GET",
         headers: { "Content-Type": "application/json", ...authHeaders },
       });
@@ -75,7 +67,7 @@ export const ApiUsersClient = {
 
     // 1. Thử gọi Express Backend
     try {
-      const res = await fetch(`${BACKEND_BASE_URL}/api/users`, {
+      const res = await fetchWithTimeout(`${BACKEND_BASE_URL}/api/users`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify(payload),
@@ -97,7 +89,7 @@ export const ApiUsersClient = {
 
     // 2. Gọi Next.js App Router nội bộ
     try {
-      const res = await fetch("/api/users", {
+      const res = await fetchWithTimeout("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify(payload),
@@ -114,7 +106,7 @@ export const ApiUsersClient = {
 
     // 1. Thử gọi Express Backend
     try {
-      const res = await fetch(`${BACKEND_BASE_URL}/api/users/${id}`, {
+      const res = await fetchWithTimeout(`${BACKEND_BASE_URL}/api/users/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify(payload),
@@ -136,7 +128,7 @@ export const ApiUsersClient = {
 
     // 2. Gọi Next.js App Router nội bộ
     try {
-      const res = await fetch(`/api/users/${id}`, {
+      const res = await fetchWithTimeout(`/api/users/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify(payload),
@@ -153,7 +145,7 @@ export const ApiUsersClient = {
 
     // 1. Thử gọi Express Backend
     try {
-      const res = await fetch(`${BACKEND_BASE_URL}/api/users/${id}`, {
+      const res = await fetchWithTimeout(`${BACKEND_BASE_URL}/api/users/${id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json", ...authHeaders },
         signal: AbortSignal.timeout(1500),
@@ -174,7 +166,7 @@ export const ApiUsersClient = {
 
     // 2. Gọi Next.js App Router nội bộ
     try {
-      const res = await fetch(`/api/users/${id}`, {
+      const res = await fetchWithTimeout(`/api/users/${id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json", ...authHeaders },
       });

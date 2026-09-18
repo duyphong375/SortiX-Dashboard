@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Thermometer, Flame, CheckCircle2, RotateCcw, AlertTriangle, Wind } from "lucide-react";
+import { Thermometer, Flame, CheckCircle2, Wind } from "lucide-react";
 import { TemperatureWarningPayload } from "@shared/types";
 
 interface TemperatureWarningToastProps {
@@ -72,7 +72,7 @@ export const TemperatureWarningToast: React.FC<TemperatureWarningToastProps> = (
           <div className="flex items-center justify-between">
             <span className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
               <Thermometer className="h-3.5 w-3.5" />
-              CẢNH BÁO QUÁ NHIỆT THIẾT BỊ
+              Cảnh báo quá nhiệt
             </span>
             <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-300 border border-amber-500/40">
               WARNING
@@ -108,7 +108,7 @@ export const TemperatureWarningToast: React.FC<TemperatureWarningToastProps> = (
               className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-3 py-2 text-xs font-black text-slate-950 shadow-md hover:from-amber-400 hover:to-yellow-400 transition-all active:scale-95"
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
-              <span>Xác nhận & Tắt còi báo</span>
+              <span>Xác nhận & tắt còi</span>
             </button>
 
             {onCoolDown && (
@@ -118,7 +118,7 @@ export const TemperatureWarningToast: React.FC<TemperatureWarningToastProps> = (
                 title="Tự động hạ nhiệt về mức an toàn 42.5°C (Chế độ mô phỏng)"
               >
                 <Wind className="h-3.5 w-3.5 text-cyan-400" />
-                <span>Hạ nhiệt (42.5°C)</span>
+                <span>Hạ nhiệt</span>
               </button>
             )}
           </div>

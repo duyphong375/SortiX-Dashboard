@@ -1,10 +1,11 @@
 import { SorterConfig } from "@shared/types";
+import { fetchWithTimeout } from "./apiFetch";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/api/config` : "/api/config";
 
 export async function fetchConfig(): Promise<SorterConfig | null> {
   try {
-    const res = await fetch(BASE_URL);
+    const res = await fetchWithTimeout(BASE_URL);
     if (!res.ok) return null;
     const json = await res.json();
     return json.data || json.config || null;
@@ -16,7 +17,7 @@ export async function fetchConfig(): Promise<SorterConfig | null> {
 
 export async function saveConfig(config: Partial<SorterConfig>): Promise<{ success: boolean; config?: SorterConfig; error?: string }> {
   try {
-    const res = await fetch(BASE_URL, {
+    const res = await fetchWithTimeout(BASE_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(config),
@@ -31,7 +32,7 @@ export async function saveConfig(config: Partial<SorterConfig>): Promise<{ succe
 
 export async function resetConfig(): Promise<{ success: boolean; config?: SorterConfig; error?: string }> {
   try {
-    const res = await fetch(BASE_URL, {
+    const res = await fetchWithTimeout(BASE_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "reset" }),

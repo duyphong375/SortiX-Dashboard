@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "./apiFetch";
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/api/stats` : "/api/stats";
 
 export interface SystemStatsResponse {
@@ -13,7 +15,7 @@ export interface SystemStatsResponse {
 
 export async function fetchStats(): Promise<SystemStatsResponse | null> {
   try {
-    const res = await fetch(BASE_URL);
+    const res = await fetchWithTimeout(BASE_URL);
     if (!res.ok) return null;
     const json = await res.json();
     return json.data || json.stats || null;

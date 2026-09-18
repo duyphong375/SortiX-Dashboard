@@ -1,40 +1,12 @@
 import { NextResponse } from "next/server";
 import { AdminCreateUserSchema } from "@shared/schemas";
 import { NextUsersStore, toSafeUser } from "./store";
-
-function checkAdminAuth(request: Request): { isAuthorized: boolean; userId: string; error?: string } {
-  const authHeader = request.headers.get("authorization");
-  const xUserRole = request.headers.get("x-user-role");
-  const xUserId = request.headers.get("x-user-id");
-
-  if (xUserRole === "admin") {
-    return { isAuthorized: true, userId: xUserId || "admin-001" };
-  }
-
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    try {
-      const token = authHeader.substring(7).trim();
-      const decoded = JSON.parse(Buffer.from(token, "base64").toString("utf-8"));
-      if (decoded && decoded.role === "admin") {
-        return { isAuthorized: true, userId: decoded.id || "admin-001" };
-      }
-    } catch {
-      // invalid token
-    }
-  }
-
-  // Cho phép chế độ development local nếu có x-user-id nhưng chưa đặt header role
-  if (xUserId && xUserId.startsWith("admin")) {
-    return { isAuthorized: true, userId: xUserId };
-  }
-
-  return { isAuthorized: false, userId: "", error: "Truy cập bị từ chối: Yêu cầu quyền Quản trị viên (Admin)" };
-}
+import { getAdminUser } from "../auth/session";
 
 export async function GET(request: Request) {
-  const auth = checkAdminAuth(request);
-  if (!auth.isAuthorized) {
-    return NextResponse.json({ success: false, message: auth.error }, { status: 403 });
+  const auth = getAdminUser(request);
+  if (!auth) {
+    return NextResponse.json({ success: false, message: "Truy cập bị từ chối: Yêu cầu quyền Quản trị viên (Admin)" }, { status: 403 });
   }
 
   const users = NextUsersStore.getAll();
@@ -42,9 +14,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = checkAdminAuth(request);
-  if (!auth.isAuthorized) {
-    return NextResponse.json({ success: false, message: auth.error }, { status: 403 });
+  const auth = getAdminUser(request);
+  if (!auth) {
+    return NextResponse.json({ success: false, message: "Truy cập bị từ chối: Yêu cầu quyền Quản trị viên (Admin)" }, { status: 403 });
   }
 
   try {

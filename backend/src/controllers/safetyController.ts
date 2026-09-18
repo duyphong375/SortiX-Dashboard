@@ -81,6 +81,14 @@ export const SafetyController = {
       };
     }
 
+    if (validated.data.max_capacity < 5 || validated.data.max_capacity > 50 ||
+      validated.data.current_count < validated.data.max_capacity) {
+      return {
+        status: 422,
+        body: { success: false, message: "Sự kiện đầy khay chỉ hợp lệ khi current_count >= max_capacity và sức chứa trong [5, 50]." },
+      };
+    }
+
     const result = SafetyService.triggerBinFull(validated.data);
     if (validated.data.mode === "simulation") {
       publishBinFullSimulation(validated.data);
@@ -106,6 +114,13 @@ export const SafetyController = {
           message: "Dữ liệu sự kiện Quá Nhiệt không đúng định dạng",
           errors: validated.error.format(),
         },
+      };
+    }
+
+    if (validated.data.current_temp <= validated.data.threshold_temp) {
+      return {
+        status: 422,
+        body: { success: false, message: "Cảnh báo quá nhiệt chỉ hợp lệ khi nhiệt độ vượt ngưỡng an toàn." },
       };
     }
 
@@ -154,7 +169,18 @@ export const SafetyController = {
 
   recordHeartbeat(body: unknown) {
     const validated = HeartbeatPayloadSchema.safeParse(body);
-    const deviceId = validated.success ? validated.data.device_id : "ESP32_MAIN_CONTROLLER";
+    if (!validated.success) {
+      return {
+        status: 400,
+        body: {
+          success: false,
+          message: "Dữ liệu heartbeat không đúng định dạng",
+          errors: validated.error.format(),
+        },
+      };
+    }
+
+    const deviceId = validated.data.device_id;
     SafetyService.recoverDeviceOnline(deviceId);
 
     return {
@@ -218,7 +244,25 @@ export const SafetyController = {
   },
 
   recoverMqttConnectedAlert(body?: unknown) {
-    const brokerUrl = (body as any)?.broker_url || "wss://broker.emqx.io:8084/mqtt";
+    let brokerUrl = "wss://broker.emqx.io:8084/mqtt";
+    if (body !== undefined) {
+      if (typeof body !== "object" || body === null || Array.isArray(body)) {
+        return { status: 400, body: { success: false, message: "Dữ liệu MQTT recovery không hợp lệ" } };
+      }
+      const candidate = (body as Record<string, unknown>).broker_url;
+      if (candidate !== undefined) {
+        if (typeof candidate !== "string" || !candidate.trim()) {
+          return { status: 400, body: { success: false, message: "broker_url không hợp lệ" } };
+        }
+        try {
+          const parsed = new URL(candidate);
+          if (!["mqtt:", "mqtts:", "ws:", "wss:"].includes(parsed.protocol)) throw new Error("unsupported protocol");
+        } catch {
+          return { status: 400, body: { success: false, message: "broker_url không hợp lệ" } };
+        }
+        brokerUrl = candidate.trim();
+      }
+    }
     const result = SafetyService.recoverMqttConnected(brokerUrl);
 
     return {
@@ -244,7 +288,10 @@ export const SafetyController = {
     }
 
     const validated = UnlockSystemSchema.safeParse(body);
-    const note = validated.success ? validated.data.note : undefined;
+    if (!validated.success || !validated.data.note?.trim()) {
+      return { status: 400, body: { success: false, message: "Bắt buộc nhập ghi chú xác nhận an toàn." } };
+    }
+    const note = validated.data.note.trim();
 
     const result = SafetyService.unlockSystem(adminUser.username || adminUser.userId, note);
 

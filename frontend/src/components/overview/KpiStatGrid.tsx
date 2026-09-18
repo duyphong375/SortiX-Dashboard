@@ -121,10 +121,10 @@ export function KpiStatGrid({
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {/* KPI 1: Sản Lượng Ca Hiện Tại */}
+      {/* KPI 1: Sản lượng ca */}
       <StatCard
         icon={Boxes}
-        title="Sản Lượng Ca Hiện Tại"
+        title="Sản lượng ca"
         value={`${animatedTotal.toLocaleString()} SP`}
         subtitle={`Khay 1: ${binCounts.bin1} | Khay 2: ${binCounts.bin2} | Khay 3: ${binCounts.bin3}`}
         trend={{ value: `+${totalSorted} trong ca`, positive: true }}
@@ -132,20 +132,20 @@ export function KpiStatGrid({
         highlight
       />
 
-      {/* KPI 2: Trạng Thái Vận Hành */}
+      {/* KPI 2: Vận hành */}
       <StatCard
         icon={Gauge}
-        title="Trạng Thái Vận Hành"
+        title="Vận hành"
         value={
           !isEspConnected && !isSimulation
-            ? "MẤT KẾT NỐI"
+            ? "Mất kết nối"
             : telemetry.estop_pressed
-            ? "DỪNG KHẨN"
+            ? "Dừng khẩn"
             : !isRunning
-            ? "TẠM DỪNG"
+            ? "Tạm dừng"
             : visualItemsCount > 0
-            ? "ĐANG CHẠY"
-            : "CHỜ PHÔI"
+            ? "Đang chạy"
+            : "Chờ phôi"
         }
         subtitle={`Tốc độ: ${
           !isEspConnected && !isSimulation
@@ -159,10 +159,10 @@ export function KpiStatGrid({
             !isEspConnected && !isSimulation
               ? "Không có tín hiệu"
               : telemetry.estop_pressed
-              ? "E-Stop Bật"
+              ? "E-Stop bật"
               : isRunning
-              ? "Băng Tải Sẵn Sàng"
-              : "Chế Độ Chờ",
+              ? "Băng tải sẵn sàng"
+              : "Chế độ chờ",
           positive: (!isEspConnected && !isSimulation) ? false : isRunning && !telemetry.estop_pressed,
         }}
         color={
@@ -176,18 +176,18 @@ export function KpiStatGrid({
         }
       />
 
-      {/* KPI 3: Trạng Thái IoT ESP32-C5 */}
+      {/* KPI 3: Thiết bị IoT */}
       <StatCard
         icon={Cpu}
-        title="Trạng Thái IoT ESP32-C5"
+        title="Thiết bị IoT"
         value={
           isDeviceOffline
-            ? "Offline"
+            ? "Ngoại tuyến"
             : isSimulation
-            ? "Trực Tuyến (Mô Phỏng)"
+            ? "Mô phỏng"
             : isEspConnected
-            ? "Trực Tuyến (ESP32)"
-            : "Offline"
+            ? "Đã kết nối"
+            : "Ngoại tuyến"
         }
         subtitle={`Uptime: ${
           !isDeviceOffline && (isEspConnected || isSimulation) ? formatUptime(telemetry.uptime) : "00:00:00"
@@ -199,20 +199,20 @@ export function KpiStatGrid({
             ? `${telemetry.wifi_band}`
             : isEspConnected
             ? `${telemetry.wifi_band}`
-            : "Đang chờ dữ liệu từ ESP32...",
+            : "Đang chờ kết nối...",
           positive: !isDeviceOffline && (isSimulation ? true : isEspConnected),
         }}
         color={isDeviceOffline || (!isEspConnected && !isSimulation) ? "slate" : isSimulation ? "purple" : "emerald"}
       />
 
-      {/* KPI 4: Hiệu Suất Nhận Diện AI */}
+      {/* KPI 4: Độ tin cậy AI */}
       <StatCard
         icon={Sparkles}
-        title="Hiệu Suất Nhận Diện AI"
+        title="Độ tin cậy AI"
         value={avgConfidence}
-        subtitle={`YOLOv8 Edge • Ping MQTT ${isEspConnected || isSimulation ? pingMs || 24 : "--"}ms • 4 Nhãn Active`}
+        subtitle="YOLOv8 Edge • 4 nhãn hoạt động"
         trend={{
-          value: !isEspConnected && !isSimulation ? "Chưa có tín hiệu" : "Tin cậy cao",
+          value: !isEspConnected && !isSimulation ? "Chưa có tín hiệu" : "Đạt tiêu chuẩn",
           positive: isEspConnected || isSimulation,
         }}
         color={!isEspConnected && !isSimulation ? "slate" : "amber"}

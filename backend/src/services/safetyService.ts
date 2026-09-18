@@ -8,6 +8,11 @@ let activeIncident: EmergencyStopPayload | null = null;
 let lastNotification: NotificationRecord | null = null;
 let lastUnlockedAt: number = 0;
 
+function eventTime(timestamp?: string): string {
+  const value = timestamp ? Date.parse(timestamp) : NaN;
+  return Number.isFinite(value) ? new Date(value).toISOString() : new Date().toISOString();
+}
+
 // Callback khi mở khóa để publish MQTT (nếu có)
 let onUnlockPublishHook: (() => void) | null = null;
 
@@ -30,15 +35,15 @@ export const SafetyService = {
 
   triggerEmergencyStop(payload: EmergencyStopPayload): {
     success: boolean;
-    notification: NotificationRecord;
+    notification: NotificationRecord | null;
     status: SystemSafetyStatus;
   } {
-    // 1. Nếu vừa mới mở khóa trong vòng 2.5s -> bỏ qua gói tin trễ từ broker
-    if (Date.now() - lastUnlockedAt < 2500) {
-      console.log("[SafetyService] Bỏ qua tín hiệu E-Stop trong thời gian ân hạn 2.5s sau khi mở khóa");
+    // Bỏ qua echo MQTT/SSE trong 5 giây sau khi mở khóa.
+    if (lastUnlockedAt > 0 && Date.now() - lastUnlockedAt < 5000) {
+      console.log("[SafetyService] Bỏ qua tín hiệu E-Stop trong thời gian ân hạn 5s sau khi mở khóa");
       return {
         success: true,
-        notification: lastNotification || ({} as any),
+        notification: lastNotification,
         status: currentStatus,
       };
     }
@@ -53,8 +58,9 @@ export const SafetyService = {
     }
 
     currentStatus = "SYSTEM_LOCKED";
-    activeIncident = payload;
+    activeIncident = { ...payload, timestamp: eventTime(payload.timestamp) };
 
+    payload = { ...payload, timestamp: eventTime(payload.timestamp) };
     const station = payload.station_id || "STATION_01";
     const source = payload.triggered_by || "Physical E-Stop Button #1";
     const description = `[NGUY HIỂM] NÚT DỪNG KHẨN CẤP ĐÃ ĐƯỢC KÍCH HOẠT TẠI TRẠM ${station.replace(/[^0-9]/g, "") || "01"}! BĂNG CHUYỀN ĐÃ NGẮT TOÀN BỘ.`;
@@ -93,6 +99,7 @@ export const SafetyService = {
     success: boolean;
     notification: NotificationRecord;
   } {
+    payload = { ...payload, timestamp: eventTime(payload.timestamp) };
     const section = payload.section || "Conveyor_Belt_Zone_A";
     const sensorId = payload.sensor_id || "OPTICAL_JAM_02";
     const duration = payload.duration_seconds || 5;
@@ -129,6 +136,7 @@ export const SafetyService = {
     success: boolean;
     notification: NotificationRecord;
   } {
+    payload = { ...payload, timestamp: eventTime(payload.timestamp) };
     const binId = payload.bin_id || "BIN_RED_01";
     const currentCount = payload.current_count ?? 50;
     const maxCapacity = payload.max_capacity ?? 50;
@@ -173,6 +181,7 @@ export const SafetyService = {
     success: boolean;
     notification: NotificationRecord;
   } {
+    payload = { ...payload, timestamp: eventTime(payload.timestamp) };
     const deviceName = payload.device_name || "Main_Drive_Motor / Edge_AI_Box";
     const currentTemp = payload.current_temp ?? 78.5;
     const thresholdTemp = payload.threshold_temp ?? 75.0;
@@ -218,6 +227,7 @@ export const SafetyService = {
     success: boolean;
     notification: NotificationRecord;
   } {
+    payload = { ...payload, timestamp: eventTime(payload.timestamp) };
     const deviceId = payload.device_id || "ESP32_MAIN_CONTROLLER";
     const ipAddress = payload.ip_address || "192.168.1.105";
     const lastSeen = payload.last_seen || "15 giây trước";
@@ -273,6 +283,7 @@ export const SafetyService = {
     success: boolean;
     notification: NotificationRecord;
   } {
+    payload = { ...payload, timestamp: eventTime(payload.timestamp) };
     const shiftName = payload.shift_name || "Báo cáo 1 ngày làm việc";
     const total = payload.total_products ?? 1250;
     const good = payload.sorted_good ?? 1180;
@@ -312,6 +323,7 @@ export const SafetyService = {
     success: boolean;
     notification: NotificationRecord;
   } {
+    payload = { ...payload, timestamp: eventTime(payload.timestamp) };
     const attempt = payload.reconnect_attempt || 1;
     const duration = payload.disconnected_duration_seconds || 5;
     const brokerUrl = payload.broker_url || "wss://broker.emqx.io:8084/mqtt";
@@ -363,12 +375,15 @@ export const SafetyService = {
       status: "resolved",
     });
 
+    lastNotification = record;
+    NotificationModel.resolveAllActive("MQTT_RECOVERY", "mqtt_disconnected");
+
     console.log(`[MQTT CONNECTED] 🟢 Đã phục hồi kết nối tới MQTT Broker (${broker}) thành công!`);
 
     SSEService.broadcast("mqtt_connected", {
       event: "mqtt_connected",
       message: description,
-      timestamp: new Date().toISOString(),
+      timestamp: record.timestamp,
       notification: record,
     });
 
@@ -386,11 +401,14 @@ export const SafetyService = {
     status: SystemSafetyStatus;
     resolvedCount: number;
   } {
+    if (!note?.trim() || note.trim().length > 255) {
+      return { success: false, message: "Bắt buộc nhập ghi chú xác nhận an toàn (1–255 ký tự).", status: currentStatus, resolvedCount: 0 };
+    }
     lastUnlockedAt = Date.now();
     currentStatus = "OPERATIONAL";
     activeIncident = null;
 
-    const resolvedCount = NotificationModel.resolveAllActive(adminUsername);
+    const resolvedCount = NotificationModel.resolveAllActive(adminUsername, "emergency_stop");
 
     console.log(`[SAFETY RESTORED] ✅ Hệ thống đã được mở khóa an toàn bởi: ${adminUsername} (ghi chú: ${note || "Không có"})`);
 

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { NotificationRecord, NotificationStatus } from "@shared/types";
+import { NotificationRecord } from "@shared/types";
 
 let notificationsStore: NotificationRecord[] = [];
 
@@ -49,11 +49,22 @@ function loadFromFile(): void {
 function saveToFile(): void {
   try {
     const filePath = resolveStorageFilePath();
-    const dir = path.dirname(filePath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    const directory = path.dirname(filePath);
+    fs.mkdirSync(directory, { recursive: true });
+    const temporaryPath = path.join(
+      directory,
+      `.${path.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`,
+    );
+    try {
+      fs.writeFileSync(temporaryPath, JSON.stringify(notificationsStore, null, 2), "utf-8");
+      fs.renameSync(temporaryPath, filePath);
+    } finally {
+      try {
+        if (fs.existsSync(temporaryPath)) fs.unlinkSync(temporaryPath);
+      } catch {
+        // Best effort cleanup; the atomic rename already completed if this runs.
+      }
     }
-    fs.writeFileSync(filePath, JSON.stringify(notificationsStore, null, 2), "utf-8");
   } catch (err) {
     console.error("[NotificationModel] Lỗi lưu file dữ liệu:", err);
   }
@@ -76,12 +87,22 @@ export const NotificationModel = {
   },
 
   add(record: Omit<NotificationRecord, "id"> & { id?: string }): NotificationRecord {
+    const parsedTime = Date.parse(record.timestamp);
+    const timestamp = Number.isFinite(parsedTime) ? new Date(parsedTime).toISOString() : new Date().toISOString();
+    const existing = notificationsStore.find((item) =>
+      (record.id && item.id === record.id) ||
+      (item.event === record.event && item.station_id === record.station_id &&
+       item.mode === record.mode && item.description === record.description &&
+       Date.parse(item.timestamp) === Date.parse(timestamp) && item.status === record.status));
+    if (existing) return existing;
     const newRecord: NotificationRecord = {
       ...record,
+      timestamp,
       id: record.id || `notif_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     };
 
     notificationsStore.unshift(newRecord);
+    notificationsStore.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
     // Giữ tối đa 1000 thông báo gần nhất
     if (notificationsStore.length > 1000) {
       notificationsStore = notificationsStore.slice(0, 1000);
@@ -101,11 +122,11 @@ export const NotificationModel = {
     return target;
   },
 
-  resolveAllActive(resolvedBy: string): number {
+  resolveAllActive(resolvedBy: string, event?: string): number {
     let count = 0;
     const now = new Date().toISOString();
     for (const n of notificationsStore) {
-      if (n.status === "unprocessed" || n.status === "acknowledged") {
+      if ((!event || n.event === event) && (n.status === "unprocessed" || n.status === "acknowledged")) {
         n.status = "resolved";
         n.resolved_at = now;
         n.resolved_by = resolvedBy;

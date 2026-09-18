@@ -167,14 +167,11 @@ export default function AnalyticsPage() {
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
-              Trung Tâm Biểu Đồ & Dữ Liệu Thời Gian Thực
+              Thống kê
             </h1>
-            <span className="rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-0.5 text-xs font-mono font-bold text-cyan-600 dark:text-cyan-400">
-              Real-time Analytics
-            </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Giám sát chuyên sâu lưu lượng phân loại PPM, phân bổ theo khung giờ và ma trận liên kết trạm servo ESP32-C5
+            Giám sát lưu lượng phân loại, sản lượng theo giờ và phân bổ khay chứa
           </p>
         </div>
       </div>
@@ -203,15 +200,15 @@ export default function AnalyticsPage() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">
-                    Cơ Cấu Sản Phẩm
+                    Cơ cấu sản phẩm
                   </h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Brand Share Donut Chart
+                    Tỷ lệ theo nhãn sản phẩm
                   </p>
                 </div>
               </div>
               <span className="rounded-md border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-purple-600 dark:text-purple-400">
-                {brandKeys.length} Nhãn
+                {brandKeys.length} nhãn
               </span>
             </div>
 
@@ -223,7 +220,7 @@ export default function AnalyticsPage() {
                   {totalBrands}
                 </span>
                 <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
-                  Sản Phẩm
+                  Sản phẩm
                 </span>
               </div>
 
@@ -315,9 +312,9 @@ export default function AnalyticsPage() {
               {(() => {
                 const b1 = binCounts.bin1 || 0;
                 const b2 = binCounts.bin2 || 0;
-                if (b1 === 0 && b2 === 0) return "-- Cân Bằng";
+                if (b1 === 0 && b2 === 0) return "-- Cân bằng";
                 const balance = ((Math.min(b1, b2) / Math.max(b1, b2)) * 100).toFixed(0);
-                return `${balance}% Cân Bằng`;
+                return `${balance}% Cân bằng`;
               })()}
             </span>
           </div>
@@ -334,14 +331,11 @@ export default function AnalyticsPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm sm:text-base font-bold tracking-tight text-slate-900 dark:text-white">
-                  Sản Lượng Phân Loại Theo Khung Giờ Trong Ca
+                  Sản lượng theo giờ
                 </h3>
-                <span className="rounded-md border border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                  Hourly Production
-                </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Theo dõi phân bổ sản lượng theo từng giờ giúp người quản lý xác định khung giờ đạt năng suất cao nhất
+                Theo dõi phân bổ sản lượng theo từng giờ trong ca
               </p>
             </div>
           </div>
@@ -349,7 +343,7 @@ export default function AnalyticsPage() {
           <div className="flex items-center gap-2">
             <div className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-700 dark:text-cyan-300">
               <Sparkles className="h-3.5 w-3.5 text-cyan-500" />
-              <span>Đỉnh Năng Suất:</span>
+              <span>Đỉnh sản lượng:</span>
               <span className="font-mono font-bold text-cyan-600 dark:text-cyan-400">
                 {peakHour.hour} ({peakHour.count} SP)
               </span>
@@ -455,14 +449,11 @@ export default function AnalyticsPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                  Bảng Ma Trận Phân Bố Sản Phẩm Theo Khay (Product Allocation Matrix)
+                  Phân bổ theo khay
                 </h2>
-                <span className="hidden md:inline-block rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-cyan-600 dark:text-cyan-400">
-                  AI Routing Table
-                </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Ma trận đồng bộ dữ liệu thời gian thực giữa mô hình nhận diện AI Vision và trạm gạt servo ESP32-C5
+                Phân bổ sản phẩm theo từng khay chứa
               </p>
             </div>
           </div>
@@ -480,7 +471,7 @@ export default function AnalyticsPage() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
-              <span>Đồng Bộ ESP32</span>
+              <span>Đồng bộ ESP32</span>
             </div>
           </div>
         </div>
@@ -490,11 +481,11 @@ export default function AnalyticsPage() {
           <table className="w-full min-w-[760px] text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200/80 dark:border-white/[0.06] text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                <th className="py-3 px-4">Cột 1: Tên Sản Phẩm & Icon</th>
-                <th className="py-3 px-4">Cột 2: Khay Phân Loại Đích</th>
-                <th className="py-3 px-4 text-center">Cột 3: Số Lượng Đã Phân Loại</th>
-                <th className="py-3 px-4">Cột 4: Tỷ Lệ Phần Trăm (%)</th>
-                <th className="py-3 px-4 text-right">Cột 5: Độ Tin Cậy AI Trung Bình</th>
+                <th className="py-3 px-4">Sản phẩm</th>
+                <th className="py-3 px-4">Khay đích</th>
+                <th className="py-3 px-4 text-center">Số lượng</th>
+                <th className="py-3 px-4">Tỷ lệ</th>
+                <th className="py-3 px-4 text-right">Độ tin cậy AI</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-white/[0.04] text-xs">

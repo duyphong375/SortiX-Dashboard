@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Activity,
   Cpu,
-  Thermometer,
   Wifi,
   Radio,
   Pause,
@@ -18,8 +17,8 @@ import {
 } from "lucide-react";
 import { TelemetryData, CATALOG_BRANDS } from "@/lib/types";
 import { TemperatureGaugeWidget } from "@/components/ui/TemperatureGaugeWidget";
-
-const MAX_BIN_CAPACITY = 50;
+import { BinCapacityInput } from "@/components/ui/BinCapacityInput";
+import { getBinColorTheme } from "@/lib/binTheme";
 
 export interface LiveHealthAndBinWidgetProps {
   telemetry: TelemetryData;
@@ -31,6 +30,7 @@ export interface LiveHealthAndBinWidgetProps {
   binCapacities?: { bin1: number; bin2: number; bin3: number };
   bin1Brands: string[];
   bin2Brands: string[];
+  bin3Brands?: string[];
   handleToggleRun: () => void;
   handleEmergencyStop: () => void;
   isDeviceOffline?: boolean;
@@ -48,6 +48,7 @@ export function LiveHealthAndBinWidget({
   binCapacities = { bin1: 50, bin2: 50, bin3: 50 },
   bin1Brands,
   bin2Brands,
+  bin3Brands = [],
   handleToggleRun,
   handleEmergencyStop,
   isDeviceOffline = false,
@@ -57,6 +58,10 @@ export function LiveHealthAndBinWidget({
   const cap1 = binCapacities.bin1 || 50;
   const cap2 = binCapacities.bin2 || 50;
   const cap3 = binCapacities.bin3 || 50;
+
+  const bin1Theme = getBinColorTheme(bin1Brands[0], "rose");
+  const bin2Theme = getBinColorTheme(bin2Brands[0], "blue");
+  const bin3Theme = getBinColorTheme(bin3Brands[0], "amber");
   return (
     <div className="relate-card flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm dark:border-white/[0.07] dark:bg-[#161822]">
       <div>
@@ -67,14 +72,11 @@ export function LiveHealthAndBinWidget({
               <Activity className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                Tình Trạng Vận Hành & Khay Chứa Tức Thời
-                <span className="rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-cyan-600 dark:text-cyan-400">
-                  Live Sorter Health
-                </span>
+              <h3 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">
+                Vận hành & khay chứa
               </h3>
               <p className="text-[11px] font-normal text-slate-500 dark:text-slate-400 mt-0.5">
-                Theo dõi dung lượng 3 khay chứa định mức & trạng thái vi xử lý ESP32-C5 thời gian thực
+                Dung lượng khay và trạng thái vi xử lý thời gian thực.
               </p>
             </div>
           </div>
@@ -114,12 +116,12 @@ export function LiveHealthAndBinWidget({
               </span>
               <span>
                 {isDeviceOffline || (!isEspConnected && !isSimulation)
-                  ? "Offline"
+                  ? "Ngoại tuyến"
                   : telemetry.estop_pressed
-                  ? "E-Stop Kích Hoạt"
+                  ? "E-Stop kích hoạt"
                   : isRunning
-                  ? "Đang Vận Hành"
-                  : "Tạm Dừng"}
+                  ? "Đang chạy"
+                  : "Tạm dừng"}
               </span>
             </span>
           </div>
@@ -130,7 +132,7 @@ export function LiveHealthAndBinWidget({
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
               <Cpu className="h-3.5 w-3.5 text-cyan-500" />
-              Cụm Vi Xử Lý ESP32-C5 & Truyền Thông IoT
+              Vi xử lý ESP32-C5
             </span>
             <span className="text-[10px] font-mono text-slate-400">Node: {telemetry.device_id}</span>
           </div>
@@ -152,7 +154,7 @@ export function LiveHealthAndBinWidget({
                   <Wifi className="h-4 w-4" />
                 </div>
                 <div>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">Sóng Wi-Fi 6</span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">Wi-Fi 6</span>
                   <p className="font-mono text-sm font-bold text-slate-900 dark:text-white truncate max-w-[110px]" title={telemetry.wifi_band}>
                     {!isDeviceOffline && (isEspConnected || isSimulation) ? `${telemetry.wifi_rssi} dBm` : "-- dBm"}
                   </p>
@@ -165,7 +167,7 @@ export function LiveHealthAndBinWidget({
                     : "text-slate-500 bg-slate-500/10"
                 }`}
               >
-                {!isDeviceOffline && (isEspConnected || isSimulation) ? "5.0 GHz" : "Offline"}
+                {!isDeviceOffline && (isEspConnected || isSimulation) ? "5.0 GHz" : "Ngoại tuyến"}
               </span>
             </div>
 
@@ -184,7 +186,7 @@ export function LiveHealthAndBinWidget({
                 <div>
                   <span className="text-[11px] text-slate-500 dark:text-slate-400">Broker MQTT</span>
                   <p className="font-mono text-sm font-bold text-slate-900 dark:text-white">
-                    {isSimulation ? "Mô Phỏng" : mqttStatus === "connected" ? "Đã Kết Nối" : "Ngoại Tuyến"}
+                    {isSimulation ? "Mô phỏng" : mqttStatus === "connected" ? "Đã kết nối" : "Ngoại tuyến"}
                   </p>
                 </div>
               </div>
@@ -204,22 +206,22 @@ export function LiveHealthAndBinWidget({
         {/* THANH TIẾN ĐỘ DUNG LƯỢNG 3 KHAY CHỨA TỨC THỜI */}
         <div className="mt-5 space-y-3.5">
           <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-            <span>Dung Lượng 3 Khay Chứa (Định mức tùy chỉnh)</span>
-            <span>Tỉ lệ đầy khay</span>
+            <span>Dung lượng khay chứa</span>
+            <span>Tỉ lệ đầy</span>
           </div>
 
           {/* Khay 1 (Gạt 1) */}
           <div className={`rounded-xl border p-3 transition-all ${
             binCounts.bin1 >= cap1
               ? "border-amber-500/50 bg-amber-500/10 dark:border-amber-500/40 dark:bg-amber-950/20 animate-pulse"
-              : "border-rose-500/20 bg-rose-500/5 dark:border-rose-500/20 dark:bg-rose-950/15"
+              : bin1Theme.widgetCardBorder
           }`}>
             <div className="flex items-center justify-between text-xs mb-1.5">
-              <div className="flex items-center gap-2 font-bold text-rose-600 dark:text-rose-400">
+              <div className={`flex items-center gap-2 font-bold ${bin1Theme.widgetTitleText}`}>
                 {binCounts.bin1 >= cap1 ? (
                   <Boxes className="h-4 w-4 text-amber-500 animate-bounce shrink-0" />
                 ) : (
-                  <span className="h-2.5 w-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]" />
+                  <span className={`h-2.5 w-2.5 rounded-full ${bin1Theme.widgetDotClass}`} />
                 )}
                 <span>
                   Khay 1 (
@@ -245,7 +247,7 @@ export function LiveHealthAndBinWidget({
                 className={`h-full rounded-full transition-all duration-500 ${
                   binCounts.bin1 >= cap1
                     ? "bg-amber-500 shadow-[0_0_10px_#f59e0b] animate-pulse"
-                    : "bg-rose-500 shadow-[0_0_8px_#f43f5e]"
+                    : bin1Theme.widgetProgressBar
                 }`}
                 style={{ width: `${Math.min(100, (binCounts.bin1 / cap1) * 100)}%` }}
               />
@@ -256,12 +258,17 @@ export function LiveHealthAndBinWidget({
               <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-white/[0.06] space-y-1">
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400 font-medium">
-                    <SlidersHorizontal className="h-3 w-3 text-rose-500" />
+                    <SlidersHorizontal className={`h-3 w-3 ${bin1Theme.sliderIcon}`} />
                     Sức chứa Khay 1:
                   </span>
-                  <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
-                    {cap1} SP (Tối đa)
-                  </span>
+                  <BinCapacityInput
+                    value={cap1}
+                    onChange={(newVal) => {
+                      if (onSetBinCapacity) onSetBinCapacity(1, newVal);
+                      else if (onSetBinCount) onSetBinCount(1, newVal);
+                    }}
+                    colorScheme={bin1Theme.colorScheme}
+                  />
                 </div>
                 <input
                   type="range"
@@ -274,20 +281,20 @@ export function LiveHealthAndBinWidget({
                     if (onSetBinCapacity) onSetBinCapacity(1, val);
                     else if (onSetBinCount) onSetBinCount(1, val);
                   }}
-                  className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-rose-500"
+                  className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 ${bin1Theme.sliderAccent}`}
                 />
                 <div className="flex items-center justify-between text-[9px] font-mono text-slate-400">
                   <button
                     type="button"
                     onClick={() => onSetBinCapacity ? onSetBinCapacity(1, 10) : onSetBinCount?.(1, 10)}
-                    className="hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer transition-colors"
+                    className={`${bin1Theme.presetHover} cursor-pointer transition-colors`}
                   >
                     10 SP
                   </button>
                   <button
                     type="button"
                     onClick={() => onSetBinCapacity ? onSetBinCapacity(1, 30) : onSetBinCount?.(1, 30)}
-                    className="hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer font-bold transition-colors"
+                    className={`${bin1Theme.presetHover} cursor-pointer font-bold transition-colors`}
                   >
                     30 SP
                   </button>
@@ -307,14 +314,14 @@ export function LiveHealthAndBinWidget({
           <div className={`rounded-xl border p-3 transition-all ${
             binCounts.bin2 >= cap2
               ? "border-amber-500/50 bg-amber-500/10 dark:border-amber-500/40 dark:bg-amber-950/20 animate-pulse"
-              : "border-blue-500/20 bg-blue-500/5 dark:border-blue-500/20 dark:bg-blue-950/15"
+              : bin2Theme.widgetCardBorder
           }`}>
             <div className="flex items-center justify-between text-xs mb-1.5">
-              <div className="flex items-center gap-2 font-bold text-blue-600 dark:text-blue-400">
+              <div className={`flex items-center gap-2 font-bold ${bin2Theme.widgetTitleText}`}>
                 {binCounts.bin2 >= cap2 ? (
                   <Boxes className="h-4 w-4 text-amber-500 animate-bounce shrink-0" />
                 ) : (
-                  <span className="h-2.5 w-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]" />
+                  <span className={`h-2.5 w-2.5 rounded-full ${bin2Theme.widgetDotClass}`} />
                 )}
                 <span>
                   Khay 2 (
@@ -340,7 +347,7 @@ export function LiveHealthAndBinWidget({
                 className={`h-full rounded-full transition-all duration-500 ${
                   binCounts.bin2 >= cap2
                     ? "bg-amber-500 shadow-[0_0_10px_#f59e0b] animate-pulse"
-                    : "bg-blue-500 shadow-[0_0_8px_#3b82f6]"
+                    : bin2Theme.widgetProgressBar
                 }`}
                 style={{ width: `${Math.min(100, (binCounts.bin2 / cap2) * 100)}%` }}
               />
@@ -351,12 +358,17 @@ export function LiveHealthAndBinWidget({
               <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-white/[0.06] space-y-1">
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400 font-medium">
-                    <SlidersHorizontal className="h-3 w-3 text-blue-500" />
+                    <SlidersHorizontal className={`h-3 w-3 ${bin2Theme.sliderIcon}`} />
                     Sức chứa Khay 2:
                   </span>
-                  <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
-                    {cap2} SP (Tối đa)
-                  </span>
+                  <BinCapacityInput
+                    value={cap2}
+                    onChange={(newVal) => {
+                      if (onSetBinCapacity) onSetBinCapacity(2, newVal);
+                      else if (onSetBinCount) onSetBinCount(2, newVal);
+                    }}
+                    colorScheme={bin2Theme.colorScheme}
+                  />
                 </div>
                 <input
                   type="range"
@@ -369,20 +381,20 @@ export function LiveHealthAndBinWidget({
                     if (onSetBinCapacity) onSetBinCapacity(2, val);
                     else if (onSetBinCount) onSetBinCount(2, val);
                   }}
-                  className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-blue-500"
+                  className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 ${bin2Theme.sliderAccent}`}
                 />
                 <div className="flex items-center justify-between text-[9px] font-mono text-slate-400">
                   <button
                     type="button"
                     onClick={() => onSetBinCapacity ? onSetBinCapacity(2, 10) : onSetBinCount?.(2, 10)}
-                    className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors"
+                    className={`${bin2Theme.presetHover} cursor-pointer transition-colors`}
                   >
                     10 SP
                   </button>
                   <button
                     type="button"
                     onClick={() => onSetBinCapacity ? onSetBinCapacity(2, 30) : onSetBinCount?.(2, 30)}
-                    className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer font-bold transition-colors"
+                    className={`${bin2Theme.presetHover} cursor-pointer font-bold transition-colors`}
                   >
                     30 SP
                   </button>
@@ -402,14 +414,14 @@ export function LiveHealthAndBinWidget({
           <div className={`rounded-xl border p-3 transition-all ${
             binCounts.bin3 >= cap3
               ? "border-amber-500/50 bg-amber-500/10 dark:border-amber-500/40 dark:bg-amber-950/20 animate-pulse"
-              : "border-amber-500/20 bg-amber-500/5 dark:border-amber-500/20 dark:bg-amber-950/15"
+              : bin3Theme.widgetCardBorder
           }`}>
             <div className="flex items-center justify-between text-xs mb-1.5">
-              <div className="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-400">
+              <div className={`flex items-center gap-2 font-bold ${bin3Theme.widgetTitleText}`}>
                 {binCounts.bin3 >= cap3 ? (
                   <Boxes className="h-4 w-4 text-amber-500 animate-bounce shrink-0" />
                 ) : (
-                  <span className="h-2.5 w-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]" />
+                  <span className={`h-2.5 w-2.5 rounded-full ${bin3Theme.widgetDotClass}`} />
                 )}
                 <span>Khay 3 (Mặc định)</span>
               </div>
@@ -429,7 +441,7 @@ export function LiveHealthAndBinWidget({
                 className={`h-full rounded-full transition-all duration-500 ${
                   binCounts.bin3 >= cap3
                     ? "bg-amber-500 shadow-[0_0_10px_#f59e0b] animate-pulse"
-                    : "bg-amber-500 shadow-[0_0_8px_#f59e0b]"
+                    : bin3Theme.widgetProgressBar
                 }`}
                 style={{ width: `${Math.min(100, (binCounts.bin3 / cap3) * 100)}%` }}
               />
@@ -440,12 +452,17 @@ export function LiveHealthAndBinWidget({
               <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-white/[0.06] space-y-1">
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400 font-medium">
-                    <SlidersHorizontal className="h-3 w-3 text-amber-500" />
+                    <SlidersHorizontal className={`h-3 w-3 ${bin3Theme.sliderIcon}`} />
                     Sức chứa Khay 3:
                   </span>
-                  <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
-                    {cap3} SP (Tối đa)
-                  </span>
+                  <BinCapacityInput
+                    value={cap3}
+                    onChange={(newVal) => {
+                      if (onSetBinCapacity) onSetBinCapacity(3, newVal);
+                      else if (onSetBinCount) onSetBinCount(3, newVal);
+                    }}
+                    colorScheme={bin3Theme.colorScheme}
+                  />
                 </div>
                 <input
                   type="range"
@@ -458,20 +475,20 @@ export function LiveHealthAndBinWidget({
                     if (onSetBinCapacity) onSetBinCapacity(3, val);
                     else if (onSetBinCount) onSetBinCount(3, val);
                   }}
-                  className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-amber-500"
+                  className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 ${bin3Theme.sliderAccent}`}
                 />
                 <div className="flex items-center justify-between text-[9px] font-mono text-slate-400">
                   <button
                     type="button"
                     onClick={() => onSetBinCapacity ? onSetBinCapacity(3, 10) : onSetBinCount?.(3, 10)}
-                    className="hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer transition-colors"
+                    className={`${bin3Theme.presetHover} cursor-pointer transition-colors`}
                   >
                     10 SP
                   </button>
                   <button
                     type="button"
                     onClick={() => onSetBinCapacity ? onSetBinCapacity(3, 30) : onSetBinCount?.(3, 30)}
-                    className="hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer font-bold transition-colors"
+                    className={`${bin3Theme.presetHover} cursor-pointer font-bold transition-colors`}
                   >
                     30 SP
                   </button>
@@ -502,7 +519,7 @@ export function LiveHealthAndBinWidget({
             }`}
           >
             {isRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-            <span>{isRunning ? "Tạm Dừng Line" : "Khởi Động Line"}</span>
+            <span>{isRunning ? "Tạm dừng" : "Khởi động"}</span>
           </button>
 
           <button
@@ -514,7 +531,7 @@ export function LiveHealthAndBinWidget({
             }`}
           >
             <AlertOctagon className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
-            <span>{telemetry.estop_pressed ? "E-STOP ĐANG BẬT" : "E-Stop Khẩn Cấp"}</span>
+            <span>{telemetry.estop_pressed ? "E-Stop đang bật" : "Dừng khẩn E-Stop"}</span>
           </button>
         </div>
 
@@ -523,7 +540,7 @@ export function LiveHealthAndBinWidget({
           className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white px-4 py-2 text-xs font-bold transition-all shadow-sm shadow-cyan-500/25 hover:shadow-cyan-500/40 active:scale-95"
         >
           <BarChart2 className="h-4 w-4" />
-          <span>Xem Biểu Đồ Phân Tích Chi Tiết</span>
+          <span>Xem thống kê chi tiết</span>
           <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>

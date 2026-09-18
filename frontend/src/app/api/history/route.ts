@@ -5,6 +5,7 @@ import {
   clearAllHistory,
 } from "@/services/historyService";
 import { HistoryQuerySchema } from "@/lib/schemas";
+import { getAdminUser } from "../auth/session";
 
 export async function GET(request: Request) {
   try {
@@ -49,7 +50,10 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(request: Request) {
+  if (!getAdminUser(request)) {
+    return NextResponse.json({ success: false, message: "Truy cập bị từ chối: Yêu cầu quyền Quản trị viên (Admin)" }, { status: 403 });
+  }
   clearAllHistory();
   return NextResponse.json({ success: true, message: "Classification history cleared" });
 }

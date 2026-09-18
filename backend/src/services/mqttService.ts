@@ -1,7 +1,8 @@
 import mqtt, { MqttClient } from "mqtt";
 import { DEFAULT_MQTT_TOPICS } from "@shared/constants";
-import { EmergencyStopPayloadSchema, JamDetectedPayloadSchema, BinFullPayloadSchema, TemperatureWarningPayloadSchema, DeviceOfflinePayloadSchema, HeartbeatPayloadSchema } from "@shared/schemas";
+import { EmergencyStopPayloadSchema, JamDetectedPayloadSchema, BinFullPayloadSchema, TemperatureWarningPayloadSchema, DeviceOfflinePayloadSchema, HeartbeatPayloadSchema, MqttDisconnectedPayloadSchema } from "@shared/schemas";
 import { SafetyService } from "./safetyService";
+import { ENV } from "../config/env";
 
 let client: MqttClient | null = null;
 let isConnected = false;
@@ -11,9 +12,12 @@ let watchdogInterval: NodeJS.Timeout | null = null;
 let isMqttDisconnectedAlertTriggered = false;
 let disconnectTimeoutTimer: NodeJS.Timeout | null = null;
 let reconnectAttemptCount = 0;
+let reconnectTimer: NodeJS.Timeout | null = null;
+let shuttingDown = false;
 
 export function initBackendMQTT() {
-  const brokerUrl = process.env.MQTT_BROKER_URL || "mqtt://broker.emqx.io:1883";
+  shuttingDown = false;
+  const brokerUrl = ENV.MQTT_BROKER_URL;
   const estopTopic = DEFAULT_MQTT_TOPICS.ESTOP || "conveyor/safety/estop";
   const jamTopic = DEFAULT_MQTT_TOPICS.JAM || "conveyor/sensor/jam";
   const binStatusTopic = DEFAULT_MQTT_TOPICS.BIN_STATUS || "conveyor/storage/bin_status";
@@ -24,8 +28,10 @@ export function initBackendMQTT() {
     console.log(`[Backend MQTT] Đang kết nối tới broker: ${brokerUrl}...`);
     client = mqtt.connect(brokerUrl, {
       clientId: `sortix_backend_${Date.now()}`,
-      reconnectPeriod: 5000,
+      reconnectPeriod: 0,
       connectTimeout: 10000,
+      ...(ENV.MQTT_USERNAME ? { username: ENV.MQTT_USERNAME } : {}),
+      ...(ENV.MQTT_PASSWORD ? { password: ENV.MQTT_PASSWORD } : {}),
     });
 
     client.on("connect", () => {
@@ -34,6 +40,10 @@ export function initBackendMQTT() {
       if (disconnectTimeoutTimer) {
         clearTimeout(disconnectTimeoutTimer);
         disconnectTimeoutTimer = null;
+      }
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
       }
       if (isMqttDisconnectedAlertTriggered) {
         isMqttDisconnectedAlertTriggered = false;
@@ -108,10 +118,14 @@ export function initBackendMQTT() {
         }
       } else if (topic === heartbeatTopic) {
         try {
-          lastHeartbeatTimestamp = Date.now();
           const raw = JSON.parse(message.toString());
           const validated = HeartbeatPayloadSchema.safeParse(raw);
-          const deviceId = validated.success ? validated.data.device_id : "ESP32_MAIN_CONTROLLER";
+          if (!validated.success) {
+            console.warn(`[Backend MQTT] Heartbeat không hợp lệ trên ${topic}:`, validated.error.format());
+            return;
+          }
+          lastHeartbeatTimestamp = Date.now();
+          const deviceId = validated.data.device_id;
 
           if (isDeviceOffline) {
             isDeviceOffline = false;
@@ -119,11 +133,7 @@ export function initBackendMQTT() {
             SafetyService.recoverDeviceOnline(deviceId);
           }
         } catch (err) {
-          lastHeartbeatTimestamp = Date.now();
-          if (isDeviceOffline) {
-            isDeviceOffline = false;
-            SafetyService.recoverDeviceOnline("ESP32_MAIN_CONTROLLER");
-          }
+          console.error(`[Backend MQTT] Lỗi giải mã heartbeat trên ${topic}:`, err);
         }
       }
     });
@@ -154,11 +164,12 @@ export function initBackendMQTT() {
 
     client.on("close", () => {
       isConnected = false;
+      if (shuttingDown) return;
       if (!disconnectTimeoutTimer && !isMqttDisconnectedAlertTriggered) {
         disconnectTimeoutTimer = setTimeout(() => {
           if (!isConnected) {
             isMqttDisconnectedAlertTriggered = true;
-            reconnectAttemptCount++;
+            reconnectAttemptCount = Math.max(1, reconnectAttemptCount);
             SafetyService.triggerMqttDisconnected({
               event: "mqtt_disconnected",
               broker_url: brokerUrl,
@@ -168,6 +179,19 @@ export function initBackendMQTT() {
             });
           }
         }, 5000);
+      }
+      const nextAttempt = reconnectAttemptCount + 1;
+      reconnectAttemptCount = nextAttempt;
+      const delayMs = nextAttempt <= 1 ? 3000 : nextAttempt === 2 ? 5000 : 10000;
+      if (!reconnectTimer) {
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null;
+          if (!shuttingDown && !isConnected) {
+            try { client?.reconnect(); } catch (err) {
+              console.warn("[Backend MQTT] Reconnect thất bại:", err);
+            }
+          }
+        }, delayMs);
       }
     });
 
@@ -188,6 +212,21 @@ export function initBackendMQTT() {
   } catch (err) {
     console.error("[Backend MQTT] Khởi tạo MQTT client thất bại:", err);
   }
+}
+
+export function shutdownBackendMQTT(): void {
+  shuttingDown = true;
+  if (watchdogInterval) clearInterval(watchdogInterval);
+  if (disconnectTimeoutTimer) clearTimeout(disconnectTimeoutTimer);
+  if (reconnectTimer) clearTimeout(reconnectTimer);
+  watchdogInterval = null;
+  disconnectTimeoutTimer = null;
+  reconnectTimer = null;
+  SafetyService.setOnUnlockPublishHook(null);
+  isConnected = false;
+  isDeviceOffline = false;
+  try { client?.end(true); } catch { /* already closed */ }
+  client = null;
 }
 
 export function publishEstopSimulation(payload: unknown) {
@@ -238,15 +277,13 @@ export function publishDeviceOfflineSimulation(payload: unknown) {
 }
 
 export function publishMqttDisconnectedSimulation(payload?: unknown) {
-  const data = (payload as any) || {
+  const data = payload || {
     event: "mqtt_disconnected",
-    broker_url: process.env.MQTT_BROKER_URL || "mqtt://broker.emqx.io:1883",
+    broker_url: ENV.MQTT_BROKER_URL,
     disconnected_duration_seconds: 5,
     reconnect_attempt: 1,
     mode: "simulation",
   };
-  SafetyService.triggerMqttDisconnected(data);
+  const validated = MqttDisconnectedPayloadSchema.safeParse(data);
+  if (validated.success) SafetyService.triggerMqttDisconnected(validated.data);
 }
-
-
-

@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { LoginSchema } from "@shared/schemas";
 import { NextUsersStore, toSafeUser } from "@/app/api/users/store";
-import { MOCK_USERS, DEMO_PASSWORDS } from "@/lib/permissions";
+import { MOCK_USERS } from "@/lib/permissions";
+import { createSessionToken } from "../session";
+
+const DEMO_PASSWORD_HASH = "$2b$10$pPw2AmBT1scTY5wU5cmpb.iLoWJZDwaVaGTxb0iT/diTyE2GKpECO";
 
 export async function POST(request: Request) {
   try {
@@ -24,7 +28,7 @@ export async function POST(request: Request) {
     if (user) {
       if (user.status === "locked") {
         return NextResponse.json(
-          { success: false, message: "Tài khoản hiện đang bị khóa. Vui lòng liên hệ quản trị viên." },
+          { success: false, message: "Tài khoản hoặc mật khẩu không chính xác." },
           { status: 400 }
         );
       }
@@ -40,14 +44,7 @@ export async function POST(request: Request) {
       NextUsersStore.setOnline(user.id, true);
       const updatedUser = NextUsersStore.findById(user.id) || user;
 
-      const token = Buffer.from(
-        JSON.stringify({
-          id: updatedUser.id,
-          role: updatedUser.role,
-          username: updatedUser.username,
-          issuedAt: Date.now(),
-        })
-      ).toString("base64");
+      const token = createSessionToken(updatedUser);
 
       return NextResponse.json({
         success: true,
@@ -68,22 +65,14 @@ export async function POST(request: Request) {
     );
 
     if (fallbackUser) {
-      const expectedPass =
-        DEMO_PASSWORDS[fallbackUser.email.toLowerCase()] ||
-        DEMO_PASSWORDS[fallbackUser.username?.toLowerCase() || ""] ||
-        "123456";
-
-      const isMatch = password === expectedPass || password === "123456";
+      const isMatch = await bcrypt.compare(password, DEMO_PASSWORD_HASH);
 
       if (isMatch) {
-        const token = Buffer.from(
-          JSON.stringify({
-            id: fallbackUser.id || "admin-001",
-            role: fallbackUser.role,
-            username: fallbackUser.username,
-            issuedAt: Date.now(),
-          })
-        ).toString("base64");
+        const token = createSessionToken({
+          id: fallbackUser.id || "admin-001",
+          role: fallbackUser.role,
+          username: fallbackUser.username || fallbackUser.displayName,
+        });
 
         return NextResponse.json({
           success: true,

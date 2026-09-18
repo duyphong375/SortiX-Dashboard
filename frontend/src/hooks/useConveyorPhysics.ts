@@ -19,6 +19,8 @@ export interface UseConveyorPhysicsProps {
   onPublishCommand?: (cmd: string, value?: number) => void;
   onJamDetected?: (payload: JamDetectedPayload) => void;
   isJammed?: boolean;
+  isBinFull?: boolean;
+  onBinFullDetected?: (binIdx: 1 | 2 | 3) => void;
 }
 
 export function useConveyorPhysics({
@@ -34,6 +36,8 @@ export function useConveyorPhysics({
   onPublishCommand,
   onJamDetected,
   isJammed = false,
+  isBinFull = false,
+  onBinFullDetected,
 }: UseConveyorPhysicsProps) {
   const toast = useToast();
   const toastRef = useRef(toast);
@@ -46,6 +50,10 @@ export function useConveyorPhysics({
   onJamDetectedRef.current = onJamDetected;
   const isJammedRef = useRef(isJammed);
   isJammedRef.current = isJammed;
+  const isBinFullRef = useRef(isBinFull);
+  isBinFullRef.current = isBinFull;
+  const onBinFullDetectedRef = useRef(onBinFullDetected);
+  onBinFullDetectedRef.current = onBinFullDetected;
   const sensor2BlockedSinceRef = useRef<number | null>(null);
 
   const [isRunning, setIsRunning] = useState(true);
@@ -179,45 +187,47 @@ export function useConveyorPhysics({
       const isBeltMoving =
         isRunningRef.current &&
         !telemetryRef.current.estop_pressed &&
-        !isJammedRef.current;
+        !isJammedRef.current &&
+        !isBinFullRef.current;
 
       // Kiểm tra phôi bị tắc nghẽn liên tục tại Cảm biến #02 / Zone A (Chỉ chạy ở chế độ Mô phỏng ảo)
       // Ở chế độ Thực tế: Tín hiệu kẹt phôi hoàn toàn phụ thuộc vào cảm biến quang học vật lý qua MQTT
       if (isSimulationRef.current) {
-        const itemsInZoneA = visualItemsRef.current.filter(
-          (it) => !it.sorted && !it.deflected && it.progress >= 42 && it.progress <= 48
-        );
-
-        // Chỉ theo dõi kẹt phôi khi băng tải đang chuyển động HOẶC phôi bị tắc ứ do khay bên dưới đã đầy
-        const hasBlockedItem = itemsInZoneA.some((it) => (it as { isBlockedByFullBin?: boolean }).isBlockedByFullBin || it.isJammed);
-        const shouldMonitorJam = isBeltMoving || hasBlockedItem;
-
-        if (shouldMonitorJam && itemsInZoneA.length > 0) {
-          if (!sensor2BlockedSinceRef.current) {
-            sensor2BlockedSinceRef.current = time;
-          } else {
-            const blockedDurationMs = time - sensor2BlockedSinceRef.current;
-            if (blockedDurationMs >= 5000 && !isJammedRef.current) {
-              // Đã đứng yên / che khuất liên tục quá 5 giây -> Kích hoạt cảnh báo kẹt phôi
-              itemsInZoneA[0].isJammed = true;
-              setIsRunning(false);
-              isRunningRef.current = false;
-              setTelemetry((prev) => ({ ...prev, conveyor_running: false, s2_sorter1: true }));
-              onPublishCommandRef.current?.("STOP");
-
-              onJamDetectedRef.current?.({
-                event: "jam_detected",
-                section: "Conveyor_Belt_Zone_A",
-                duration_seconds: 5,
-                sensor_id: "OPTICAL_JAM_02",
-                mode: "simulation",
-                timestamp: new Date().toISOString(),
-              });
-            }
-          }
-        } else {
-          // Băng tải đang dừng chủ động (STOP/PAUSE), không phải lỗi kẹt phôi
+        if (isBinFullRef.current) {
+          // Băng tải đang dừng do Khay đầy, không kích hoạt cảnh báo kẹt phôi ảo
           sensor2BlockedSinceRef.current = null;
+        } else {
+          const itemsInZoneA = visualItemsRef.current.filter(
+            (it) => !it.sorted && !it.deflected && it.progress >= 42 && it.progress <= 48
+          );
+
+          if (isBeltMoving && itemsInZoneA.length > 0) {
+            if (!sensor2BlockedSinceRef.current) {
+              sensor2BlockedSinceRef.current = time;
+            } else {
+              const blockedDurationMs = time - sensor2BlockedSinceRef.current;
+              if (blockedDurationMs >= 5000 && !isJammedRef.current) {
+                // Đã đứng yên / che khuất liên tục quá 5 giây -> Kích hoạt cảnh báo kẹt phôi
+                itemsInZoneA[0].isJammed = true;
+                setIsRunning(false);
+                isRunningRef.current = false;
+                setTelemetry((prev) => ({ ...prev, conveyor_running: false, s2_sorter1: true }));
+                onPublishCommandRef.current?.("STOP");
+
+                onJamDetectedRef.current?.({
+                  event: "jam_detected",
+                  section: "Conveyor_Belt_Zone_A",
+                  duration_seconds: 5,
+                  sensor_id: "OPTICAL_JAM_02",
+                  mode: "simulation",
+                  timestamp: new Date().toISOString(),
+                });
+              }
+            }
+          } else {
+            // Băng tải đang dừng chủ động (STOP/PAUSE), không phải lỗi kẹt phôi
+            sensor2BlockedSinceRef.current = null;
+          }
         }
       }
 
@@ -271,9 +281,18 @@ export function useConveyorPhysics({
                 updatedItems.push(item);
                 continue;
               } else {
-                // KHAY 1 ĐÃ ĐẦY ĐỊNH MỨC -> Phôi bị tắc ứ trước máng gạt
-                item.progress = 45;
-                (item as { isBlockedByFullBin?: boolean }).isBlockedByFullBin = true;
+                // KHAY 1 ĐÃ ĐẦY ĐỊNH MỨC -> Dừng băng tải bảo vệ phôi mẫu, giữ nguyên toàn bộ phôi trên băng
+                item.progress = 44;
+                updatedItems.push(item);
+                for (let j = i + 1; j < currentItems.length; j++) {
+                  updatedItems.push(currentItems[j]);
+                }
+                setIsRunning(false);
+                isRunningRef.current = false;
+                setTelemetry((prev) => ({ ...prev, conveyor_running: false }));
+                onPublishCommandRef.current?.("STOP");
+                onBinFullDetectedRef.current?.(1);
+                break;
               }
             }
           }
@@ -302,23 +321,52 @@ export function useConveyorPhysics({
                 updatedItems.push(item);
                 continue;
               } else {
-                // KHAY 2 ĐÃ ĐẦY ĐỊNH MỨC -> Phôi bị tắc ứ trước máng gạt
-                item.progress = 72;
-                (item as { isBlockedByFullBin?: boolean }).isBlockedByFullBin = true;
+                // KHAY 2 ĐÃ ĐẦY ĐỊNH MỨC -> Dừng băng tải bảo vệ phôi mẫu, giữ nguyên toàn bộ phôi trên băng
+                item.progress = 71;
+                updatedItems.push(item);
+                for (let j = i + 1; j < currentItems.length; j++) {
+                  updatedItems.push(currentItems[j]);
+                }
+                setIsRunning(false);
+                isRunningRef.current = false;
+                setTelemetry((prev) => ({ ...prev, conveyor_running: false }));
+                onPublishCommandRef.current?.("STOP");
+                onBinFullDetectedRef.current?.(2);
+                break;
               }
             }
           }
 
           // End of belt / Default Bin 3 (96%)
           if (item.progress >= 96 && !item.sorted) {
-            item.sorted = true;
-            onItemSortedRef.current?.(item, 3);
-            continue;
+            const currentCounts = isSimulationRef.current ? simBinCountsRef.current : realBinCountsRef.current;
+            const capacities = binCapacitiesRef?.current || { bin1: 50, bin2: 50, bin3: 50 };
+            const cap3 = capacities.bin3 || 50;
+            const count3 = currentCounts.bin3 || 0;
+
+            if (count3 < cap3) {
+              item.sorted = true;
+              onItemSortedRef.current?.(item, 3);
+              continue;
+            } else {
+              // KHAY 3 ĐÃ ĐẦY ĐỊNH MỨC -> Dừng băng tải bảo vệ phôi mẫu, giữ nguyên toàn bộ phôi trên băng
+              item.progress = 95;
+              updatedItems.push(item);
+              for (let j = i + 1; j < currentItems.length; j++) {
+                updatedItems.push(currentItems[j]);
+              }
+              setIsRunning(false);
+              isRunningRef.current = false;
+              setTelemetry((prev) => ({ ...prev, conveyor_running: false }));
+              onPublishCommandRef.current?.("STOP");
+              onBinFullDetectedRef.current?.(3);
+              break;
+            }
           }
 
           if (item.progress < 100) updatedItems.push(item);
         }
-        
+
         // Cập nhật DOM ảo (React state) với tần số thấp hơn (30fps) để giảm overhead. 
         // 1000 / 30fps ~ 33ms
         if (!lastRenderTimeRef.current || time - lastRenderTimeRef.current > 33) {
@@ -334,7 +382,10 @@ export function useConveyorPhysics({
 
     animFrameRef.current = requestAnimationFrame(loop);
     return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (animFrameRef.current !== null) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
       // BUG-03: Cleanup all tracked timeouts on unmount
       timeoutIdsRef.current.forEach((id) => clearTimeout(id));
       timeoutIdsRef.current = [];

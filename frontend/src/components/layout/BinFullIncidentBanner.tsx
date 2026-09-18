@@ -56,15 +56,15 @@ export const BinFullIncidentBanner: React.FC<BinFullIncidentBannerProps> = ({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1 rounded-md bg-black/30 px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-yellow-200 border border-yellow-300/40">
-                <AlertTriangle className="h-3.5 w-3.5" /> BIN FULL (100%)
+                <AlertTriangle className="h-3.5 w-3.5" /> Đầy khay (100%)
               </span>
               <span className="text-xs font-mono opacity-90">
-                {timeStr} • {incident?.mode === "simulation" ? "🧪 Chế độ Giả lập" : "🔴 Phần cứng thực tế"} • Đạt {count}/{max} SP
+                {timeStr} • {incident?.mode === "simulation" ? "Mô phỏng" : "Thực tế"} • Đạt {count}/{max} SP
               </span>
             </div>
 
             <h3 className="text-sm sm:text-base font-black tracking-tight text-white drop-shadow-sm">
-              [ĐẦY KHAY CHỨA] Khay phân loại sản phẩm {binLabel} đã đạt giới hạn {count}/{max} cái. Vui lòng thay thế khay rỗng mới!
+              [Đầy khay chứa] Khay phân loại {binLabel} đã đạt giới hạn {count}/{max}. Vui lòng thay khay mới.
             </h3>
           </div>
         </div>
@@ -76,7 +76,7 @@ export const BinFullIncidentBanner: React.FC<BinFullIncidentBannerProps> = ({
             className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-black text-amber-900 hover:bg-yellow-50 active:scale-95 transition-all shadow-md hover:shadow-lg uppercase tracking-wider cursor-pointer"
           >
             <PackageCheck className="h-4 w-4 text-amber-600" />
-            <span>Xác nhận đã thay khay mới</span>
+            <span>Đã thay khay mới</span>
           </button>
         </div>
       </div>

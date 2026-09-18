@@ -188,10 +188,10 @@ export const CalendarWidget = React.memo(function CalendarWidget({
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-              Bộ Lọc Thống Kê Ngày
+              Lịch thống kê
             </h3>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Chọn ngày để xem thống kê & lịch sử
+              Chọn ngày để xem chi tiết
             </p>
           </div>
         </div>
@@ -279,7 +279,7 @@ export const CalendarWidget = React.memo(function CalendarWidget({
         <div className="flex items-center justify-between gap-2 border-b border-slate-200/60 pb-2.5 dark:border-white/[0.05]">
           <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-white">
             <BarChart2 className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
-            <span>Thống Kê Ngày: {selectedDisplay}</span>
+            <span>Thống kê ngày: {selectedDisplay}</span>
             {isSelectedToday && (
               <span className="rounded-md bg-indigo-600 text-white dark:bg-cyan-500 dark:text-slate-950 px-1.5 py-0.2 text-[9px] font-black uppercase">
                 Hôm nay
@@ -381,7 +381,7 @@ export const CalendarWidget = React.memo(function CalendarWidget({
           title={`Xem bảng lịch sử chi tiết của ngày ${selectedDisplay}`}
         >
           <History className="h-3.5 w-3.5" />
-          <span>Xem Lịch Sử Ngày {selectedDisplay}</span>
+          <span>Xem lịch sử ngày {selectedDisplay}</span>
           <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>

@@ -53,7 +53,7 @@ export const JamUnlockToast: React.FC<JamUnlockToastProps> = ({
           <div className="flex-1">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black uppercase tracking-wider text-amber-400">
-                ⚠️ CẢNH BÁO KẸT PHÔI TRÊN BĂNG TẢI
+                Cảnh báo kẹt phôi
               </span>
               <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-300 border border-rose-500/40">
                 CRITICAL
@@ -75,7 +75,7 @@ export const JamUnlockToast: React.FC<JamUnlockToastProps> = ({
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 via-rose-600 to-amber-600 hover:from-amber-500 hover:to-rose-500 py-2.5 px-4 text-xs font-extrabold uppercase tracking-wider text-white shadow-lg hover:shadow-amber-500/30 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
               >
                 <Wrench className="h-4 w-4" />
-                <span>Tôi đã gỡ kẹt phôi / Khởi động lại</span>
+                <span>Gỡ kẹt & khởi động lại</span>
               </button>
             </div>
           </div>
@@ -91,7 +91,7 @@ export const JamUnlockToast: React.FC<JamUnlockToastProps> = ({
                 <Wrench className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">Xác Nhận Đã Gỡ Kẹt Phôi Hiện Trường</h3>
+                <h3 className="text-sm font-bold text-white">Xác nhận đã gỡ kẹt phôi</h3>
                 <p className="text-xs text-slate-400">Kiểm tra vật cản trước khi cấp quyền chạy lại băng chuyền</p>
               </div>
             </div>
@@ -117,7 +117,7 @@ export const JamUnlockToast: React.FC<JamUnlockToastProps> = ({
                 disabled={isClearing}
                 className="rounded-xl border border-white/[0.08] bg-slate-800/80 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700 transition-all cursor-pointer"
               >
-                Hủy Bỏ
+                Hủy
               </button>
               <button
                 type="button"
@@ -126,7 +126,7 @@ export const JamUnlockToast: React.FC<JamUnlockToastProps> = ({
                 className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-4 py-2 text-xs font-bold text-white shadow-md active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
               >
                 <ShieldCheck className="h-4 w-4" />
-                <span>{isClearing ? "Đang xử lý..." : "Xác Nhận & Khởi Động Lại"}</span>
+                <span>{isClearing ? "Đang xử lý..." : "Xác nhận & khởi động lại"}</span>
               </button>
             </div>
           </div>

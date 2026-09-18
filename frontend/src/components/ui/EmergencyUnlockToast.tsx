@@ -28,8 +28,9 @@ export const EmergencyUnlockToast: React.FC<EmergencyUnlockToastProps> = ({
   const triggeredBy = incident?.triggered_by || "Physical E-Stop Button #1";
 
   const handleConfirmUnlock = async () => {
+    if (!isAdmin || !safetyNote.trim()) return;
     setIsUnlocking(true);
-    const success = await onUnlock(safetyNote || "Đã xác nhận kiểm tra an toàn hiện trường.");
+    const success = await onUnlock(safetyNote.trim());
     setIsUnlocking(false);
     if (success) {
       setShowConfirmModal(false);
@@ -55,7 +56,7 @@ export const EmergencyUnlockToast: React.FC<EmergencyUnlockToastProps> = ({
           <div className="flex-1">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black uppercase tracking-wider text-rose-400">
-                🚨 SỰ CỐ DỪNG KHẨN CẤP
+                Sự cố dừng khẩn cấp
               </span>
               <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-300 border border-rose-500/40">
                 CRITICAL
@@ -74,7 +75,7 @@ export const EmergencyUnlockToast: React.FC<EmergencyUnlockToastProps> = ({
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 py-2.5 px-4 text-xs font-extrabold uppercase tracking-wider text-white shadow-lg hover:shadow-emerald-500/30 active:scale-95 transition-all disabled:opacity-50"
                 >
                   <ShieldCheck className="h-4 w-4" />
-                  <span>Tôi đã kiểm tra an toàn / Mở khóa hệ thống</span>
+                  <span>Kiểm tra an toàn & mở khóa</span>
                 </button>
               ) : (
                 <div className="rounded-xl border border-rose-500/30 bg-rose-950/40 p-2.5 text-center">
@@ -101,7 +102,7 @@ export const EmergencyUnlockToast: React.FC<EmergencyUnlockToastProps> = ({
                 <Key className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">Xác Nhận Mở Khóa An Toàn (Admin)</h3>
+                <h3 className="text-sm font-bold text-white">Xác nhận mở khóa (Admin)</h3>
                 <p className="text-xs text-slate-400">Kiểm tra hiện trường trước khi cấp quyền chạy lại</p>
               </div>
             </div>
@@ -135,16 +136,16 @@ export const EmergencyUnlockToast: React.FC<EmergencyUnlockToastProps> = ({
                 disabled={isUnlocking}
                 className="rounded-xl border border-white/[0.08] bg-slate-800/80 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700 transition-all"
               >
-                Hủy Bỏ
+                Hủy
               </button>
               <button
                 type="button"
                 onClick={handleConfirmUnlock}
-                disabled={isUnlocking}
+                disabled={isUnlocking || !safetyNote.trim()}
                 className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-xs font-bold text-white shadow-md active:scale-95 transition-all disabled:opacity-50"
               >
                 <ShieldCheck className="h-4 w-4" />
-                <span>{isUnlocking ? "Đang mở khóa..." : "Xác Nhận Mở Khóa Ngay"}</span>
+                <span>{isUnlocking ? "Đang mở khóa..." : "Mở khóa ngay"}</span>
               </button>
             </div>
           </div>

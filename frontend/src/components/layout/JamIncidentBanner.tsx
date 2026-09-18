@@ -46,18 +46,18 @@ export const JamIncidentBanner: React.FC<JamIncidentBannerProps> = ({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1 rounded-md bg-black/30 px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-yellow-300 border border-yellow-300/40">
-                <ShieldAlert className="h-3.5 w-3.5" /> JAM DETECTED
+                <ShieldAlert className="h-3.5 w-3.5" /> Kẹt phôi
               </span>
               <span className="text-xs font-mono opacity-90">
-                {timeStr} • {incident?.mode === "simulation" ? "🧪 Chế độ Giả lập" : "🔴 Phần cứng thực tế"} • Cản liên tục {duration}s
+                {timeStr} • {incident?.mode === "simulation" ? "Mô phỏng" : "Thực tế"} • Cản liên tục {duration}s
               </span>
             </div>
 
             <h3 className="text-sm sm:text-base font-black tracking-tight text-white drop-shadow-sm uppercase">
-              [CẢNH BÁO KẸT PHÔI] PHÁT HIỆN TẮC NGHẼN SẢN PHẨM TẠI KHU VỰC BĂNG CHUYỀN A ({sensorId})!
+              [Cảnh báo kẹt phôi] Phát hiện tắc nghẽn sản phẩm tại khu vực băng chuyền A ({sensorId})!
             </h3>
             <p className="text-xs text-rose-100 font-medium">
-              Vị trí: <span className="font-bold underline">{section}</span>. Băng chuyền đã tự động dừng khẩn để bảo vệ thiết bị.
+              Vị trí: <span className="font-bold underline">{section}</span>. Băng tải đã tự động dừng khẩn để bảo vệ thiết bị.
             </p>
           </div>
         </div>
@@ -69,7 +69,7 @@ export const JamIncidentBanner: React.FC<JamIncidentBannerProps> = ({
             className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-black text-rose-700 hover:bg-rose-50 active:scale-95 transition-all shadow-md hover:shadow-lg uppercase tracking-wider cursor-pointer"
           >
             <Wrench className="h-4 w-4 text-rose-600" />
-            <span>Gỡ Kẹt Phôi & Tiếp Tục</span>
+            <span>Gỡ kẹt & tiếp tục</span>
           </button>
         </div>
       </div>

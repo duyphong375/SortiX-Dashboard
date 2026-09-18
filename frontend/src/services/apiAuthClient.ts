@@ -1,5 +1,10 @@
-import { AuthUser, MOCK_USERS, DEMO_PASSWORDS } from "@/lib/permissions";
+import bcrypt from "bcryptjs";
+import { AuthUser, MOCK_USERS } from "@/lib/permissions";
 import { RegisterInput, SafeUser } from "@shared/types";
+import { fetchWithTimeout } from "./apiFetch";
+
+const DEFAULT_DEMO_PASSWORD_HASH = "$2b$10$pPw2AmBT1scTY5wU5cmpb.iLoWJZDwaVaGTxb0iT/diTyE2GKpECO";
+const fallbackPasswordHashes = new Map<string, string>();
 
 export const ApiAuthClient = {
   /**
@@ -15,7 +20,7 @@ export const ApiAuthClient = {
 
     // 1. Thử gọi qua API route (/api/auth/login)
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetchWithTimeout("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier: trimmed, password }),
@@ -32,6 +37,7 @@ export const ApiAuthClient = {
           role: backendUser.role,
           avatar: "",
           loginTime: new Date().toISOString(),
+          sessionToken: data.data.token,
         };
         return { success: true, user: authUser, token: data.data.token, message: data.message };
       }
@@ -41,10 +47,10 @@ export const ApiAuthClient = {
       }
     } catch {
       // 2. Thử gọi backend độc lập nếu API route chưa sẵn sàng
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL;
+      const backendUrl = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL)?.replace(/\/$/, "");
       if (backendUrl) {
         try {
-          const res = await fetch(`${backendUrl}/api/auth/login`, {
+          const res = await fetchWithTimeout(`${backendUrl}/api/auth/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ identifier: trimmed, password }),
@@ -60,6 +66,7 @@ export const ApiAuthClient = {
               role: backendUser.role,
               avatar: "",
               loginTime: new Date().toISOString(),
+              sessionToken: data.data.token,
             };
             return { success: true, user: authUser, token: data.data.token, message: data.message };
           }
@@ -78,12 +85,9 @@ export const ApiAuthClient = {
     );
 
     if (demoUser) {
-      const expectedPass =
-        DEMO_PASSWORDS[demoUser.email.toLowerCase()] ||
-        DEMO_PASSWORDS[demoUser.username?.toLowerCase() || ""] ||
-        "123456";
-
-      const isMatch = password === expectedPass || password === "123456";
+      const key = demoUser.id || demoUser.email.toLowerCase();
+      const expectedHash = fallbackPasswordHashes.get(key) || DEFAULT_DEMO_PASSWORD_HASH;
+      const isMatch = await bcrypt.compare(password, expectedHash);
 
       if (isMatch) {
         return {
@@ -106,7 +110,7 @@ export const ApiAuthClient = {
   ): Promise<{ success: boolean; user?: SafeUser; message?: string }> {
     // 1. Thử gọi qua API route
     try {
-      const res = await fetch("/api/auth/register", {
+      const res = await fetchWithTimeout("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -144,8 +148,8 @@ export const ApiAuthClient = {
       };
 
       MOCK_USERS.push(newUser);
-      DEMO_PASSWORDS[trimmedMail] = payload.password;
-      DEMO_PASSWORDS[trimmedUser] = payload.password;
+      const passwordHash = await bcrypt.hash(payload.password, 12);
+      fallbackPasswordHashes.set(newUser.id || trimmedUser, passwordHash);
 
       return {
         success: true,
@@ -183,17 +187,7 @@ export const ApiAuthClient = {
         const raw = localStorage.getItem("pbl3_auth_user");
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed.role) authHeaders["x-user-role"] = parsed.role;
-          if (parsed.id) authHeaders["x-user-id"] = parsed.id;
-          const token = Buffer.from(
-            JSON.stringify({
-              id: parsed.id || "admin-001",
-              role: parsed.role || "admin",
-              username: parsed.username || "admin1",
-              issuedAt: Date.now(),
-            })
-          ).toString("base64");
-          authHeaders["Authorization"] = `Bearer ${token}`;
+          if (parsed.sessionToken) authHeaders["Authorization"] = `Bearer ${parsed.sessionToken}`;
         }
       } catch {
         // ignore
@@ -201,9 +195,9 @@ export const ApiAuthClient = {
     }
 
     // 1. Thử gọi backend Express
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+    const backendUrl = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
     try {
-      const res = await fetch(`${backendUrl}/api/user/change-password`, {
+      const res = await fetchWithTimeout(`${backendUrl}/api/user/change-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify(payload),
@@ -222,7 +216,7 @@ export const ApiAuthClient = {
 
     // 2. Gọi qua Next.js Route
     try {
-      const res = await fetch("/api/user/change-password", {
+      const res = await fetchWithTimeout("/api/user/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify(payload),

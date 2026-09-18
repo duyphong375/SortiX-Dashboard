@@ -42,7 +42,7 @@ export function ConveyorControls({
             }`}
           >
             {isRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            <span>{isRunning ? "Tạm Dừng Băng Tải" : "Khởi Động Băng Tải"}</span>
+            <span>{isRunning ? "Tạm dừng" : "Khởi động"}</span>
           </button>
 
           <button
@@ -54,7 +54,7 @@ export function ConveyorControls({
             }`}
           >
             <OctagonAlert className="h-4 w-4 text-rose-600 dark:text-rose-400" />
-            <span>{telemetry.estop_pressed ? "E-STOP ĐANG BẬT" : "DỪNG KHẨN CẤP"}</span>
+            <span>{telemetry.estop_pressed ? "E-Stop đang bật" : "Dừng khẩn E-Stop"}</span>
           </button>
         </div>
 
@@ -87,10 +87,10 @@ export function ConveyorControls({
             </span>
             <span>
               {telemetry.estop_pressed
-                ? "E-Stop Bật"
+                ? "E-Stop bật"
                 : isRunning
-                ? "Băng Tải Đang Chạy"
-                : "Tạm Dừng"}
+                ? "Đang chạy"
+                : "Tạm dừng"}
             </span>
           </span>
         </div>
@@ -100,9 +100,9 @@ export function ConveyorControls({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-2 dark:border-white/[0.06] dark:bg-[#111319]">
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <Sliders className="h-4 w-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
-          <span className="font-bold text-slate-700 dark:text-slate-300">Tốc độ Băng tải:</span>
+          <span className="font-bold text-slate-700 dark:text-slate-300">Tốc độ băng tải:</span>
           <span className="font-mono text-sm font-black text-cyan-600 dark:text-cyan-400">
-            {isBeltMoving ? `${speed}%` : "0% (Đứng yên)"}
+            {isBeltMoving ? `${speed}%` : "0% (Dừng)"}
           </span>
           <span className="font-mono text-slate-500 dark:text-slate-400 text-[11px]">
             ({linearSpeedCms} cm/s • {rollerRpm} RPM)

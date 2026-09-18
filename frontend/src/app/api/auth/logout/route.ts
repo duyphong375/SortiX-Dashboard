@@ -1,12 +1,25 @@
 import { NextResponse } from "next/server";
 import { NextUsersStore } from "@/app/api/users/store";
+import { getAuthenticatedUser } from "../session";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json().catch(() => ({}));
-    const { userId } = body;
-    if (userId && typeof userId === "string") {
-      NextUsersStore.setOnline(userId, false);
+    let user = getAuthenticatedUser(request);
+    if (!user) {
+      try {
+        const body = await request.clone().json();
+        if (body?.userId) {
+          user = NextUsersStore.findById(body.userId) || null;
+        } else if (body?.username) {
+          user = NextUsersStore.findByUsername(body.username) || null;
+        }
+      } catch {
+        // body not json
+      }
+    }
+
+    if (user) {
+      NextUsersStore.setOnline(user.id, false);
     }
     return NextResponse.json({ success: true, message: "Đăng xuất thành công" });
   } catch (error) {

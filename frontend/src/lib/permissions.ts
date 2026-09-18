@@ -11,6 +11,7 @@ export interface AuthUser {
   avatar: string;
   email: string;
   loginTime: string;
+  sessionToken?: string;
 }
 
 // Danh sách tất cả quyền hành động trong hệ thống
@@ -104,36 +105,36 @@ export const MOCK_USERS: AuthUser[] = [
     id: "admin-001",
     username: "admin1",
     role: "admin",
-    displayName: "Quản trị viên Hệ thống 1",
+    displayName: "Nguyễn Tá Duy Phong",
     avatar: "",
-    email: "admin1@system.local",
+    email: "admin1@gmail.com",
     loginTime: "",
   },
   {
     id: "admin-002",
     username: "admin2",
     role: "admin",
-    displayName: "Quản trị viên Hệ thống 2",
+    displayName: "Nguyễn Nhật Minh",
     avatar: "",
-    email: "admin2@system.local",
+    email: "admin2@gmail.com",
     loginTime: "",
   },
   {
     id: "admin-003",
     username: "admin3",
     role: "admin",
-    displayName: "Quản trị viên Hệ thống 3",
+    displayName: "Trần Đăng Lợi",
     avatar: "",
-    email: "admin3@system.local",
+    email: "admin3@gmail.com",
     loginTime: "",
   },
   {
     id: "admin-004",
     username: "admin4",
     role: "admin",
-    displayName: "Quản trị viên Hệ thống 4",
+    displayName: "Nguyễn Đình Anh Tuấn",
     avatar: "",
-    email: "admin4@system.local",
+    email: "admin4@gmail.com",
     loginTime: "",
   },
   {
@@ -146,6 +147,15 @@ export const MOCK_USERS: AuthUser[] = [
     loginTime: "",
   },
   {
+    id: "usr-1789661442408-kwp0",
+    username: "duyphong",
+    role: "user",
+    displayName: "duyphong",
+    avatar: "",
+    email: "duyphong@gmail.com",
+    loginTime: "",
+  },
+  {
     id: "usr-demo-001",
     username: "operator",
     role: "user",
@@ -155,28 +165,6 @@ export const MOCK_USERS: AuthUser[] = [
     loginTime: "",
   },
 ];
-
-// Mật khẩu dự phòng demo cục bộ khi backend offline
-export const DEMO_PASSWORDS: Record<string, string> = {
-  "admin@pbl3.local": "123456",
-  "admin": "123456",
-  "admin1@system.local": "123456",
-  "admin1@gmail.com": "123456",
-  "admin1": "123456",
-  "admin2@system.local": "123456",
-  "admin2@gmail.com": "123456",
-  "admin2": "123456",
-  "admin3@system.local": "123456",
-  "admin3@gmail.com": "123456",
-  "admin3": "123456",
-  "admin4@system.local": "123456",
-  "admin4@gmail.com": "123456",
-  "admin4": "123456",
-  "duyphong@gmail.com": "123456",
-  "duyphong": "123456",
-  "operator@pbl3.local": "123456",
-  "operator": "123456",
-};
 
 // Sidebar menu items cấu hình
 export interface SidebarMenuItem {
@@ -196,26 +184,26 @@ export interface SidebarMenuGroup {
 
 export const SIDEBAR_MENU: SidebarMenuGroup[] = [
   {
-    groupLabel: "TỔNG QUAN",
+    groupLabel: "Tổng quan",
     items: [
-      { id: "dashboard", label: "Tổng Quan", icon: "LayoutDashboard", href: "/" },
-      { id: "analytics", label: "Thống Kê", icon: "BarChart3", href: "/analytics" },
+      { id: "dashboard", label: "Tổng quan", icon: "LayoutDashboard", href: "/" },
+      { id: "analytics", label: "Thống kê", icon: "BarChart3", href: "/analytics" },
     ],
   },
   {
-    groupLabel: "VẬN HÀNH",
+    groupLabel: "Vận hành",
     items: [
-      { id: "conveyor", label: "Băng Tải", icon: "Layers", href: "/conveyor" },
-      { id: "history", label: "Lịch Sử", icon: "History", href: "/history" },
-      { id: "alerts", label: "Cảnh Báo", icon: "Bell", href: "/alerts" },
+      { id: "conveyor", label: "Băng tải", icon: "Layers", href: "/conveyor" },
+      { id: "history", label: "Lịch sử", icon: "History", href: "/history" },
+      { id: "alerts", label: "Cảnh báo", icon: "Bell", href: "/alerts" },
     ],
   },
   {
-    groupLabel: "HỆ THỐNG",
+    groupLabel: "Hệ thống",
     items: [
-      { id: "config", label: "Cấu Hình", icon: "SlidersHorizontal", href: "/config", requiredPermission: "config.view" },
-      { id: "devices", label: "MQTT & IoT", icon: "Cpu", href: "/devices", requiredPermission: "devices.view" },
-      { id: "users", label: "Người Dùng", icon: "Users", href: "/users", requiredPermission: "users.view" },
+      { id: "config", label: "Cấu hình", icon: "SlidersHorizontal", href: "/config", requiredPermission: "config.view" },
+      { id: "devices", label: "Thiết bị & IoT", icon: "Cpu", href: "/devices", requiredPermission: "devices.view" },
+      { id: "users", label: "Người dùng", icon: "Users", href: "/users", requiredPermission: "users.view" },
     ],
   },
 ];

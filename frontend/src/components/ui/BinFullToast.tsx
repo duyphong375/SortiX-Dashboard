@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Package, CheckCircle2, AlertTriangle, RotateCcw, Boxes } from "lucide-react";
+import { Package, CheckCircle2, Boxes } from "lucide-react";
 import { BinFullPayload } from "@shared/types";
 
 interface BinFullToastProps {
@@ -72,7 +72,7 @@ export const BinFullToast: React.FC<BinFullToastProps> = ({
           <div className="flex items-center justify-between">
             <span className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
               <Package className="h-3.5 w-3.5" />
-              ĐẦY KHAY CHỨA PHÂN LOẠI
+              Đầy khay phân loại
             </span>
             <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-300 border border-amber-500/40">
               WARNING
@@ -80,14 +80,14 @@ export const BinFullToast: React.FC<BinFullToastProps> = ({
           </div>
 
           <p className="mt-1.5 text-xs font-bold text-slate-100 leading-snug">
-            [ĐẦY KHAY CHỨA] Khay phân loại sản phẩm <strong className="text-amber-300">{binLabel}</strong> đã đạt giới hạn <span className="font-mono text-amber-400 font-black">{count}/{max}</span> cái. Vui lòng thay thế khay rỗng mới.
+            [Đầy khay chứa] Khay phân loại <strong className="text-amber-300">{binLabel}</strong> đã đạt giới hạn <span className="font-mono text-amber-400 font-black">{count}/{max}</span> cái. Vui lòng thay thế khay rỗng mới.
           </p>
 
           {/* Thanh tiến trình 100% nhấp nháy màu vàng cam */}
           <div className="mt-2 space-y-1">
             <div className="flex items-center justify-between text-[10px] font-mono text-amber-300/90 font-semibold">
-              <span>Tiến độ dung lượng khay:</span>
-              <span className="font-black text-amber-400">100% ĐẦY</span>
+              <span>Dung lượng khay:</span>
+              <span className="font-black text-amber-400">100% đầy</span>
             </div>
             <div className="h-2 w-full rounded-full bg-slate-800 border border-amber-500/30 overflow-hidden">
               <div
@@ -105,7 +105,7 @@ export const BinFullToast: React.FC<BinFullToastProps> = ({
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-400 hover:to-yellow-400 py-2.5 px-4 text-xs font-black uppercase tracking-wider text-slate-950 shadow-lg hover:shadow-amber-500/30 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
             >
               <CheckCircle2 className="h-4 w-4" />
-              <span>Xác nhận đã thay khay mới</span>
+              <span>Đã thay khay mới</span>
             </button>
           </div>
         </div>

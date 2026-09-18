@@ -23,7 +23,7 @@ function HistoryPageContent() {
       {!canDelete && (
         <div className="mb-3 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs font-medium text-amber-600 dark:text-amber-400">
           <ShieldAlert className="h-4 w-4 shrink-0" />
-          <span>Bạn chỉ có quyền xem và xuất CSV — Xóa lịch sử cần quyền Admin</span>
+          <span>Chỉ có quyền xem và xuất CSV — Xóa lịch sử yêu cầu quyền quản trị viên</span>
         </div>
       )}
       <HistoryTable
@@ -40,7 +40,7 @@ export default function HistoryPage() {
     <Suspense
       fallback={
         <div className="min-h-[300px] flex items-center justify-center text-xs font-medium text-slate-400">
-          Đang tải nhật ký lịch sử phân loại...
+          Đang tải lịch sử phân loại...
         </div>
       }
     >

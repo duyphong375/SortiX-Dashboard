@@ -54,6 +54,7 @@ export default function DashboardPage() {
   // Nhãn phân loại theo từng máng
   const bin1Brands = sorterConfig?.bins?.[0]?.brand_ids || [];
   const bin2Brands = sorterConfig?.bins?.[1]?.brand_ids || [];
+  const bin3Brands = sorterConfig?.bins?.[2]?.brand_ids || [];
 
   return (
     <div className="space-y-6 page-transition-enter pb-6">
@@ -85,6 +86,7 @@ export default function DashboardPage() {
             binCounts={binCounts}
             bin1Brands={bin1Brands}
             bin2Brands={bin2Brands}
+            bin3Brands={bin3Brands}
             handleToggleRun={handleToggleRun}
             handleEmergencyStop={handleEmergencyStop}
             isDeviceOffline={isDeviceOffline}

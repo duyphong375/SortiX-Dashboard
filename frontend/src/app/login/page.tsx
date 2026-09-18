@@ -16,7 +16,7 @@ import {
   CheckCircle2,
   ArrowRight,
 } from "lucide-react";
-import { UserRole, MOCK_USERS, DEMO_PASSWORDS } from "@/lib/permissions";
+import { UserRole } from "@/lib/permissions";
 import { useToast } from "@/components/ui/Toast";
 import { ForgotPasswordModal } from "@/components/ui/ForgotPasswordModal";
 
@@ -100,8 +100,8 @@ export default function LoginPage() {
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
 
   // Form Đăng nhập
-  const [email, setEmail] = useState("admin1");
-  const [password, setPassword] = useState("123456");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
@@ -128,7 +128,7 @@ export default function LoginPage() {
   const handleRoleLogin = (role: UserRole) => {
     setErrorMsg(null);
     login(role);
-    toast.success(`Đăng nhập thành công với quyền ${role === "admin" ? "Quản trị viên (Admin)" : "Khách hàng / Vận hành (User)"}`);
+    toast.success(`Đăng nhập thành công với quyền ${role === "admin" ? "quản trị viên" : "người dùng"}`);
     router.push("/");
   };
 
@@ -254,7 +254,7 @@ export default function LoginPage() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
             </span>
-            <span className="text-xs font-semibold text-emerald-800">Online</span>
+            <span className="text-xs font-semibold text-emerald-800">Trực tuyến</span>
           </div>
         </div>
 
@@ -274,7 +274,7 @@ export default function LoginPage() {
                   : "text-slate-500 hover:text-slate-900"
               }`}
             >
-              Đăng Nhập
+              Đăng nhập
             </button>
             <button
               type="button"
@@ -288,7 +288,7 @@ export default function LoginPage() {
                   : "text-slate-500 hover:text-slate-900"
               }`}
             >
-              Đăng Ký Tài Khoản
+              Đăng ký
             </button>
           </div>
 
@@ -298,8 +298,8 @@ export default function LoginPage() {
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
               {authMode === "login"
-                ? "Nhập tài khoản để truy cập hệ thống phân loại SortiX."
-                : "Tài khoản đăng ký mới sẽ được thiết lập vai trò Người Dùng (User)."}
+                ? "Nhập thông tin để truy cập hệ thống phân loại SortiX."
+                : "Tài khoản đăng ký mới sẽ được thiết lập vai trò Người dùng."}
             </p>
           </div>
 
@@ -331,7 +331,7 @@ export default function LoginPage() {
                       if (errorMsg) setErrorMsg(null);
                     }}
                     className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 shadow-2xs transition-all focus:border-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-                    placeholder="admin1 hoặc admin1@gmail.com"
+                    placeholder="Nhập tên đăng nhập hoặc email"
                     required
                   />
                 </div>
@@ -518,7 +518,7 @@ export default function LoginPage() {
 
               <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                <span>Vai trò mặc định sau khi tạo: <b>Người Dùng (User)</b></span>
+                <span>Vai trò mặc định sau khi tạo: <b>Người dùng</b></span>
               </div>
 
               <button
@@ -540,7 +540,7 @@ export default function LoginPage() {
             <div className="relative flex items-center justify-center mb-3">
               <div className="w-full border-t border-slate-100"></div>
               <span className="absolute bg-white px-3 text-xs text-slate-400">
-                Hoặc thử nghiệm nhanh vai trò
+                Hoặc chọn nhanh vai trò
               </span>
             </div>
 
@@ -548,27 +548,23 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setEmail("admin1");
-                  setPassword("123456");
                   handleRoleLogin("admin");
                 }}
                 className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-100/80 py-2.5 px-3 text-xs font-semibold text-slate-800 transition-all hover:bg-slate-200 active:scale-[0.99] cursor-pointer"
               >
                 <Shield className="h-3.5 w-3.5 text-purple-600" />
-                <span>Admin (admin1 / 123456)</span>
+                <span>Quản trị viên</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => {
-                  setEmail("duyphong");
-                  setPassword("123456");
                   handleRoleLogin("user");
                 }}
                 className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-100/80 py-2.5 px-3 text-xs font-semibold text-slate-800 transition-all hover:bg-slate-200 active:scale-[0.99] cursor-pointer"
               >
                 <Wrench className="h-3.5 w-3.5 text-emerald-600" />
-                <span>User (duyphong / 123456)</span>
+                <span>Người dùng</span>
               </button>
             </div>
           </div>
@@ -593,11 +589,11 @@ export default function LoginPage() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50/90 px-3.5 py-1 text-xs font-bold text-emerald-800 shadow-2xs">
               <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
-              <span>PHIÊN BẢN HỆ THỐNG V3.2 • IOT &amp; AI VISION</span>
+              <span>Hệ thống SortiX v3.2 • IoT &amp; AI Vision</span>
             </div>
 
             <h2 className="text-2xl xl:text-3xl font-extrabold tracking-tight text-slate-900 mt-3 leading-tight">
-              Hệ Thống Phân Loại Thông Minh SortiX
+              Hệ thống phân loại thông minh SortiX
             </h2>
 
             <p className="text-sm text-slate-600 mt-2 leading-relaxed">
@@ -610,14 +606,14 @@ export default function LoginPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/smart_sorter_hero.jpg"
-                alt="Hệ Thống Phân Loại Sản Phẩm Tự Động 3D Hero"
+                alt="Hệ thống phân loại sản phẩm tự động"
                 className="w-full h-auto max-h-[480px] xl:max-h-[540px] object-cover transition-transform duration-700 group-hover:scale-[1.03]"
               />
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/30 via-transparent to-transparent opacity-60 group-hover:opacity-20 transition-opacity" />
 
               <div className="absolute top-3.5 right-3.5 flex items-center gap-1.5 rounded-full bg-slate-900/80 backdrop-blur-md px-3.5 py-1 border border-white/20 text-[11px] font-semibold text-white shadow-sm">
                 <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>AI Vision Scanning Active</span>
+                <span>Thị giác AI đang quét</span>
               </div>
             </div>
           </div>

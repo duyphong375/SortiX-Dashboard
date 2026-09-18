@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { WifiOff, Radio, CheckCircle2, RotateCcw, AlertOctagon, ServerOff } from "lucide-react";
+import { WifiOff, CheckCircle2, RotateCcw, ServerOff } from "lucide-react";
 import { DeviceOfflinePayload } from "@shared/types";
 
 interface DeviceOfflineToastProps {
@@ -71,7 +71,7 @@ export const DeviceOfflineToast: React.FC<DeviceOfflineToastProps> = ({
           <div className="flex items-center justify-between">
             <span className="text-xs font-black uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
               <ServerOff className="h-3.5 w-3.5" />
-              MẤT KẾT NỐI THIẾT BỊ
+              Mất kết nối thiết bị
             </span>
             <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-300 border border-rose-500/40">
               ERROR
@@ -117,7 +117,7 @@ export const DeviceOfflineToast: React.FC<DeviceOfflineToastProps> = ({
                 title="Khôi phục lại luồng Heartbeat ảo mô phỏng"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
-                <span>Kết nối lại (Sim)</span>
+                <span>Kết nối lại (Mô phỏng)</span>
               </button>
             )}
           </div>

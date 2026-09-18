@@ -10,6 +10,9 @@ export interface QuickFeedBarProps {
   telemetry: TelemetryData;
   onSpawnPackage: (brandKey?: string) => void;
   onGenerateDemoData?: () => void;
+  bin1Brands?: string[];
+  bin2Brands?: string[];
+  bin3Brands?: string[];
 }
 
 export function QuickFeedBar({
@@ -18,16 +21,26 @@ export function QuickFeedBar({
   telemetry,
   onSpawnPackage,
   onGenerateDemoData,
+  bin1Brands,
+  bin2Brands,
 }: QuickFeedBarProps) {
   if (!isSimulation) return null;
 
   const isDisabled = !isRunning || telemetry.estop_pressed;
 
+  const getBrandTargetBinName = (brandKey: string) => {
+    if (bin1Brands?.includes(brandKey)) return "Khay 1";
+    if (bin2Brands?.includes(brandKey)) return "Khay 2";
+    return "Khay 3";
+  };
+
+  const hasBinConfig = (bin1Brands && bin1Brands.length > 0) || (bin2Brands && bin2Brands.length > 0);
+
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 rounded-xl border border-slate-200 bg-slate-50/80 p-2.5 transition-all duration-300 dark:border-white/[0.06] dark:bg-[#111319]">
       <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">
         <Box className="h-4 w-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
-        <span>Nạp nhanh vật mẫu lên băng tải (Mô phỏng):</span>
+        <span>Nạp mẫu vật (Mô phỏng):</span>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -38,7 +51,7 @@ export function QuickFeedBar({
           className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-1.5 text-xs font-bold text-red-700 transition-all hover:bg-red-100 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
           title="Thả Lon Coca-Cola"
         >
-          <span>🔴 Lon Coca-Cola</span>
+          <span>Lon Coca-Cola{hasBinConfig ? ` (${getBrandTargetBinName("brand_c")})` : ""}</span>
         </button>
 
         {/* Pepsi */}
@@ -48,7 +61,7 @@ export function QuickFeedBar({
           className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-1.5 text-xs font-bold text-blue-700 transition-all hover:bg-blue-100 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-400 dark:hover:bg-blue-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
           title="Thả Lon Pepsi"
         >
-          <span>🔵 Lon Pepsi</span>
+          <span>Lon Pepsi{hasBinConfig ? ` (${getBrandTargetBinName("brand_a")})` : ""}</span>
         </button>
 
         {/* Red Bull */}
@@ -58,7 +71,7 @@ export function QuickFeedBar({
           className="flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-1.5 text-xs font-bold text-amber-800 transition-all hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-400 dark:hover:bg-amber-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
           title="Thả Lon Red Bull"
         >
-          <span>🟡 Lon Red Bull</span>
+          <span>Lon Red Bull{hasBinConfig ? ` (${getBrandTargetBinName("brand_b")})` : ""}</span>
         </button>
 
         {/* Aquafina */}
@@ -68,7 +81,7 @@ export function QuickFeedBar({
           className="flex items-center gap-1.5 rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-1.5 text-xs font-bold text-cyan-700 transition-all hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/15 dark:text-cyan-400 dark:hover:bg-cyan-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
           title="Thả Chai Aquafina"
         >
-          <span>🔷 Chai Aquafina</span>
+          <span>Chai Aquafina{hasBinConfig ? ` (${getBrandTargetBinName("brand_d")})` : ""}</span>
         </button>
 
         {/* Random Phôi */}
@@ -79,7 +92,7 @@ export function QuickFeedBar({
           title="Thả ngẫu nhiên một phôi"
         >
           <Sparkles className="h-3.5 w-3.5 text-purple-500" />
-          <span>🎲 Phôi ngẫu nhiên</span>
+          <span>Phôi ngẫu nhiên</span>
         </button>
 
         {/* Generate Demo Data */}
@@ -90,7 +103,7 @@ export function QuickFeedBar({
             title="Tạo dữ liệu lịch sử demo ngẫu nhiên"
           >
             <BarChart2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>📊 Tạo dữ liệu demo</span>
+            <span>Tạo dữ liệu demo</span>
           </button>
         )}
       </div>

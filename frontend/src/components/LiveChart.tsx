@@ -90,10 +90,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm sm:text-base font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                Lưu Lượng Thời Gian Thực
-                <span className="hidden sm:inline-block text-xs font-mono font-normal text-slate-400">
-                  (Real-Time Throughput Stream)
-                </span>
+                Lưu lượng thời gian thực
               </h3>
               <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
                 <span className="relative flex h-2 w-2">
@@ -104,7 +101,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({
               </div>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Dòng thời gian chạy thực tế: Tốc độ phân loại (PPM) kết hợp Tốc độ động cơ băng tải (PWM %)
+              Tốc độ phân loại (PPM) và tốc độ động cơ băng tải (PWM)
             </p>
           </div>
         </div>
@@ -290,10 +287,10 @@ export const LiveChart: React.FC<LiveChartProps> = ({
       <div className="mt-3 pt-3 border-t border-slate-200/80 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400">
         <div className="flex items-center gap-1.5">
           <Zap className="h-3.5 w-3.5 text-cyan-500 shrink-0" />
-          <span>Thu thập từ tín hiệu xung Encoder PCNT & cảm biến quang qua MQTT Telemetry ESP32-C5</span>
+          <span>Thu thập từ cảm biến và telemetry ESP32-C5</span>
         </div>
         <span className="font-mono font-semibold text-cyan-600 dark:text-cyan-400">
-          Độ trễ truyền nhận: &lt; 25ms
+          Độ trễ: &lt; 25ms
         </span>
       </div>
     </div>

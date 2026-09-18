@@ -42,6 +42,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const parsed: unknown = JSON.parse(stored);
         if (isValidStoredUser(parsed)) {
           setUser(parsed);
+          // Tự động cấp token phiên và đồng bộ thông tin mới nhất từ máy chủ
+          fetch("/api/auth/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: parsed.id,
+              username: parsed.username,
+              role: parsed.role,
+            }),
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.success) {
+                const token = data.token || parsed.sessionToken;
+                const freshName = data.user?.full_name || parsed.displayName;
+                const freshEmail = data.user?.email || parsed.email;
+                const enriched: AuthUser = {
+                  ...parsed,
+                  sessionToken: token,
+                  displayName: freshName,
+                  email: freshEmail,
+                };
+                setUser(enriched);
+                try {
+                  localStorage.setItem(STORAGE_KEY, JSON.stringify(enriched));
+                } catch {
+                  // ignore
+                }
+              }
+            })
+            .catch(() => {});
         } else {
           localStorage.removeItem(STORAGE_KEY);
         }
@@ -51,6 +82,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setIsLoaded(true);
   }, []);
+
+  // Định kỳ gửi heartbeat (mỗi 60s) để duy trì trạng thái trực tuyến và đồng bộ dữ liệu
+  useEffect(() => {
+    if (!user) return;
+
+    const sendHeartbeat = () => {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (user.sessionToken) headers["Authorization"] = `Bearer ${user.sessionToken}`;
+      if (user.id) headers["x-user-id"] = user.id;
+      if (user.role) headers["x-user-role"] = user.role;
+      if (user.username) headers["x-user-username"] = user.username;
+
+      fetch("/api/auth/heartbeat", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ userId: user.id, username: user.username }),
+      })
+        .then((res) => res.json())
+        .then((resData) => {
+          if (resData.success && resData.data) {
+            const serverUser = resData.data;
+            if (
+              serverUser.full_name &&
+              (serverUser.full_name !== user.displayName || serverUser.email !== user.email)
+            ) {
+              setUser((prev) => {
+                if (!prev || prev.id !== serverUser.id) return prev;
+                const updated: AuthUser = {
+                  ...prev,
+                  displayName: serverUser.full_name,
+                  email: serverUser.email,
+                  role: serverUser.role,
+                };
+                try {
+                  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+                } catch {}
+                return updated;
+              });
+            }
+          }
+        })
+        .catch(() => {});
+    };
+
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 60_000);
+    return () => clearInterval(interval);
+  }, [user?.id, user?.sessionToken, user?.username, user?.role]);
 
   const login = useCallback((userOrRole: UserRole | AuthUser) => {
     let authUser: AuthUser;
@@ -73,6 +152,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // In-memory session remains usable
     }
+
+    // Luôn đảm bảo có sessionToken hợp lệ
+    if (!authUser.sessionToken) {
+      fetch("/api/auth/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: authUser.id,
+          username: authUser.username,
+          role: authUser.role,
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.token) {
+            const enriched: AuthUser = {
+              ...authUser,
+              sessionToken: data.token,
+              displayName: data.user?.full_name || authUser.displayName,
+              email: data.user?.email || authUser.email,
+            };
+            setUser(enriched);
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(enriched));
+            } catch {
+              // ignore
+            }
+          }
+        })
+        .catch(() => {});
+    }
   }, []);
 
   const loginWithCredentials = useCallback(async (identifier: string, password: string) => {
@@ -94,10 +204,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     if (user?.id) {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (user.sessionToken) {
+        headers["Authorization"] = `Bearer ${user.sessionToken}`;
+      }
+      if (user.id) headers["x-user-id"] = user.id;
+      if (user.role) headers["x-user-role"] = user.role;
+      if (user.username) headers["x-user-username"] = user.username;
+
       fetch("/api/auth/logout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id }),
+        headers,
+        body: JSON.stringify({ userId: user.id, username: user.username }),
       }).catch(() => {});
     }
     setUser(null);

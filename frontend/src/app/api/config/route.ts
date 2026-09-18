@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 import { getServerConfig, updateServerConfig, resetServerConfig } from "@/services/configService";
+import { getAdminUser } from "../auth/session";
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!getAdminUser(request)) {
+    return NextResponse.json({ success: false, message: "Truy cập bị từ chối: Yêu cầu quyền Quản trị viên (Admin)" }, { status: 403 });
+  }
   const config = getServerConfig();
   return NextResponse.json({ success: true, data: config });
 }
 
 export async function POST(request: Request) {
+  if (!getAdminUser(request)) {
+    return NextResponse.json({ success: false, message: "Truy cập bị từ chối: Yêu cầu quyền Quản trị viên (Admin)" }, { status: 403 });
+  }
   try {
     const body = await request.json();
     if (body && body.action === "reset") {

@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { randomInt } from "node:crypto";
 import { UserModel, toSafeUser } from "../models/userModel";
 import {
   UpdateProfileSchema,
@@ -11,6 +12,7 @@ import {
   ResetPasswordSchema,
 } from "@shared/schemas";
 import { SafeUser } from "@shared/types";
+import { createAuthToken } from "./authToken";
 
 export interface ServiceResult<T> {
   success: boolean;
@@ -166,27 +168,16 @@ export const UserService = {
 
     // 3. Kiểm tra trạng thái tài khoản
     if (user.status === "locked") {
-      return { success: false, message: "Tài khoản hiện đang bị khóa. Vui lòng liên hệ quản trị viên." };
+      return { success: false, message: "Tài khoản hoặc mật khẩu không chính xác" };
     }
 
-    // 4. So sánh mật khẩu bằng Bcrypt hoặc plain_password hoặc mật khẩu chuẩn 123456
-    const isMatch =
-      (user.plain_password && user.plain_password === input.password) ||
-      input.password === "123456" ||
-      (await bcrypt.compare(input.password, user.password_hash));
+    // Mật khẩu chỉ được xác minh bằng Bcrypt hash đã lưu.
+    const isMatch = await bcrypt.compare(input.password, user.password_hash);
     if (!isMatch) {
       return { success: false, message: "Tài khoản hoặc mật khẩu không chính xác" };
     }
 
-    // 5. Tạo token phiên làm việc
-    const token = Buffer.from(
-      JSON.stringify({
-        id: user.id,
-        role: user.role,
-        username: user.username,
-        issuedAt: Date.now(),
-      })
-    ).toString("base64");
+    const token = createAuthToken(user);
 
     return {
       success: true,
@@ -315,11 +306,10 @@ export const UserService = {
       };
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
     UserModel.setResetOtp(user.username, otp, expiresAt);
-    console.log(`[MOCK OTP] Tài khoản ${user.username} (${user.email}) có mã OTP là: ${otp}`);
 
     return {
       success: true,

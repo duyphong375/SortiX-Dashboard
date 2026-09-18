@@ -17,13 +17,10 @@ export function RecentActivityList({ records }: RecentActivityListProps) {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-white/[0.06] px-5 py-4">
         <div>
           <h3 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-            Nhật Ký Phân Loại Mới Nhất
-            <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-mono text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-              5 SP Gần Nhất
-            </span>
+            Nhật ký gần đây
           </h3>
           <p className="text-xs font-normal text-slate-500 dark:text-slate-400 mt-0.5">
-            Sản phẩm vừa được hệ thống camera AI nhận diện và trạm servo gạt thành công
+            Sản phẩm vừa phân loại qua camera AI
           </p>
         </div>
 
@@ -31,7 +28,7 @@ export function RecentActivityList({ records }: RecentActivityListProps) {
           href="/history"
           className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 transition-colors"
         >
-          <span>Xem toàn bộ lịch sử ({records.length} SP)</span>
+          <span>Xem tất cả ({records.length} SP)</span>
           <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
@@ -42,11 +39,11 @@ export function RecentActivityList({ records }: RecentActivityListProps) {
           <thead>
             <tr className="border-b border-slate-100 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#111319] text-slate-500 dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider">
               <th className="px-5 py-3 text-left">STT</th>
-              <th className="px-5 py-3 text-left">Sản Phẩm & Mã Định Danh</th>
-              <th className="px-5 py-3 text-left">Khay Đích</th>
-              <th className="px-5 py-3 text-left">Trạng Thái</th>
-              <th className="px-5 py-3 text-left">Độ Tin Cậy</th>
-              <th className="px-5 py-3 text-right">Thời Gian</th>
+              <th className="px-5 py-3 text-left">Sản phẩm</th>
+              <th className="px-5 py-3 text-left">Khay đích</th>
+              <th className="px-5 py-3 text-left">Trạng thái</th>
+              <th className="px-5 py-3 text-left">Độ tin cậy</th>
+              <th className="px-5 py-3 text-right">Thời gian</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
@@ -54,7 +51,7 @@ export function RecentActivityList({ records }: RecentActivityListProps) {
               <tr>
                 <td colSpan={6} className="px-5 py-10 text-center text-slate-400">
                   <Package className="mx-auto mb-2 h-8 w-8 text-slate-300 dark:text-slate-700" />
-                  Chưa có sản phẩm nào được phân loại trong ca làm việc này.
+                  Chưa có sản phẩm nào trong ca làm việc.
                 </td>
               </tr>
             ) : (

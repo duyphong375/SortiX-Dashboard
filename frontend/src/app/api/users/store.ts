@@ -2,10 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import bcrypt from "bcryptjs";
 import { UserAccount, SafeUser } from "@shared/types";
-import { MOCK_USERS, DEMO_PASSWORDS, AuthUser } from "@/lib/permissions";
+import { MOCK_USERS, AuthUser } from "@/lib/permissions";
 
 export interface StoredUserAccount extends UserAccount {
-  plain_password?: string;
 }
 
 export function toSafeUser(user: StoredUserAccount): SafeUser {
@@ -27,48 +26,49 @@ const INITIAL_USERS: StoredUserAccount[] = [
   {
     id: "admin-001",
     username: "admin1",
-    full_name: "Quản trị viên Hệ thống 1",
+    full_name: "Nguyễn Tá Duy Phong",
     email: "admin1@gmail.com",
     password_hash: "$2b$10$pPw2AmBT1scTY5wU5cmpb.iLoWJZDwaVaGTxb0iT/diTyE2GKpECO",
-    plain_password: "123456",
     role: "admin",
     status: "active",
+    is_online: true,
+    last_login_at: new Date().toISOString(),
     created_at: "2026-01-10T08:00:00.000Z",
     updated_at: "2026-01-10T08:00:00.000Z",
   },
   {
     id: "admin-002",
     username: "admin2",
-    full_name: "Quản trị viên Hệ thống 2",
+    full_name: "Nguyễn Nhật Minh",
     email: "admin2@gmail.com",
     password_hash: "$2b$10$pPw2AmBT1scTY5wU5cmpb.iLoWJZDwaVaGTxb0iT/diTyE2GKpECO",
-    plain_password: "123456",
     role: "admin",
     status: "active",
+    is_online: false,
     created_at: "2026-01-12T09:30:00.000Z",
     updated_at: "2026-01-12T09:30:00.000Z",
   },
   {
     id: "admin-003",
     username: "admin3",
-    full_name: "Quản trị viên Hệ thống 3",
+    full_name: "Trần Đăng Lợi",
     email: "admin3@gmail.com",
     password_hash: "$2b$10$pPw2AmBT1scTY5wU5cmpb.iLoWJZDwaVaGTxb0iT/diTyE2GKpECO",
-    plain_password: "123456",
     role: "admin",
     status: "active",
+    is_online: false,
     created_at: "2026-01-15T10:15:00.000Z",
     updated_at: "2026-01-15T10:15:00.000Z",
   },
   {
     id: "admin-004",
     username: "admin4",
-    full_name: "Quản trị viên Hệ thống 4",
+    full_name: "Nguyễn Đình Anh Tuấn",
     email: "admin4@gmail.com",
     password_hash: "$2b$10$pPw2AmBT1scTY5wU5cmpb.iLoWJZDwaVaGTxb0iT/diTyE2GKpECO",
-    plain_password: "123456",
     role: "admin",
     status: "active",
+    is_online: false,
     created_at: "2026-01-20T14:20:00.000Z",
     updated_at: "2026-01-20T14:20:00.000Z",
   },
@@ -78,9 +78,9 @@ const INITIAL_USERS: StoredUserAccount[] = [
     full_name: "Quản trị viên hệ thống (Legacy)",
     email: "admin@pbl3.local",
     password_hash: "$2b$10$pPw2AmBT1scTY5wU5cmpb.iLoWJZDwaVaGTxb0iT/diTyE2GKpECO",
-    plain_password: "123456",
     role: "admin",
     status: "active",
+    is_online: false,
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-01T00:00:00.000Z",
   },
@@ -90,9 +90,9 @@ const INITIAL_USERS: StoredUserAccount[] = [
     full_name: "Kỹ thuật viên vận hành",
     email: "operator@pbl3.local",
     password_hash: "$2b$10$pPw2AmBT1scTY5wU5cmpb.iLoWJZDwaVaGTxb0iT/diTyE2GKpECO",
-    plain_password: "123456",
     role: "user",
     status: "active",
+    is_online: false,
     created_at: "2026-02-01T08:00:00.000Z",
     updated_at: "2026-02-01T08:00:00.000Z",
   },
@@ -123,11 +123,6 @@ function resolveStorageFilePath(): string {
 
 function syncToPermissions(users: StoredUserAccount[]) {
   for (const u of users) {
-    if (u.plain_password) {
-      DEMO_PASSWORDS[u.email.toLowerCase()] = u.plain_password;
-      DEMO_PASSWORDS[u.username.toLowerCase()] = u.plain_password;
-    }
-
     const existing = MOCK_USERS.find(
       (m) =>
         m.id === u.id ||
@@ -161,6 +156,9 @@ let lastLoadedMtimeMs = 0;
 
 function loadUsers(): StoredUserAccount[] {
   const filePath = resolveStorageFilePath();
+  const nowMs = Date.now();
+  const ONLINE_EXPIRY_MS = 15 * 60 * 1000;
+
   try {
     if (fs.existsSync(filePath)) {
       const stat = fs.statSync(filePath);
@@ -170,6 +168,11 @@ function loadUsers(): StoredUserAccount[] {
         if (Array.isArray(parsed) && parsed.length > 0) {
           let hasFixes = false;
           for (const u of parsed) {
+            const legacyRecord = u as StoredUserAccount & Record<string, unknown>;
+            if ("plain_password" in legacyRecord) {
+              delete legacyRecord.plain_password;
+              hasFixes = true;
+            }
             if (u.reset_otp === undefined) {
               u.reset_otp = null;
               hasFixes = true;
@@ -178,19 +181,10 @@ function loadUsers(): StoredUserAccount[] {
               u.reset_otp_expires_at = null;
               hasFixes = true;
             }
-            // Tự động đồng bộ: nếu người dùng chỉnh sửa plain_password trong users.json,
-            // tự động băm Bcrypt cập nhật password_hash tương ứng ngay lập tức
-            if (u.plain_password) {
-              let matches = false;
-              if (u.password_hash) {
-                try {
-                  matches = bcrypt.compareSync(u.plain_password, u.password_hash);
-                } catch {
-                  matches = false;
-                }
-              }
-              if (!matches) {
-                u.password_hash = bcrypt.hashSync(u.plain_password, 10);
+            if (u.is_online) {
+              const lastLoginMs = u.last_login_at ? new Date(u.last_login_at).getTime() : 0;
+              if (nowMs - lastLoginMs > ONLINE_EXPIRY_MS) {
+                u.is_online = false;
                 hasFixes = true;
               }
             }
@@ -212,7 +206,24 @@ function loadUsers(): StoredUserAccount[] {
           return parsed;
         }
       } else {
-        return globalAny[globalUsersKey]!;
+        const cached = globalAny[globalUsersKey]!;
+        let hasExpired = false;
+        for (const u of cached) {
+          if (u.is_online) {
+            const lastLoginMs = u.last_login_at ? new Date(u.last_login_at).getTime() : 0;
+            if (nowMs - lastLoginMs > ONLINE_EXPIRY_MS) {
+              u.is_online = false;
+              hasExpired = true;
+            }
+          }
+        }
+        if (hasExpired) {
+          try {
+            fs.writeFileSync(filePath, JSON.stringify(cached, null, 2), "utf-8");
+            lastLoadedMtimeMs = fs.statSync(filePath).mtimeMs;
+          } catch {}
+        }
+        return cached;
       }
     }
   } catch (err) {
@@ -244,7 +255,6 @@ function saveUsers(users: StoredUserAccount[]): void {
 
 export type CreateUserInput = Omit<StoredUserAccount, "id" | "created_at" | "updated_at" | "password_hash"> & {
   password_hash?: string;
-  plain_password?: string;
 };
 
 export const NextUsersStore = {
@@ -277,9 +287,7 @@ export const NextUsersStore = {
     const now = new Date().toISOString();
 
     let passwordHash = data.password_hash;
-    if (!passwordHash && data.plain_password) {
-      passwordHash = bcrypt.hashSync(data.plain_password, 10);
-    } else if (data.password_hash && !data.password_hash.startsWith("$2")) {
+    if (data.password_hash && !data.password_hash.startsWith("$2")) {
       passwordHash = bcrypt.hashSync(data.password_hash, 10);
     }
 
@@ -289,7 +297,6 @@ export const NextUsersStore = {
       username: data.username.trim(),
       email: data.email.trim().toLowerCase(),
       password_hash: passwordHash || "$2b$10$99OI5VV7ywqNghc0MPOQAef3HGT8/Z3DSWLGq/g3OvDOYoF7E/qiG",
-      plain_password: data.plain_password,
       role: data.role || "user",
       status: data.status || "active",
       created_at: now,
@@ -303,7 +310,7 @@ export const NextUsersStore = {
 
   update(
     id: string,
-    data: Partial<Pick<StoredUserAccount, "full_name" | "email" | "role" | "status" | "password_hash" | "plain_password">>
+    data: Partial<Pick<StoredUserAccount, "full_name" | "email" | "role" | "status" | "password_hash">>
   ): StoredUserAccount | undefined {
     const users = [...loadUsers()];
     const index = users.findIndex((u) => u.id === id);
@@ -315,10 +322,7 @@ export const NextUsersStore = {
     if (data.email !== undefined) user.email = data.email.trim().toLowerCase();
     if (data.role !== undefined) user.role = data.role;
     if (data.status !== undefined) user.status = data.status;
-    if (data.plain_password !== undefined) {
-      user.plain_password = data.plain_password;
-      user.password_hash = bcrypt.hashSync(data.plain_password, 10);
-    } else if (data.password_hash !== undefined) {
+    if (data.password_hash !== undefined) {
       user.password_hash = data.password_hash.startsWith("$2")
         ? data.password_hash
         : bcrypt.hashSync(data.password_hash, 10);
@@ -379,31 +383,13 @@ export const NextUsersStore = {
   },
 
   verifyPassword(user: StoredUserAccount, inputPassword: string): boolean {
-    if (user.plain_password && user.plain_password === inputPassword) {
-      return true;
-    }
-
     if (user.password_hash) {
       try {
-        if (bcrypt.compareSync(inputPassword, user.password_hash)) {
-          return true;
-        }
+        return bcrypt.compareSync(inputPassword, user.password_hash);
       } catch {
-        // bỏ qua lỗi compare nếu hash không hợp lệ
+        return false;
       }
     }
-
-    const demoPass =
-      DEMO_PASSWORDS[user.email.toLowerCase()] ||
-      DEMO_PASSWORDS[user.username.toLowerCase()];
-    if (demoPass && demoPass === inputPassword) {
-      return true;
-    }
-
-    if (inputPassword === "123456") {
-      return true;
-    }
-
     return false;
   },
 
@@ -461,13 +447,12 @@ export const NextUsersStore = {
     }
 
     // Kiểm tra hạn sử dụng OTP (5 phút)
-    if (!user.reset_otp_expires_at || new Date(user.reset_otp_expires_at).getTime() < Date.now()) {
+    if (!user.reset_otp_expires_at || new Date(user.reset_otp_expires_at).getTime() <= Date.now()) {
       return { success: false, message: "Mã OTP đã hết hạn hiệu lực (quá 5 phút). Vui lòng yêu cầu mã mới" };
     }
 
     // Băm mật khẩu mới bằng Bcrypt
     user.password_hash = bcrypt.hashSync(newPassword, 10);
-    user.plain_password = newPassword;
     // Xóa OTP sau khi đổi mật khẩu thành công (chống tái sử dụng)
     user.reset_otp = null;
     user.reset_otp_expires_at = null;

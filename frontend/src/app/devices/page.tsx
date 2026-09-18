@@ -10,7 +10,6 @@ import {
   Wifi,
   WifiOff,
   Radio,
-  Thermometer,
   Activity,
   Signal,
   Clock,
@@ -84,8 +83,8 @@ export default function DevicesPage() {
     <div className="space-y-6 page-transition-enter">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">MQTT & Thiết Bị IoT</h2>
-          <p className="text-xs font-normal text-slate-500 dark:text-slate-400">Giám sát trạng thái kết nối và chẩn đoán phần cứng ESP32-C5</p>
+          <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Thiết bị & IoT</h2>
+          <p className="text-xs font-normal text-slate-500 dark:text-slate-400">Giám sát kết nối và chẩn đoán phần cứng vi điều khiển ESP32-C5</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -100,7 +99,7 @@ export default function DevicesPage() {
             className="inline-flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-50 px-3.5 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/20 transition-all shadow-xs"
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            <span>Reset Cảm Biến & Van Gạt (Idle)</span>
+            <span>Đặt lại cảm biến & van gạt</span>
           </button>
         </div>
       </div>
@@ -108,7 +107,7 @@ export default function DevicesPage() {
       {/* MQTT Status */}
       <div className="relate-card rounded-2xl border border-slate-200/80 bg-white/95 p-5 dark:border-white/[0.07] dark:bg-[#161822]">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">Kết Nối MQTT WebSocket</h3>
+          <h3 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">Kết nối MQTT</h3>
           <button
             type="button"
             data-testid="btn-toggle-mqtt-devices"
@@ -121,7 +120,7 @@ export default function DevicesPage() {
             title="Ngắt hoặc khôi phục kết nối MQTT Client"
           >
             <WifiOff className="h-3.5 w-3.5" />
-            <span>{isMqttAlertActive ? "⚡ Khôi phục kết nối MQTT" : "🔌 Ngắt kết nối MQTT Client"}</span>
+            <span>{isMqttAlertActive ? "Khôi phục kết nối MQTT" : "Ngắt kết nối MQTT Client"}</span>
           </button>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -153,7 +152,7 @@ export default function DevicesPage() {
       {/* ESP32 Telemetry */}
       <div className="relate-card rounded-2xl border border-slate-200/80 bg-white/95 p-5 dark:border-white/[0.07] dark:bg-[#161822]">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">Chẩn Đoán ESP32-C5</h3>
+          <h3 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">Chẩn đoán ESP32-C5</h3>
           <span className="text-[11px] font-mono text-slate-400">Node: {telemetry.device_id}</span>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -181,35 +180,35 @@ export default function DevicesPage() {
           <DiagCard
             icon={Activity}
             label="Cảm biến S1 (Camera)"
-            value={telemetry.s1_entry ? "PHÁT HIỆN VẬT" : "Thông thoáng"}
+            value={telemetry.s1_entry ? "Phát hiện vật" : "Thông thoáng"}
             status={telemetry.s1_entry ? "warning" : "ok"}
             color="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
           />
           <DiagCard
             icon={Activity}
             label="Cảm biến S2 (Khay 1)"
-            value={telemetry.s2_sorter1 ? "PHÁT HIỆN VẬT" : "Thông thoáng"}
+            value={telemetry.s2_sorter1 ? "Phát hiện vật" : "Thông thoáng"}
             status={telemetry.s2_sorter1 ? "warning" : "ok"}
             color="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
           />
           <DiagCard
             icon={Activity}
             label="Cảm biến S3 (Khay 2)"
-            value={telemetry.s3_sorter2 ? "PHÁT HIỆN VẬT" : "Thông thoáng"}
+            value={telemetry.s3_sorter2 ? "Phát hiện vật" : "Thông thoáng"}
             status={telemetry.s3_sorter2 ? "warning" : "ok"}
             color="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
           />
           <DiagCard
             icon={Sliders}
-            label="Van Gạt 1 (IO23)"
-            value={telemetry.arm1_active ? "GẠT SANG KHAY 1" : "Nhàn rỗi (Idle - 0°)"}
+            label="Van gạt 1 (IO23)"
+            value={telemetry.arm1_active ? "Gạt sang khay 1" : "Nhàn rỗi (0°)"}
             status={telemetry.arm1_active ? "warning" : "ok"}
             color="bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
           />
           <DiagCard
             icon={Sliders}
-            label="Van Gạt 2 (IO24)"
-            value={telemetry.arm2_active ? "GẠT SANG KHAY 2" : "Nhàn rỗi (Idle - 0°)"}
+            label="Van gạt 2 (IO24)"
+            value={telemetry.arm2_active ? "Gạt sang khay 2" : "Nhàn rỗi (0°)"}
             status={telemetry.arm2_active ? "warning" : "ok"}
             color="bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
           />
@@ -219,12 +218,12 @@ export default function DevicesPage() {
       {/* Encoder & Config */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="relate-card rounded-2xl border border-slate-200/80 bg-white/95 p-5 dark:border-white/[0.07] dark:bg-[#161822]">
-          <h3 className="mb-3 text-sm font-bold tracking-tight text-slate-900 dark:text-white">Encoder Quay</h3>
+          <h3 className="mb-3 text-sm font-bold tracking-tight text-slate-900 dark:text-white">Encoder quay</h3>
           <p className="text-3xl font-mono font-bold text-slate-900 dark:text-white">{telemetry.encoder_count.toLocaleString()}</p>
           <p className="text-xs font-normal text-slate-500 dark:text-slate-400">Xung đếm PCNT (IO2/IO3)</p>
         </div>
         <div className="relate-card rounded-2xl border border-slate-200/80 bg-white/95 p-5 dark:border-white/[0.07] dark:bg-[#161822]">
-          <h3 className="mb-3 text-sm font-bold tracking-tight text-slate-900 dark:text-white">Phiên Bản Cấu Hình</h3>
+          <h3 className="mb-3 text-sm font-bold tracking-tight text-slate-900 dark:text-white">Phiên bản cấu hình</h3>
           <p className="text-3xl font-mono font-bold text-cyan-600 dark:text-cyan-400">
             v{sorterConfig?.config_version || telemetry.active_config_version || 1}
           </p>

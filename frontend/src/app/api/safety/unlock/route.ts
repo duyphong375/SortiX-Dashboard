@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { SafetyService } from "@/services/safetyService";
 import { UnlockSystemSchema } from "@shared/schemas";
+import { getAdminUser } from "../../auth/session";
 
 export async function POST(request: Request) {
   try {
-    const roleHeader = request.headers.get("x-user-role") || "admin";
-    const userIdHeader = request.headers.get("x-user-id") || "admin-001";
-
-    if (roleHeader !== "admin") {
+    const adminUser = getAdminUser(request);
+    if (!adminUser) {
       return NextResponse.json(
         {
           success: false,
@@ -28,7 +27,11 @@ export async function POST(request: Request) {
       // Body may be empty
     }
 
-    const result = SafetyService.unlockSystem(userIdHeader, note);
+    if (!note?.trim()) {
+      return NextResponse.json({ success: false, message: "Bắt buộc nhập ghi chú xác nhận an toàn." }, { status: 400 });
+    }
+
+    const result = SafetyService.unlockSystem(adminUser.id, note);
     return NextResponse.json({
       success: true,
       message: result.message,

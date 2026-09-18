@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   Clock,
-  Boxes,
   ShieldCheck,
   ShieldAlert,
   Sparkles,
@@ -68,19 +67,14 @@ export const ShiftSummaryModal: React.FC<ShiftSummaryModalProps> = ({
   const goodPct = ((good / total) * 100).toFixed(1);
   const defectPct = ((defect / total) * 100).toFixed(1);
 
-  // Tính toán đường cong Donut SVG (bán kính r=70, chu vi = 2 * PI * 70 ≈ 439.82)
-  const circumference = 439.82;
-  const goodStrokeDash = (good / total) * circumference;
-  const defectStrokeDash = (defect / total) * circumference;
-
   const handleExportExcel = () => {
     if (!isAdmin) {
-      toast.error("Chức năng tải báo cáo Excel yêu cầu quyền Quản trị viên (Admin)!", "Truy cập bị từ chối");
+      toast.error("Chức năng xuất báo cáo CSV yêu cầu quyền Quản trị viên!", "Truy cập bị từ chối");
       return;
     }
     const success = exportShiftSummaryToCSV(summary);
     if (success) {
-      toast.success("Đã xuất báo cáo 1 ngày làm việc ra file Excel (.csv) thành công!");
+      toast.success("Đã xuất báo cáo 1 ngày làm việc ra file CSV thành công!");
     } else {
       toast.error("Không thể xuất file báo cáo.");
     }
@@ -88,7 +82,7 @@ export const ShiftSummaryModal: React.FC<ShiftSummaryModalProps> = ({
 
   const handleExportPDF = () => {
     if (!isAdmin) {
-      toast.error("Chức năng in và lưu báo cáo PDF yêu cầu quyền Quản trị viên (Admin)!", "Truy cập bị từ chối");
+      toast.error("Chức năng in và lưu báo cáo PDF yêu cầu quyền Quản trị viên!", "Truy cập bị từ chối");
       return;
     }
     printShiftSummaryReport(summary);
@@ -151,7 +145,7 @@ export const ShiftSummaryModal: React.FC<ShiftSummaryModalProps> = ({
           <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-3.5">
             <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
               <CheckCircle2 className="h-3 w-3" />
-              Đạt Chuẩn (Good)
+              Đạt chuẩn
             </span>
             <p className="font-mono text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
               {summary.sorted_good.toLocaleString("vi-VN")}
@@ -162,7 +156,7 @@ export const ShiftSummaryModal: React.FC<ShiftSummaryModalProps> = ({
           <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-3.5">
             <span className="text-[11px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1">
               <AlertTriangle className="h-3 w-3" />
-              Lỗi (Defect)
+              Phế phẩm
             </span>
             <p className="font-mono text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">
               {summary.sorted_defect.toLocaleString("vi-VN")}
@@ -173,12 +167,12 @@ export const ShiftSummaryModal: React.FC<ShiftSummaryModalProps> = ({
           <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-3.5">
             <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-1">
               <Sparkles className="h-3 w-3" />
-              Độ Chính Xác
+              Độ chính xác
             </span>
             <p className="font-mono text-2xl font-black text-cyan-600 dark:text-cyan-400 mt-1">
               {summary.accuracy_rate}
             </p>
-            <span className="text-[10px] text-cyan-500 font-semibold">Chất lượng cao</span>
+            <span className="text-[10px] text-cyan-500 font-semibold">Tỷ lệ chính xác</span>
           </div>
         </div>
 
@@ -276,12 +270,12 @@ export const ShiftSummaryModal: React.FC<ShiftSummaryModalProps> = ({
               {isAdmin ? (
                 <>
                   <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span>Tài khoản <b>Quản trị viên ({user?.displayName || user?.username})</b> được cấp quyền tải báo cáo PDF / Excel.</span>
+                  <span>Tài khoản <b>Quản trị viên ({user?.displayName || user?.username})</b> có quyền xuất báo cáo PDF và CSV.</span>
                 </>
               ) : (
                 <>
                   <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0" />
-                  <span>Tài khoản <b>Người dùng</b> chỉ có quyền xem. Chức năng tải file yêu cầu quyền Admin.</span>
+                  <span>Tài khoản <b>Người dùng</b> chỉ có quyền xem. Chức năng xuất file yêu cầu quyền Quản trị viên.</span>
                 </>
               )}
             </div>
@@ -303,7 +297,7 @@ export const ShiftSummaryModal: React.FC<ShiftSummaryModalProps> = ({
               title={isAdmin ? "In hoặc lưu báo cáo PDF chuẩn doanh nghiệp" : "Chỉ Quản trị viên mới được xuất file"}
             >
               <Printer className="h-4 w-4" />
-              <span>Tải báo cáo PDF</span>
+              <span>Xuất PDF</span>
             </button>
 
             <button
@@ -315,10 +309,10 @@ export const ShiftSummaryModal: React.FC<ShiftSummaryModalProps> = ({
                   ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white border-emerald-400/40"
                   : "bg-slate-100 dark:bg-white/5 text-slate-400 border-transparent cursor-not-allowed opacity-50"
               }`}
-              title={isAdmin ? "Xuất dữ liệu thống kê ra file Excel (.csv)" : "Chỉ Quản trị viên mới được xuất file"}
+              title={isAdmin ? "Xuất dữ liệu thống kê ra file CSV" : "Chỉ Quản trị viên mới được xuất file"}
             >
               <Download className="h-4 w-4" />
-              <span>Tải báo cáo Excel (CSV)</span>
+              <span>Xuất CSV</span>
             </button>
           </div>
 

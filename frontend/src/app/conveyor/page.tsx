@@ -27,7 +27,6 @@ export default function ConveyorPage() {
     handleClearBin,
     isJammed,
     jamIncident,
-    handleTriggerJam,
     handleClearJam,
     isBinFull,
     fullBinIndex,
@@ -51,7 +50,7 @@ export default function ConveyorPage() {
       {!canEstop && (
         <div className="mb-3 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs font-medium text-amber-600 dark:text-amber-400">
           <ShieldAlert className="h-4 w-4 shrink-0" />
-          <span>Bạn đang ở chế độ Vận Hành — nút E-Stop bị khóa (chỉ Admin mới sử dụng được)</span>
+          <span>Bạn đang ở chế độ người dùng — nút E-Stop chỉ dành cho quản trị viên.</span>
         </div>
       )}
 

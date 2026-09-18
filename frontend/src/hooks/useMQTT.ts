@@ -2,13 +2,16 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { SorterMQTTService } from "@/lib/mqttClient";
-import { SorterConfig, VisionDetection, EmergencyStopPayload, JamDetectedPayload, BinFullPayload, TemperatureWarningPayload, DeviceOfflinePayload, MqttDisconnectedPayload } from "@/lib/types";
+import { SorterConfig, VisionDetection, ClassificationRecord, EmergencyStopPayload, JamDetectedPayload, BinFullPayload, TemperatureWarningPayload, DeviceOfflinePayload, MqttDisconnectedPayload } from "@shared/types";
+import { ClassificationRecordSchema } from "@shared/schemas";
 import { DEFAULT_MQTT_TOPICS } from "@shared/constants";
 import { cleanVisionPayload } from "@/lib/dataProcessor";
 
 export interface UseMQTTOptions {
   isClient: boolean;
+  isSimulation: boolean;
   onVisionDetection?: (detection: VisionDetection) => void;
+  onClassification?: (record: ClassificationRecord) => void;
   onTelemetryPayload?: (payload: unknown) => void;
   onConfigStatusApplied?: (version: number) => void;
   onConfigStatusRejected?: (reason: string) => void;
@@ -24,7 +27,9 @@ export interface UseMQTTOptions {
 
 export function useMQTT({
   isClient,
+  isSimulation,
   onVisionDetection,
+  onClassification,
   onTelemetryPayload,
   onConfigStatusApplied,
   onConfigStatusRejected,
@@ -48,10 +53,13 @@ export function useMQTT({
   const [isSimulatedDisconnect, setIsSimulatedDisconnect] = useState<boolean>(false);
 
   const mqttRef = useRef<SorterMQTTService | null>(null);
+  const isSimulationRef = useRef(isSimulation);
+  isSimulationRef.current = isSimulation;
 
   // Callbacks ref to prevent stale closures
   const callbacksRef = useRef({
     onVisionDetection,
+    onClassification,
     onTelemetryPayload,
     onConfigStatusApplied,
     onConfigStatusRejected,
@@ -66,6 +74,7 @@ export function useMQTT({
   });
   callbacksRef.current = {
     onVisionDetection,
+    onClassification,
     onTelemetryPayload,
     onConfigStatusApplied,
     onConfigStatusRejected,
@@ -79,11 +88,35 @@ export function useMQTT({
     onMqttReconnected,
   };
 
+  // Coalesce bursty telemetry packets into one React update per frame.
+  // MQTT can deliver status/telemetry much faster than the UI can render.
+  const pendingTelemetryRef = useRef<unknown | null>(null);
+  const telemetryFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleTelemetryUpdate = useCallback((payload: unknown) => {
+    pendingTelemetryRef.current = payload;
+    if (telemetryFlushTimerRef.current !== null) return;
+
+    telemetryFlushTimerRef.current = setTimeout(() => {
+      telemetryFlushTimerRef.current = null;
+      const latest = pendingTelemetryRef.current;
+      pendingTelemetryRef.current = null;
+      if (latest !== null) callbacksRef.current.onTelemetryPayload?.(latest);
+    }, 16);
+  }, []);
+
 
   const handleIncomingMessage = useCallback((topic: string, msgText: string) => {
     try {
       const data = JSON.parse(msgText);
       if (data === null || typeof data !== "object") return;
+      if (isSimulationRef.current || data.mode === "simulation") return;
+
+      // A camera detection alone does not confirm a successful physical sort.
+      // Accept completed records using the existing shared wire contract.
+      const classification = ClassificationRecordSchema.safeParse(data);
+      if (classification.success) {
+        callbacksRef.current.onClassification?.(classification.data);
+      }
 
       const isConfigStatus = topic.includes("config/status");
 
@@ -105,7 +138,7 @@ export function useMQTT({
       // 2. Status / Telemetry
       // Config acknowledgements are status topics too, but are not telemetry.
       if (!isConfigStatus && (topic.includes("status") || topic.includes("telemetry"))) {
-        callbacksRef.current.onTelemetryPayload?.(data);
+        scheduleTelemetryUpdate(data);
       }
 
       // 3. Vision Detection
@@ -162,10 +195,11 @@ export function useMQTT({
 
       // 7. Temperature Warning Event (conveyor/telemetry/temp)
       if (topic === (DEFAULT_MQTT_TOPICS.TEMP || "conveyor/telemetry/temp") || data.event === "temperature_warning") {
+        if (typeof data.current_temp !== "number" || !Number.isFinite(data.current_temp)) return;
         const tempPayload: TemperatureWarningPayload = {
           event: "temperature_warning",
           device_name: typeof data.device_name === "string" ? data.device_name : "Main_Drive_Motor / Edge_AI_Box",
-          current_temp: Number.isFinite(Number(data.current_temp)) ? Number(data.current_temp) : 78.5,
+          current_temp: data.current_temp,
           threshold_temp: Number.isFinite(Number(data.threshold_temp)) ? Number(data.threshold_temp) : 75.0,
           unit: typeof data.unit === "string" ? data.unit : "°C",
           mode: data.mode === "simulation" ? "simulation" : "realtime",
@@ -194,7 +228,7 @@ export function useMQTT({
     } catch (e) {
       console.warn("Lỗi phân tích JSON MQTT:", e);
     }
-  }, []);
+  }, [scheduleTelemetryUpdate]);
 
   const handleIncomingMessageRef = useRef(handleIncomingMessage);
   handleIncomingMessageRef.current = handleIncomingMessage;
@@ -208,6 +242,7 @@ export function useMQTT({
 
     const statusTopic = process.env.NEXT_PUBLIC_MQTT_TOPIC_STATUS || "sorter/sorter_01/status";
     const visionTopic = process.env.NEXT_PUBLIC_MQTT_TOPIC_VISION || "sorter/sorter_01/vision";
+    const classificationTopic = process.env.NEXT_PUBLIC_MQTT_TOPIC_CLASSIFICATION || "sorter/sorter_01/classification";
     const cfgStatusTopic =
       process.env.NEXT_PUBLIC_MQTT_TOPIC_CONFIG_STATUS || "sorter/sorter_01/config/status";
     const telemetryTopic = process.env.NEXT_PUBLIC_MQTT_TOPIC_TELEMETRY || "sorter/sorter_01/telemetry";
@@ -239,7 +274,7 @@ export function useMQTT({
           broker_url: brokerUrl,
           disconnected_duration_seconds: durationSec,
           reconnect_attempt: attempt,
-          mode: "realtime",
+          mode: isSimulationRef.current ? "simulation" : "realtime",
           timestamp: new Date().toISOString(),
         };
         setMqttDisconnectedIncident(incident);
@@ -258,20 +293,27 @@ export function useMQTT({
         handleIncomingMessageRef.current(topic, message),
     });
 
-    service.connect([statusTopic, visionTopic, cfgStatusTopic, telemetryTopic, alertTopic, estopTopic, jamTopic, binStatusTopic, tempTopic, heartbeatTopic]);
+    setIsSimulatedDisconnect(false);
+    service.connect([statusTopic, visionTopic, classificationTopic, cfgStatusTopic, telemetryTopic, alertTopic, estopTopic, jamTopic, binStatusTopic, tempTopic, heartbeatTopic]);
 
     return () => {
       service.disconnect();
+      if (telemetryFlushTimerRef.current !== null) {
+        clearTimeout(telemetryFlushTimerRef.current);
+        telemetryFlushTimerRef.current = null;
+      }
+      pendingTelemetryRef.current = null;
       if (mqttRef.current === service) {
         mqttRef.current = null;
         setMqttStatus("disconnected");
         setIsMqttAlertActive(false);
       }
     };
-  }, [isClient]);
+  }, [isClient, isSimulation]);
 
 
   const publishCommand = useCallback(async (cmd: string, value?: number): Promise<boolean> => {
+    if (isSimulationRef.current) return false;
     const command = typeof cmd === "string" ? cmd.trim() : "";
     if (!command || !mqttRef.current || !mqttRef.current.isConnected()) return false;
     if (value !== undefined && !Number.isFinite(value)) return false;
@@ -285,42 +327,49 @@ export function useMQTT({
   }, []);
 
   const publishConfig = useCallback(async (config: SorterConfig): Promise<boolean> => {
+    if (isSimulationRef.current) return false;
     if (!mqttRef.current || !mqttRef.current.isConnected()) return false;
     const topic = process.env.NEXT_PUBLIC_MQTT_TOPIC_CONFIG || "sorter/sorter_01/config";
     return await mqttRef.current.publish(topic, config);
   }, []);
 
   const publishEmergencyStop = useCallback(async (payload: EmergencyStopPayload): Promise<boolean> => {
+    if (isSimulationRef.current || payload.mode === "simulation") return false;
     if (!mqttRef.current || !mqttRef.current.isConnected()) return false;
     const topic = DEFAULT_MQTT_TOPICS.ESTOP || "conveyor/safety/estop";
     return await mqttRef.current.publish(topic, payload);
   }, []);
 
   const publishJamAlert = useCallback(async (payload: JamDetectedPayload): Promise<boolean> => {
+    if (isSimulationRef.current || payload.mode === "simulation") return false;
     if (!mqttRef.current || !mqttRef.current.isConnected()) return false;
     const topic = DEFAULT_MQTT_TOPICS.JAM || "conveyor/sensor/jam";
     return await mqttRef.current.publish(topic, payload);
   }, []);
 
   const publishBinFullAlert = useCallback(async (payload: BinFullPayload): Promise<boolean> => {
+    if (isSimulationRef.current || payload.mode === "simulation") return false;
     if (!mqttRef.current || !mqttRef.current.isConnected()) return false;
     const topic = DEFAULT_MQTT_TOPICS.BIN_STATUS || "conveyor/storage/bin_status";
     return await mqttRef.current.publish(topic, payload);
   }, []);
 
   const publishTemperatureWarningAlert = useCallback(async (payload: TemperatureWarningPayload): Promise<boolean> => {
+    if (isSimulationRef.current || payload.mode === "simulation") return false;
     if (!mqttRef.current || !mqttRef.current.isConnected()) return false;
     const topic = DEFAULT_MQTT_TOPICS.TEMP || "conveyor/telemetry/temp";
     return await mqttRef.current.publish(topic, payload);
   }, []);
 
   const publishDeviceOfflineAlert = useCallback(async (payload: DeviceOfflinePayload): Promise<boolean> => {
+    if (isSimulationRef.current || payload.mode === "simulation") return false;
     if (!mqttRef.current || !mqttRef.current.isConnected()) return false;
     const topic = DEFAULT_MQTT_TOPICS.HEARTBEAT || "conveyor/heartbeat";
     return await mqttRef.current.publish(topic, payload);
   }, []);
 
   const publishHeartbeatPing = useCallback(async (deviceId = "ESP32_MAIN_CONTROLLER"): Promise<boolean> => {
+    if (isSimulationRef.current) return false;
     if (!mqttRef.current || !mqttRef.current.isConnected()) return false;
     const topic = DEFAULT_MQTT_TOPICS.HEARTBEAT || "conveyor/heartbeat";
     return await mqttRef.current.publish(topic, {
@@ -331,6 +380,7 @@ export function useMQTT({
   }, []);
 
   const simulateDisconnect = useCallback(() => {
+    if (!isSimulationRef.current) return;
     setIsSimulatedDisconnect(true);
     setMqttStatus("disconnected");
     if (mqttRef.current) {
@@ -368,4 +418,3 @@ export function useMQTT({
     mqttRef,
   };
 }
-

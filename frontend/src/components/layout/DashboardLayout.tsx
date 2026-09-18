@@ -340,15 +340,28 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       void triggerJamRef.current(payload, "physics_in");
     },
     isJammed,
+    isBinFull,
+    onBinFullDetected: (binIdx) => {
+      const binId = binIdx === 1 ? "BIN_RED_01" : binIdx === 2 ? "BIN_BLUE_02" : "BIN_DEFAULT_03";
+      void triggerBinFullRef.current({ bin_id: binId }, "counter_in");
+    },
   });
   spawnRealItemRef.current = (item) => {
     conveyor.setVisualItems((prev) => [...prev, item]);
   };
   setIsRunningRef.current = conveyor.setIsRunning;
 
+  // Tài khoản người dùng (role: user) chỉ có duy nhất chế độ thực tế, không có mô phỏng
+  useEffect(() => {
+    if (user?.role === "user" && sorterData.isSimulation) {
+      sorterData.setIsSimulation(false);
+    }
+  }, [user?.role, sorterData.isSimulation, sorterData.setIsSimulation]);
+
   // Hook 4: MQTT WebSocket Connection
   const mqtt = useMQTT({
     isClient: sorterData.isClient,
+    isSimulation: user?.role === "user" ? false : sorterData.isSimulation,
     onVisionDetection: sorterData.handleRealHardwareDetection,
     onTelemetryPayload: (payload) => {
       setTelemetry((prev) => {
@@ -689,7 +702,11 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       setFullBinIncident(payload);
       setFullBinIndex(binIdx);
 
-      // Nếu đang trong chế độ mô phỏng, cập nhật số đếm khay lên 50 để đồng bộ toàn bộ giao diện
+      // Tạm dừng băng tải ngay lập tức để bảo vệ các mẫu phôi còn lại trên băng tải
+      conveyor.setIsRunning(false);
+      setTelemetry((prev) => ({ ...prev, conveyor_running: false }));
+
+      // Nếu đang trong chế độ mô phỏng, cập nhật số đếm khay lên bằng sức chứa để đồng bộ toàn bộ giao diện
       if (sorterData.isSimulationRef.current) {
         sorterData.setBinCounts((prev) => ({
           ...prev,
@@ -725,7 +742,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         ]);
       }
     },
-    [mqtt, sorterData, toast]
+    [mqtt, sorterData, toast, conveyor, setTelemetry]
   );
   triggerBinFullRef.current = handleTriggerBinFull;
 
@@ -750,9 +767,15 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         prev.map((a) => (a.event_type === "bin_full" ? { ...a, resolved: true } : a))
       );
 
+      // 5. Khởi động lại băng tải nếu không bị E-Stop hoặc kẹt phôi để tiếp tục xử lý các mẫu còn lại trên băng
+      if (!telemetryRef.current.estop_pressed && !isJammedRef.current) {
+        conveyor.setIsRunning(true);
+        setTelemetry((prev) => ({ ...prev, conveyor_running: true }));
+      }
+
       toast.success(`Đã xác nhận thay khay mới cho Khay ${targetIdx}! Số lượng đã được đặt lại về 0.`);
     },
-    [sorterData, toast]
+    [conveyor, sorterData, setTelemetry, toast]
   );
 
   // Handler: Kích hoạt / Cập nhật Cảnh báo Quá Nhiệt (temperature_warning)
@@ -977,11 +1000,13 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       const totalFromRecords = records.length;
 
       // Ưu tiên đếm theo khay thực tế hoặc theo danh sách bản ghi
+      // Toàn bộ sản phẩm phân loại vào các khay (Khay 1, Khay 2, Khay 3) đều là sản phẩm đạt chuẩn.
+      // Hệ thống không có sản phẩm nào là lỗi hay phế phẩm.
       const computedTotal = totalFromBins > 0 ? totalFromBins : totalFromRecords;
-      const computedGood = totalFromBins > 0 ? (bin1 + bin2) : records.filter((r) => r.status === "success" && r.actual_bin !== 3).length;
-      const computedDefect = totalFromBins > 0 ? bin3 : records.filter((r) => r.status !== "success" || r.actual_bin === 3).length;
+      const computedGood = computedTotal;
+      const computedDefect = 0;
 
-      // Tính tỷ lệ đạt phần trăm thực tế
+      // Tính tỷ lệ đạt phần trăm thực tế (toàn bộ đạt chuẩn -> 100.0%)
       const computedAccuracy = computedTotal > 0
         ? `${((computedGood / computedTotal) * 100).toFixed(1)}%`
         : "100.0%";
@@ -1438,12 +1463,13 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     );
   }, [conveyor, sorterData, toast]);
 
-  // Tự động kích hoạt còi cảnh báo KHAY ĐẦY (>= 50 SP) cho đến khi người dùng dọn khay
+  // Tự động kích hoạt còi cảnh báo KHAY ĐẦY khi đạt định mức cho đến khi người dùng dọn khay
   useEffect(() => {
+    const capacities = sorterData.isSimulationRef.current ? sorterData.simBinCapacitiesRef.current : sorterData.realBinCapacitiesRef.current;
     const isAnyBinFull =
-      sorterData.binCounts.bin1 >= 50 ||
-      sorterData.binCounts.bin2 >= 50 ||
-      sorterData.binCounts.bin3 >= 50;
+      sorterData.binCounts.bin1 >= (capacities.bin1 || 50) ||
+      sorterData.binCounts.bin2 >= (capacities.bin2 || 50) ||
+      sorterData.binCounts.bin3 >= (capacities.bin3 || 50);
 
     if (isAnyBinFull && !isMuted && !isSystemLocked && !isJammed) {
       industrialAudio.startContinuousBinFullAlarm();
@@ -1454,16 +1480,24 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     return () => {
       industrialAudio.stopContinuousBinFullAlarm();
     };
-  }, [sorterData.binCounts, isMuted, isSystemLocked, isJammed]);
+  }, [sorterData.binCounts, isMuted, isSystemLocked, isJammed, sorterData.isSimulationRef, sorterData.simBinCapacitiesRef, sorterData.realBinCapacitiesRef]);
 
   const handleClearBin = useCallback(
     (binIndex: 1 | 2 | 3) => {
       industrialAudio.playClick();
       sorterData.handleClearBin(binIndex);
 
+      const isSim = sorterData.isSimulationRef.current;
+      const capacities = isSim ? sorterData.simBinCapacitiesRef.current : sorterData.realBinCapacitiesRef.current;
+      const cap1 = capacities.bin1 || 50;
+      const cap2 = capacities.bin2 || 50;
+      const cap3 = capacities.bin3 || 50;
+
       // Kiểm tra xem các khay còn lại có còn khay nào đầy không
       const remainingBins = { ...sorterData.binCounts, [`bin${binIndex}`]: 0 };
-      if (remainingBins.bin1 < 50 && remainingBins.bin2 < 50 && remainingBins.bin3 < 50) {
+      const isAnyFull = remainingBins.bin1 >= cap1 || remainingBins.bin2 >= cap2 || remainingBins.bin3 >= cap3;
+
+      if (!isAnyFull) {
         industrialAudio.stopContinuousBinFullAlarm();
         setIsBinFull(false);
         setFullBinIncident(null);
@@ -1472,7 +1506,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
           prev.map((a) => (a.event_type === "bin_full" ? { ...a, resolved: true } : a))
         );
       } else if (fullBinIndexRef.current === binIndex) {
-        const nextFullIdx = remainingBins.bin1 >= 50 ? 1 : remainingBins.bin2 >= 50 ? 2 : remainingBins.bin3 >= 50 ? 3 : null;
+        const nextFullIdx = remainingBins.bin1 >= cap1 ? 1 : remainingBins.bin2 >= cap2 ? 2 : remainingBins.bin3 >= cap3 ? 3 : null;
         if (nextFullIdx) {
           setFullBinIndex(nextFullIdx);
         } else {
@@ -1483,7 +1517,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       // Tự động khởi động lại băng tải nếu đang tạm dừng và không bị E-Stop hoặc Kẹt phôi
-      if (!conveyor.isRunning && !telemetryRef.current.estop_pressed && !isJammedRef.current) {
+      if (!telemetryRef.current.estop_pressed && !isJammedRef.current && !isAnyFull) {
         conveyor.setIsRunning(true);
         setTelemetry((prev) => ({ ...prev, conveyor_running: true }));
         toast.success(`Đã dọn khay ${binIndex}. Băng tải tự động tiếp tục vận hành!`);
@@ -1499,6 +1533,18 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       sorterData.handleSetBinCapacity(binIndex, clamped);
     },
     [sorterData]
+  );
+
+  // Handler: Chuyển đổi chế độ (Chỉ Admin mới có quyền bật Mô phỏng, User chỉ có Thực tế)
+  const handleToggleSimulationMode = useCallback(
+    (targetMode?: boolean) => {
+      if (user?.role === "user") {
+        toast.warning("Tài khoản người dùng chỉ có chế độ Thực tế, không thể chuyển sang Mô phỏng!");
+        return;
+      }
+      sorterData.toggleSimulationMode(targetMode);
+    },
+    [user?.role, sorterData, toast]
   );
 
   // Handler: Điều chỉnh mức số lượng trong khay qua thanh trượt (đồng bộ dữ liệu toàn hệ thống)
@@ -1595,10 +1641,16 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     handleSimulateMqttDisconnect: mqtt.simulateDisconnect,
     handleReconnectMqtt: mqtt.reconnectManual,
     pingMs: mqtt.pingMs,
-    isSimulation: sorterData.isSimulation,
+    isSimulation: user?.role === "user" ? false : sorterData.isSimulation,
 
-    setIsSimulation: sorterData.setIsSimulation,
-    toggleSimulationMode: sorterData.toggleSimulationMode,
+    setIsSimulation: (val: boolean | ((prev: boolean) => boolean)) => {
+      if (user?.role === "user") {
+        toast.warning("Tài khoản người dùng chỉ có chế độ Thực tế, không thể chuyển sang Mô phỏng!");
+        return;
+      }
+      sorterData.setIsSimulation(val);
+    },
+    toggleSimulationMode: handleToggleSimulationMode,
     generateSimulationDemoData: sorterData.generateSimulationDemoData,
     isRunning: conveyor.isRunning,
     setIsRunning: conveyor.setIsRunning,
@@ -1724,8 +1776,8 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             isMqttAlertActive={mqtt.isMqttAlertActive}
             reconnectAttempt={mqtt.reconnectAttempt}
             pingMs={mqtt.pingMs}
-            isSimulation={sorterData.isSimulation}
-            onToggleSimulationMode={sorterData.toggleSimulationMode}
+            isSimulation={user?.role === "user" ? false : sorterData.isSimulation}
+            onToggleSimulationMode={user?.role === "user" ? undefined : handleToggleSimulationMode}
             isDeviceOffline={isDeviceOffline}
             onTriggerShiftSummary={() => handleTriggerShiftSummary(undefined, "user_action")}
           />

@@ -1,42 +1,33 @@
 import { NextResponse } from "next/server";
 import { AdminUpdateUserSchema } from "@shared/schemas";
 import { NextUsersStore, toSafeUser } from "../store";
+import { getAdminUser } from "../../auth/session";
 
-function checkAdminAuth(request: Request): { isAuthorized: boolean; userId: string; error?: string } {
-  const authHeader = request.headers.get("authorization");
-  const xUserRole = request.headers.get("x-user-role");
-  const xUserId = request.headers.get("x-user-id");
-
-  if (xUserRole === "admin") {
-    return { isAuthorized: true, userId: xUserId || "admin-001" };
-  }
-
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    try {
-      const token = authHeader.substring(7).trim();
-      const decoded = JSON.parse(Buffer.from(token, "base64").toString("utf-8"));
-      if (decoded && decoded.role === "admin") {
-        return { isAuthorized: true, userId: decoded.id || "admin-001" };
-      }
-    } catch {
-      // invalid token
+export async function GET(
+  request: Request,
+  props: { params: Promise<{ id: string }> | { id: string } }
+) {
+  try {
+    const params = await props.params;
+    const targetId = params.id;
+    const user = NextUsersStore.findById(targetId) || NextUsersStore.findByUsername(targetId);
+    if (!user) {
+      return NextResponse.json({ success: false, message: "Tài khoản không tồn tại" }, { status: 404 });
     }
+    return NextResponse.json({ success: true, data: toSafeUser(user) });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Lỗi tìm thông tin tài khoản";
+    return NextResponse.json({ success: false, message }, { status: 500 });
   }
-
-  if (xUserId && xUserId.startsWith("admin")) {
-    return { isAuthorized: true, userId: xUserId };
-  }
-
-  return { isAuthorized: false, userId: "", error: "Truy cập bị từ chối: Yêu cầu quyền Quản trị viên (Admin)" };
 }
 
 export async function PUT(
   request: Request,
   props: { params: Promise<{ id: string }> | { id: string } }
 ) {
-  const auth = checkAdminAuth(request);
-  if (!auth.isAuthorized) {
-    return NextResponse.json({ success: false, message: auth.error }, { status: 403 });
+  const auth = getAdminUser(request);
+  if (!auth) {
+    return NextResponse.json({ success: false, message: "Truy cập bị từ chối: Yêu cầu quyền Quản trị viên (Admin)" }, { status: 403 });
   }
 
   try {
@@ -93,16 +84,16 @@ export async function DELETE(
   request: Request,
   props: { params: Promise<{ id: string }> | { id: string } }
 ) {
-  const auth = checkAdminAuth(request);
-  if (!auth.isAuthorized) {
-    return NextResponse.json({ success: false, message: auth.error }, { status: 403 });
+  const auth = getAdminUser(request);
+  if (!auth) {
+    return NextResponse.json({ success: false, message: "Truy cập bị từ chối: Yêu cầu quyền Quản trị viên (Admin)" }, { status: 403 });
   }
 
   try {
     const params = await props.params;
     const targetId = params.id;
 
-    const result = NextUsersStore.delete(targetId, auth.userId);
+    const result = NextUsersStore.delete(targetId, auth.id);
     if (!result.success) {
       return NextResponse.json({ success: false, message: result.message }, { status: 400 });
     }

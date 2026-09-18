@@ -5,7 +5,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ApiAuthClient } from "@/services/apiAuthClient";
 import {
   KeyRound,
-  Lock,
   CheckCircle2,
   XCircle,
   X,
@@ -108,7 +107,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                Đổi Mật Khẩu Cá Nhân
+                Đổi mật khẩu
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Tài khoản: <b>{user?.displayName || user?.username}</b> ({user?.email})
@@ -217,7 +216,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
           <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 dark:border-white/[0.08] dark:bg-[#111319] p-3 space-y-1.5">
             <div className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300 text-[11px] mb-1">
               <Shield className="h-3.5 w-3.5 text-cyan-500" />
-              <span>Tiêu chuẩn mật khẩu an toàn:</span>
+              <span>Yêu cầu mật khẩu:</span>
             </div>
             <div className="grid grid-cols-2 gap-1.5 text-[10.5px]">
               <span className={`flex items-center gap-1.5 ${hasMinLength ? "text-emerald-500 font-bold" : "text-slate-400"}`}>
@@ -262,7 +261,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
               className="flex items-center gap-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white px-5 py-2 font-bold shadow-sm transition-all disabled:opacity-50"
             >
               {isSubmitting && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
-              Lưu Mật Khẩu Mới
+              Lưu mật khẩu
             </button>
           </div>
         </form>

@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   KeyRound,
-  Mail,
   User,
   Lock,
   Eye,
@@ -292,7 +291,7 @@ export function ForgotPasswordModal({
                 </span>
                 <div>
                   <span className="inline-block rounded-md bg-emerald-500/20 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 border border-emerald-500/30">
-                    [CHẾ ĐỘ MÔ PHỎNG / TEST]
+                    Mô phỏng
                   </span>
                 </div>
               </div>
@@ -377,10 +376,10 @@ export function ForgotPasswordModal({
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                    Khôi Phục Mật Khẩu
+                    Khôi phục mật khẩu
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Cơ chế xác thực an toàn qua mã OTP
+                    Cơ chế xác thực qua mã OTP
                   </p>
                 </div>
               </div>
@@ -463,7 +462,7 @@ export function ForgotPasswordModal({
                         if (errorMsg) setErrorMsg(null);
                       }}
                       className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 shadow-2xs transition-all focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 dark:border-white/[0.08] dark:bg-[#111319] dark:text-white"
-                      placeholder="duyphong hoặc duyphong@gmail.com"
+                      placeholder="Nhập tên đăng nhập hoặc email"
                       autoFocus
                       required
                     />

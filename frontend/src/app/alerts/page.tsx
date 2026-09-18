@@ -6,10 +6,8 @@ import { usePermission } from "@/contexts/AuthContext";
 import { AlertEvent, AlertSeverity } from "@/lib/types";
 import {
   AlertTriangle,
-  AlertCircle,
   Info,
   Trash2,
-  Filter,
   ShieldAlert,
   Zap,
   Clock,
@@ -54,7 +52,6 @@ export default function AlertsPage() {
   const { alerts, handleClearAlerts } = useDashboard();
   const toast = useToast();
   const canDelete = usePermission("alerts.delete");
-  const canConfigure = usePermission("alerts.configure");
 
   const [filter, setFilter] = useState<AlertSeverity | "all">("all");
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
@@ -122,7 +119,7 @@ export default function AlertsPage() {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Cảnh Báo & Sự Cố</h2>
+          <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Cảnh báo</h2>
           <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
             {alerts.length} sự kiện • {severityCounts.critical} sự cố nghiêm trọng
           </p>
@@ -140,12 +137,12 @@ export default function AlertsPage() {
                   }`}
               >
                 {sev === "all"
-                  ? `Tất Cả (${alerts.length})`
+                  ? `Tất cả (${alerts.length})`
                   : sev === "critical"
-                    ? `Nghiêm Trọng (${severityCounts.critical})`
+                    ? `Nghiêm trọng (${severityCounts.critical})`
                     : sev === "warning"
-                      ? `Cảnh Báo (${severityCounts.warning})`
-                      : `Thông Tin (${severityCounts.info})`}
+                      ? `Cảnh báo (${severityCounts.warning})`
+                      : `Thông tin (${severityCounts.info})`}
               </button>
             ))}
           </div>
@@ -174,7 +171,7 @@ export default function AlertsPage() {
       {!canDelete && (
         <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-800 dark:border-amber-500/20 dark:bg-amber-950/30 dark:text-amber-400">
           <ShieldAlert className="h-4 w-4 shrink-0" />
-          <span>Bạn chỉ có quyền xem cảnh báo — Xóa và cấu hình cần quyền Admin</span>
+          <span>Bạn chỉ có quyền xem cảnh báo — thao tác xóa cần quyền quản trị viên.</span>
         </div>
       )}
 
@@ -184,7 +181,7 @@ export default function AlertsPage() {
           <div className="relate-card flex flex-col items-center justify-center rounded-2xl border border-slate-200/80 bg-white/95 py-16 dark:border-white/[0.07] dark:bg-[#161822]">
             <CheckCircle2 className="mb-3 h-10 w-10 text-emerald-500" />
             <p className="font-bold text-slate-800 dark:text-white">Không có cảnh báo nào</p>
-            <p className="text-xs font-normal text-slate-500 dark:text-slate-400">Hệ thống đang hoạt động an toàn & ổn định</p>
+            <p className="text-xs font-normal text-slate-500 dark:text-slate-400">Hệ thống hoạt động ổn định, không ghi nhận sự cố</p>
           </div>
         ) : (
           filteredAlerts.map((alert) => {

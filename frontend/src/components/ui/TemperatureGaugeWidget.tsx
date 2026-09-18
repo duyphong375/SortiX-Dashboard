@@ -58,10 +58,10 @@ export const TemperatureGaugeWidget: React.FC<TemperatureGaugeWidgetProps> = ({
     : "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400";
 
   const statusText = isOverheat
-    ? "QUÁ NHIỆT"
+    ? "Quá nhiệt"
     : isWarningZone
-    ? "CẬN NGƯỠNG"
-    : "AN TOÀN";
+    ? "Cận ngưỡng"
+    : "Bình thường";
 
   // Bán kính cung tròn SVG
   const cx = 100;
@@ -190,7 +190,7 @@ export const TemperatureGaugeWidget: React.FC<TemperatureGaugeWidgetProps> = ({
           </div>
           <div>
             <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-              Đồng Hồ Nhiệt Độ (Gauge Dial)
+              Nhiệt độ
               {isOverheat && (
                 <span className="animate-ping inline-flex h-2 w-2 rounded-full bg-rose-500" />
               )}
@@ -215,9 +215,9 @@ export const TemperatureGaugeWidget: React.FC<TemperatureGaugeWidgetProps> = ({
       </div>
 
       {/* SVG Semicircular Gauge */}
-      <div className="relative mt-2 w-full max-w-[210px] flex items-center justify-center">
+      <div className="w-full max-w-[210px] flex flex-col items-center justify-center">
         <svg
-          viewBox="0 0 200 115"
+          viewBox="0 0 200 108"
           className="w-full h-auto overflow-visible select-none drop-shadow-xs"
         >
           <defs>
@@ -346,20 +346,20 @@ export const TemperatureGaugeWidget: React.FC<TemperatureGaugeWidgetProps> = ({
           <circle
             cx={cx}
             cy={cy}
-            r="8"
+            r="6"
             fill="#1e293b"
             stroke={statusColor}
-            strokeWidth="3"
+            strokeWidth="2.5"
             className="dark:fill-slate-900 transition-colors duration-300"
           />
-          <circle cx={cx} cy={cy} r="3" fill="#ffffff" />
+          <circle cx={cx} cy={cy} r="2.5" fill="#ffffff" />
         </svg>
 
-        {/* Số nhiệt độ tức thời đặt ngay dưới tâm kim */}
-        <div className="absolute bottom-0 flex flex-col items-center text-center">
+        {/* Số nhiệt độ tức thời đặt ngay dưới tâm kim - Thoáng đãng, rõ nét, không bị che */}
+        <div className="flex flex-col items-center text-center mt-1">
           <div className="flex items-baseline gap-1">
             <span
-              className={`font-mono text-2xl font-black tracking-tight transition-all duration-300 ${
+              className={`font-mono text-3xl font-black tracking-tight transition-all duration-300 ${
                 isOverheat
                   ? "text-rose-600 dark:text-rose-400 scale-110 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-pulse"
                   : isWarningZone
@@ -369,11 +369,11 @@ export const TemperatureGaugeWidget: React.FC<TemperatureGaugeWidgetProps> = ({
             >
               {isOnline ? currentTemp.toFixed(1) : "--.-"}
             </span>
-            <span className="font-mono text-xs font-bold text-slate-400 dark:text-slate-500">
+            <span className="font-mono text-sm font-bold text-slate-400 dark:text-slate-500">
               {unit}
             </span>
           </div>
-          <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">
+          <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-0.5">
             Ngưỡng an toàn: <strong className="text-rose-500 font-mono">{thresholdTemp}{unit}</strong>
           </span>
         </div>
@@ -481,6 +481,7 @@ export const TemperatureGaugeWidget: React.FC<TemperatureGaugeWidgetProps> = ({
             <span className="inline-flex items-center gap-1 rounded bg-emerald-500/15 px-1.5 py-0.2 text-[9px] font-extrabold uppercase text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
               Thực Tế
+              <span className="sr-only">[PHẦN CỨNG THẬT]</span>
             </span>
           </div>
 

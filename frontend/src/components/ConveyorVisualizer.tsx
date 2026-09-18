@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { BinCapacityInput } from "@/components/ui/BinCapacityInput";
 import { TelemetryData, SorterConfig, CATALOG_BRANDS, VisualItem, JamDetectedPayload } from "@/lib/types";
-import { determineTargetBin } from "@/lib/dataProcessor";
+import { getBinColorTheme } from "@/lib/binTheme";
 import {
   Play,
   Pause,
@@ -23,66 +24,76 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 
-interface ConveyorVisualizerProps {
+export interface ConveyorVisualizerProps {
+  speed: number;
+  onSpeedChange: (speed: number) => void;
+  isSimulation: boolean;
+  onSpawnPackage?: (brandKey?: string) => void;
+  onEmergencyStop?: () => void;
+  onUnlockEmergency?: () => void;
+  onClearBin?: (binIndex: 1 | 2 | 3) => void;
+  onConfirmBinReplaced?: (binIndex: 1 | 2 | 3) => void;
+  isRunning?: boolean;
+  isJammed?: boolean;
+  onUnlockJam?: () => void;
+  onClearJam?: () => void;
   telemetry: TelemetryData;
   config: SorterConfig;
-  items: VisualItem[];
-  isRunning: boolean;
-  speed: number;
-  onToggleRun: () => void;
-  onEmergencyStop: () => void;
-  onSpeedChange: (newSpeed: number) => void;
-  onSpawnPackage?: (brandKey?: string) => void;
-  arm1Active: boolean;
-  arm2Active: boolean;
-  binCounts: { bin1: number; bin2: number; bin3: number };
-  brandCounts?: Record<string, number>;
-  isSimulation?: boolean;
-  onToggleSimulationMode?: () => void;
-  onGenerateDemoData?: () => void;
-  onClearBin?: (binIndex: 1 | 2 | 3) => void;
-  isJammed?: boolean;
-  jamIncident?: JamDetectedPayload | null;
-  onClearJam?: () => void;
+  events?: any[];
+  items?: VisualItem[];
+  binCounts?: { bin1: number; bin2: number; bin3: number };
   isBinFull?: boolean;
-  fullBinIndex?: 1 | 2 | 3 | null;
-  onConfirmBinReplaced?: (binIdx?: 1 | 2 | 3) => void;
-  onSetBinCount?: (binIndex: 1 | 2 | 3, count: number) => void;
+  fullBinIndex?: number | null;
+  onGenerateDemoData?: () => void;
+  onTestJamSimulation?: (zone?: string) => void;
+  jamPayload?: JamDetectedPayload | null;
   binCapacities?: { bin1: number; bin2: number; bin3: number };
   onSetBinCapacity?: (binIndex: 1 | 2 | 3, capacity: number) => void;
+  onSetBinCount?: (binIndex: 1 | 2 | 3, count: number) => void;
+  onToggleRun?: () => void;
+  arm1Active?: boolean;
+  arm2Active?: boolean;
+  brandCounts?: Record<string, number>;
+  onToggleSimulationMode?: () => void;
+  jamIncident?: any;
 }
 
 export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
+  speed,
+  onSpeedChange,
+  isSimulation,
+  onSpawnPackage,
+  onEmergencyStop,
+  onUnlockEmergency,
+  onClearBin,
+  onConfirmBinReplaced,
+  isRunning = true,
+  isJammed = false,
+  onUnlockJam,
+  onClearJam,
   telemetry,
   config,
-  items,
-  isRunning,
-  speed,
-  onToggleRun,
-  onEmergencyStop,
-  onSpeedChange,
-  onSpawnPackage,
-  arm1Active,
-  arm2Active,
-  binCounts,
-  brandCounts = {},
-  isSimulation = false,
-  onToggleSimulationMode,
-  onGenerateDemoData,
-  onClearBin,
-  isJammed = false,
-  jamIncident = null,
-  onClearJam,
+  events = [],
+  items = [],
+  binCounts = { bin1: 0, bin2: 0, bin3: 0 },
   isBinFull = false,
   fullBinIndex = null,
-  onConfirmBinReplaced,
-  onSetBinCount,
+  onGenerateDemoData,
+  onTestJamSimulation,
+  jamPayload,
   binCapacities = { bin1: 50, bin2: 50, bin3: 50 },
   onSetBinCapacity,
+  onSetBinCount,
+  onToggleRun,
+  arm1Active: propArm1Active,
+  arm2Active: propArm2Active,
 }) => {
   const [confirmBinClear, setConfirmBinClear] = useState<1 | 2 | 3 | null>(null);
 
-  const isBeltMoving = isRunning && !telemetry.estop_pressed && items.length > 0;
+  const arm1Active = propArm1Active ?? telemetry.arm1_active;
+  const arm2Active = propArm2Active ?? telemetry.arm2_active;
+
+  const isBeltMoving = isRunning && !telemetry.estop_pressed && !isBinFull && items.length > 0;
   const linearSpeedCms = isBeltMoving ? ((speed / 100) * 35).toFixed(1) : "0.0";
   const rollerRpm = isBeltMoving ? Math.floor((speed / 100) * 120) : 0;
 
@@ -91,6 +102,17 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
   const bin2Brands = config.bins[1]?.brand_ids || [];
   const assignedBrands = new Set([...bin1Brands, ...bin2Brands]);
   const bin3Brands = Object.keys(CATALOG_BRANDS).filter((b) => !assignedBrands.has(b));
+
+  // Đồng bộ màu sắc động theo thương hiệu gán cho từng khay
+  const bin1Theme = getBinColorTheme(bin1Brands[0], "rose");
+  const bin2Theme = getBinColorTheme(bin2Brands[0], "blue");
+  const bin3Theme = getBinColorTheme(bin3Brands[0], "amber");
+
+  const getBrandTargetBinName = (brandKey: string) => {
+    if (bin1Brands.includes(brandKey)) return "Khay 1";
+    if (bin2Brands.includes(brandKey)) return "Khay 2";
+    return "Khay 3";
+  };
 
   const cap1 = binCapacities.bin1 || 50;
   const cap2 = binCapacities.bin2 || 50;
@@ -264,7 +286,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-sm sm:text-base font-bold tracking-tight text-slate-900 dark:text-white truncate">
-                Mô Phỏng Băng Tải 2D & Cơ Cấu Phân Loại
+                Băng tải & cơ cấu phân loại
               </h3>
               <span
                 className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider border shrink-0 ${
@@ -278,22 +300,22 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                 }`}
               >
                 {telemetry.estop_pressed
-                  ? "E-STOP KHẨN CẤP"
+                  ? "Dừng khẩn"
                   : !isRunning
-                  ? "TẠM DỪNG"
+                  ? "Tạm dừng"
                   : items.length > 0
-                  ? `ĐANG CHẠY (${items.length} PHÔI)`
-                  : "CHỜ PHÔI"}
+                  ? `Đang chạy (${items.length} phôi)`
+                  : "Chờ phôi"}
               </span>
             </div>
             <p className="text-xs font-normal text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1 sm:line-clamp-none">
               {telemetry.estop_pressed
-                ? "Băng tải đã ngắt điện khẩn cấp do nút E-Stop"
+                ? "Băng tải đã ngắt điện do kích hoạt E-Stop"
                 : !isRunning
-                ? "Hệ thống đang tạm dừng • Nhấn Khởi Động để sẵn sàng"
+                ? "Hệ thống đang tạm dừng • Nhấn Khởi động để tiếp tục"
                 : items.length > 0
-                ? `Băng tải đang chuyển động đưa ${items.length} phôi qua trạm quét và cơ cấu gạt`
-                : "Băng tải tự động đứng yên khi không có phôi • Nhấn nạp nhanh mẫu vật bên dưới để chạy"}
+                ? `Băng tải đang vận chuyển ${items.length} phôi qua trạm quét và cơ cấu gạt`
+                : "Băng tải tự động dừng khi không có phôi"}
             </p>
           </div>
         </div>
@@ -304,7 +326,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           {isSimulation ? (
             <div className="flex items-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-2 text-xs font-bold text-purple-700 dark:border-purple-500/30 dark:bg-purple-950/40 dark:text-purple-300 shadow-xs select-none">
               <FlaskConical className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400 animate-pulse" />
-              <span>Chế độ: <span className="text-purple-600 dark:text-purple-300 font-extrabold">🧪 Mô phỏng ảo</span></span>
+              <span>Chế độ: <span className="text-purple-600 dark:text-purple-300 font-bold">Mô phỏng</span></span>
             </div>
           ) : (
             <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-300 shadow-xs select-none">
@@ -313,7 +335,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
               </span>
               <Radio className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>Chế độ: <span className="text-emerald-600 dark:text-emerald-300 font-extrabold">🟢 Máy thật (Live ESP32)</span></span>
+              <span>Chế độ: <span className="text-emerald-600 dark:text-emerald-300 font-bold">Thực tế (ESP32)</span></span>
             </div>
           )}
 
@@ -329,11 +351,11 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           >
             {isRunning ? (
               <>
-                <Pause className="h-3.5 w-3.5" /> Tạm Dừng
+                <Pause className="h-3.5 w-3.5" /> Tạm dừng
               </>
             ) : (
               <>
-                <Play className="h-3.5 w-3.5" /> Khởi Động
+                <Play className="h-3.5 w-3.5" /> Khởi động
               </>
             )}
           </button>
@@ -341,14 +363,14 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           {/* Nút E-STOP Dừng Khẩn Cấp */}
           <button
             onClick={onEmergencyStop}
-            className={`flex items-center gap-1.5 rounded-xl border-2 px-4 py-2 text-xs font-black uppercase tracking-wider transition-all duration-200 ${
+            className={`flex items-center gap-1.5 rounded-xl border-2 px-4 py-2 text-xs font-bold tracking-wider transition-all duration-200 ${
               telemetry.estop_pressed
                 ? "border-amber-500 bg-amber-500 text-slate-950 shadow-[0_0_15px_#f59e0b]"
                 : "border-rose-600 bg-rose-600 text-white shadow-md hover:bg-rose-500"
             }`}
           >
             <OctagonAlert className="h-3.5 w-3.5" />
-            {telemetry.estop_pressed ? "MỞ KHÓA E-STOP" : "E-STOP (IO10)"}
+            {telemetry.estop_pressed ? "Mở khóa E-Stop" : "Dừng khẩn E-Stop"}
           </button>
         </div>
       </div>
@@ -358,14 +380,14 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
         <div className="flex items-center gap-2.5 rounded-xl border border-emerald-300 bg-emerald-50/90 px-3.5 py-2 text-xs text-emerald-900 shadow-xs dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-200">
           <ShieldAlert className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 animate-pulse" />
           <span className="leading-relaxed">
-            <strong className="font-bold text-emerald-950 dark:text-emerald-100 uppercase tracking-wide">Chế độ máy thật:</strong> Đang chờ sản phẩm thực tế trên băng chuyền từ cảm biến & Camera ESP32. Toàn bộ nút thả phôi ảo đã bị khóa để đảm bảo số liệu thu thập hoàn toàn từ phần cứng thực tế.
+            <strong className="font-bold text-emerald-950 dark:text-emerald-100">Chế độ thực tế:</strong> Đang nhận dữ liệu từ cảm biến và camera ESP32. Nút thả phôi ảo được khóa để bảo đảm tính chuẩn xác của phần cứng.
           </span>
         </div>
       ) : (
         <div className="flex items-center gap-2.5 rounded-xl border border-purple-300 bg-purple-50/90 px-3.5 py-2 text-xs text-purple-900 shadow-xs dark:border-purple-500/30 dark:bg-purple-950/40 dark:text-purple-200">
           <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400 shrink-0" />
           <span className="leading-relaxed">
-            <strong className="font-bold text-purple-950 dark:text-purple-100">Chế độ mô phỏng tương tác:</strong> Bạn có thể nhấn các nút bên dưới để thả phôi mẫu thử nghiệm trên băng tải số (Coca, Pepsi, Red Bull, Aquafina hoặc Phôi ngẫu nhiên).
+            <strong className="font-bold text-purple-950 dark:text-purple-100">Chế độ mô phỏng:</strong> Thả phôi mẫu trực tiếp lên băng tải để kiểm thử phân loại và cơ cấu gạt.
           </span>
         </div>
       )}
@@ -377,12 +399,12 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           {!isSimulation ? (
             <>
               <Lock className="h-4 w-4 text-amber-500 shrink-0" />
-              <span className="text-amber-600 dark:text-amber-400">Nút thả mẫu phôi bị vô hiệu hóa (Khóa ở Chế độ Máy thật):</span>
+              <span className="text-amber-600 dark:text-amber-400">Khóa ở chế độ thực tế:</span>
             </>
           ) : (
             <>
               <Box className="h-4 w-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
-              <span>Nạp nhanh vật mẫu lên băng tải (Mô phỏng):</span>
+              <span>Thả vật mẫu (Mô phỏng):</span>
             </>
           )}
         </div>
@@ -391,37 +413,49 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           <button
             onClick={() => onSpawnPackage?.("brand_c")}
             disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
-            className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-1.5 text-xs font-bold text-red-700 transition-all hover:bg-red-100 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
-            title={!isSimulation ? "Nút bị khóa ở chế độ máy thật" : "Thả Lon Coca-Cola (Khay 1)"}
+            className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 transition-all hover:bg-red-100 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
+            title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : `Thả Lon Coca-Cola (${getBrandTargetBinName("brand_c")})`}
           >
-            <span>🔴 Lon Coca-Cola</span>
+            <span>Lon Coca-Cola</span>
+            <span className="text-[10px] font-mono font-normal opacity-75">
+              ({getBrandTargetBinName("brand_c")})
+            </span>
           </button>
 
           <button
             onClick={() => onSpawnPackage?.("brand_a")}
             disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
-            className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-1.5 text-xs font-bold text-blue-700 transition-all hover:bg-blue-100 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-400 dark:hover:bg-blue-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
-            title={!isSimulation ? "Nút bị khóa ở chế độ máy thật" : "Thả Lon Pepsi (Khay 2)"}
+            className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition-all hover:bg-blue-100 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-400 dark:hover:bg-blue-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
+            title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : `Thả Lon Pepsi (${getBrandTargetBinName("brand_a")})`}
           >
-            <span>🔵 Lon Pepsi</span>
+            <span>Lon Pepsi</span>
+            <span className="text-[10px] font-mono font-normal opacity-75">
+              ({getBrandTargetBinName("brand_a")})
+            </span>
           </button>
 
           <button
             onClick={() => onSpawnPackage?.("brand_b")}
             disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
-            className="flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-1.5 text-xs font-bold text-amber-800 transition-all hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-400 dark:hover:bg-amber-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
-            title={!isSimulation ? "Nút bị khóa ở chế độ máy thật" : "Thả Lon Red Bull (Khay 3)"}
+            className="flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 transition-all hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-400 dark:hover:bg-amber-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
+            title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : `Thả Lon Red Bull (${getBrandTargetBinName("brand_b")})`}
           >
-            <span>🟡 Lon Red Bull</span>
+            <span>Lon Red Bull</span>
+            <span className="text-[10px] font-mono font-normal opacity-75">
+              ({getBrandTargetBinName("brand_b")})
+            </span>
           </button>
 
           <button
             onClick={() => onSpawnPackage?.("brand_d")}
             disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
-            className="flex items-center gap-1.5 rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-1.5 text-xs font-bold text-cyan-700 transition-all hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/15 dark:text-cyan-400 dark:hover:bg-cyan-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
-            title={!isSimulation ? "Nút bị khóa ở chế độ máy thật" : "Thả Chai Aquafina (Khay 3)"}
+            className="flex items-center gap-1.5 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-bold text-cyan-700 transition-all hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/15 dark:text-cyan-400 dark:hover:bg-cyan-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
+            title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : `Thả Chai Aquafina (${getBrandTargetBinName("brand_d")})`}
           >
-            <span>🔷 Chai Aquafina</span>
+            <span>Chai Aquafina</span>
+            <span className="text-[10px] font-mono font-normal opacity-75">
+              ({getBrandTargetBinName("brand_d")})
+            </span>
           </button>
 
           {/* Nút thả phôi ngẫu nhiên */}
@@ -429,10 +463,10 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
             onClick={() => onSpawnPackage?.()}
             disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
             className="flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-1.5 text-xs font-bold text-purple-700 transition-all hover:bg-purple-100 dark:border-purple-500/40 dark:bg-purple-500/15 dark:text-purple-400 dark:hover:bg-purple-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
-            title={!isSimulation ? "Nút bị khóa ở chế độ máy thật" : "Thả ngẫu nhiên một phôi"}
+            title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : "Thả ngẫu nhiên một phôi"}
           >
             <Sparkles className="h-3.5 w-3.5 text-purple-500" />
-            <span>🎲 Phôi ngẫu nhiên</span>
+            <span>Phôi ngẫu nhiên</span>
           </button>
 
           {isSimulation && (
@@ -442,7 +476,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
               className="flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-bold text-emerald-700 transition-all hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-400 dark:hover:bg-emerald-500/25 shadow-xs active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
               title="Tạo dữ liệu lịch sử demo ngẫu nhiên"
             >
-              <span>📊 Tạo dữ liệu demo</span>
+              <span>Tạo dữ liệu demo</span>
             </button>
           )}
         </div>
@@ -454,7 +488,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <Sliders className="h-4 w-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
           <span className="font-bold text-slate-700 dark:text-slate-300">
-            Tốc độ Băng tải:
+            Tốc độ băng tải:
           </span>
           <span className="font-mono text-sm font-black text-cyan-600 dark:text-cyan-400">
             {isBeltMoving ? `${speed}%` : "0% (Đứng yên)"}
@@ -506,13 +540,13 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
             <span className="absolute left-[15%] top-1/2 -translate-y-1/2 -translate-x-1/2 whitespace-nowrap text-cyan-700 dark:text-cyan-300 font-black">
               ▲ 150mm <span className="hidden sm:inline">(CAM)</span>
             </span>
-            <span className="absolute left-[45%] top-1/2 -translate-y-1/2 -translate-x-1/2 whitespace-nowrap text-cyan-700 dark:text-cyan-300 font-black">
+            <span className={`absolute left-[45%] top-1/2 -translate-y-1/2 -translate-x-1/2 whitespace-nowrap font-black ${bin1Theme.rulerText}`}>
               ▲ 450mm <span className="hidden sm:inline">(PISTON 1)</span>
             </span>
-            <span className="absolute left-[72%] top-1/2 -translate-y-1/2 -translate-x-1/2 whitespace-nowrap text-blue-700 dark:text-blue-300 font-black">
+            <span className={`absolute left-[72%] top-1/2 -translate-y-1/2 -translate-x-1/2 whitespace-nowrap font-black ${bin2Theme.rulerText}`}>
               ▲ 720mm <span className="hidden sm:inline">(PISTON 2)</span>
             </span>
-            <span className="absolute right-2 top-1/2 -translate-y-1/2 whitespace-nowrap text-amber-700 dark:text-amber-300 font-black">
+            <span className={`absolute right-2 top-1/2 -translate-y-1/2 whitespace-nowrap font-black ${bin3Theme.rulerText}`}>
               ▲ 1000mm <span className="hidden sm:inline">(KHAY 3)</span>
             </span>
           </div>
@@ -527,30 +561,50 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           <div className={`rounded-lg border py-1.5 px-2 flex items-center justify-center gap-1.5 shadow-sm font-mono min-w-0 transition-colors ${
             isJammed
               ? "border-rose-500 bg-rose-500/20 text-rose-700 dark:text-rose-300 animate-pulse ring-1 ring-rose-500"
-              : "border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
+              : bin1Theme.stationBadge
           }`}>
             <span className="shrink-0">{isJammed ? "⚠️" : "🎛️"}</span>
             <span className="truncate">{isJammed ? "2. ZONE A: KẸT PHÔI!" : "2. PISTON 1 (IO23 - 45%)"}</span>
           </div>
-          <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 py-1.5 px-2 text-blue-700 dark:text-blue-300 flex items-center justify-center gap-1.5 shadow-sm font-mono min-w-0">
+          <div className={`rounded-lg border py-1.5 px-2 flex items-center justify-center gap-1.5 shadow-sm font-mono min-w-0 ${bin2Theme.stationBadge}`}>
             <span className="shrink-0">🎛️</span>
             <span className="truncate">3. PISTON 2 (IO24 - 72%)</span>
           </div>
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 py-1.5 px-2 text-amber-700 dark:text-amber-300 flex items-center justify-center gap-1.5 shadow-sm font-mono min-w-0">
+          <div className={`rounded-lg border py-1.5 px-2 flex items-center justify-center gap-1.5 shadow-sm font-mono min-w-0 ${bin3Theme.stationBadge}`}>
             <span className="shrink-0">📥</span>
             <span className="truncate">4. KHAY 3 (96%)</span>
           </div>
         </div>
 
-        {/* Thông báo chế độ chờ khi không có phôi */}
-        {items.length === 0 && (
+        {/* Thông báo trạng thái: Khay đầy tạm dừng / Đứng yên chờ phôi / Tạm dừng */}
+        {isBinFull ? (
+          <div className="flex justify-center mt-3 mb-1">
+            <div className="rounded-full bg-amber-950/90 px-4 py-1.5 backdrop-blur border border-amber-500/50 text-[10px] sm:text-xs font-semibold text-amber-300 shadow-sm flex items-center gap-2 text-center w-fit mx-auto animate-pulse">
+              <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />
+              <span>
+                ⚠️ Khay chứa đang đầy ({fullBinIndex ? `Khay ${fullBinIndex}` : "Khay phân loại"} đã đạt định mức) • Băng tải tạm dừng bảo vệ phôi. Vui lòng dọn khay để tiếp tục vận hành!
+              </span>
+            </div>
+          </div>
+        ) : items.length === 0 ? (
           <div className="flex justify-center mt-3 mb-1">
             <div className="rounded-full bg-slate-900/90 px-4 py-1.5 backdrop-blur border border-cyan-500/30 text-[10px] sm:text-xs font-semibold text-cyan-300 shadow-sm flex items-center gap-2 text-center w-fit mx-auto">
               <span className="h-2 w-2 rounded-full bg-cyan-400 animate-ping shrink-0" />
-              <span>Băng tải đứng yên chờ phôi • Nhấn nút nạp nhanh vật mẫu phía trên để vận hành</span>
+              <span>
+                {isSimulation
+                  ? "Băng tải đứng yên chờ phôi • Nhấn nút nạp nhanh vật mẫu phía trên để vận hành"
+                  : "Băng tải sẵn sàng • Đang chờ phôi mẫu từ Camera AI & Hệ thống nạp thực tế"}
+              </span>
             </div>
           </div>
-        )}
+        ) : !isRunning ? (
+          <div className="flex justify-center mt-3 mb-1">
+            <div className="rounded-full bg-slate-900/90 px-4 py-1.5 backdrop-blur border border-slate-600/50 text-[10px] sm:text-xs font-semibold text-slate-300 shadow-sm flex items-center gap-2 text-center w-fit mx-auto">
+              <span className="h-2 w-2 rounded-full bg-slate-400 shrink-0" />
+              <span>Băng tải đang tạm dừng • Nhấn nút chạy hoặc kích hoạt để tiếp tục di chuyển phôi</span>
+            </div>
+          </div>
+        ) : null}
 
         {/* DÂY ĐAI BĂNG TẢI CHÍNH & VẬT PHẨM CHẠY 2D */}
         <div className="relative my-6 flex items-center">
@@ -884,24 +938,19 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
         <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* MÁNG KHAY 1 (PISTON 1 - 45%) */}
           <div 
-            onClick={() => {
-              setConfirmBinClear(1);
-            }}
-            role="button"
-            tabIndex={0}
-            className={`relate-card relative overflow-hidden rounded-2xl border p-3.5 shadow-sm transition-all cursor-pointer flex flex-col justify-between gap-3 group hover:scale-[1.01] ${
+            className={`relate-card relative overflow-hidden rounded-2xl border p-3.5 shadow-sm transition-all flex flex-col justify-between gap-3 group ${
               binCounts.bin1 >= cap1 
                 ? "border-amber-500 bg-amber-500/15 animate-pulse ring-2 ring-amber-500/60 shadow-[0_0_16px_rgba(245,158,11,0.4)]" 
-                : "border-rose-500/30 bg-white dark:bg-[#161822] dark:border-rose-500/20 hover:border-rose-500/60 hover:shadow-md"
+                : bin1Theme.cardNormalBorder
             }`}
           >
             <div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-black tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5 truncate">
+                <span className={`text-xs font-black tracking-wider flex items-center gap-1.5 truncate ${bin1Theme.titleText}`}>
                   {binCounts.bin1 >= cap1 ? (
                     <Boxes className="h-4 w-4 text-amber-500 animate-bounce shrink-0" />
                   ) : (
-                    <span className="h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_6px_#f43f5e] shrink-0" />
+                    <span className={`h-2 w-2 rounded-full shrink-0 ${bin1Theme.dotClass}`} />
                   )}
                   <span className="truncate">MÁNG TRƯỢT 1 (PISTON 1)</span>
                 </span>
@@ -921,7 +970,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                     </button>
                   ) : (
                     <>
-                      <span className="rounded-md border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-rose-700 dark:text-rose-400">
+                      <span className={`rounded-md px-2 py-0.5 text-[10px] font-mono font-bold ${bin1Theme.badgeClass}`}>
                         Piston IO23
                       </span>
                       <button
@@ -930,7 +979,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                           e.stopPropagation();
                           setConfirmBinClear(1);
                         }}
-                        className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-md transition-all border border-rose-500/40 bg-rose-500/10 hover:bg-rose-600 hover:text-white text-rose-600 dark:text-rose-300 shadow-xs active:scale-95"
+                        className={`flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-md transition-all shadow-xs active:scale-95 ${bin1Theme.clearBtnClass}`}
                         title={`Dọn khay ngay lập tức (không cần đợi đủ ${cap1} SP)`}
                       >
                         <Trash2 className="h-3 w-3" />
@@ -944,7 +993,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
               {/* Tên nhãn gạt chính */}
               <div className="mt-2 flex items-center justify-between text-xs">
                 <span className="text-slate-500 dark:text-slate-400 text-[11px]">Nhãn gạt chính:</span>
-                <span className="font-bold text-rose-600 dark:text-rose-400">
+                <span className={`font-bold ${bin1Theme.brandText}`}>
                   {bin1Brands.map((bId) => CATALOG_BRANDS[bId]?.name || bId).join(", ") || "Chưa cấu hình"}
                 </span>
               </div>
@@ -957,7 +1006,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                 <div className={`text-3xl font-black font-mono shrink-0 ${
                   binCounts.bin1 >= cap1 
                     ? "text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.8)] animate-pulse" 
-                    : "text-rose-600 dark:text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]"
+                    : bin1Theme.countNormalText
                 }`}>
                   {binCounts.bin1} <span className="text-xs font-normal text-slate-500">SP</span>
                 </div>
@@ -978,7 +1027,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                         isFull
                           ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,1)] animate-pulse"
                           : isFilled
-                          ? "bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.9)]"
+                          ? bin1Theme.ledActive
                           : "bg-slate-200 dark:bg-slate-800/90 border border-slate-300/40 dark:border-white/5"
                       }`}
                     />
@@ -996,9 +1045,6 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                   <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{binCounts.bin1}/{binCapacities.bin1 || 50} SP (Định mức)</span>
                 )}
               </div>
-              <div className="mt-1 text-center text-[9px] text-slate-400 dark:text-slate-500 italic">
-                💡 Click khay hoặc bấm nút để dọn dẹp bất kỳ lúc nào
-              </div>
 
               {/* Thanh trượt điều chỉnh sức chứa định mức của Máng 1 */}
               {(onSetBinCapacity || onSetBinCount) && (
@@ -1008,12 +1054,17 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                 >
                   <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     <span className="flex items-center gap-1">
-                      <SlidersHorizontal className="h-3 w-3 text-rose-500" />
+                      <SlidersHorizontal className={`h-3 w-3 ${bin1Theme.sliderIcon}`} />
                       <span>Độ rộng / Sức chứa khay:</span>
                     </span>
-                    <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
-                      {binCapacities.bin1 || 50} SP (Tối đa)
-                    </span>
+                    <BinCapacityInput
+                      value={binCapacities.bin1 || 50}
+                      onChange={(newVal) => {
+                        if (onSetBinCapacity) onSetBinCapacity(1, newVal);
+                        else if (onSetBinCount) onSetBinCount(1, newVal);
+                      }}
+                      colorScheme={bin1Theme.colorScheme}
+                    />
                   </div>
                   <input
                     type="range"
@@ -1026,20 +1077,20 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                       if (onSetBinCapacity) onSetBinCapacity(1, val);
                       else if (onSetBinCount) onSetBinCount(1, val);
                     }}
-                    className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-rose-500"
+                    className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 ${bin1Theme.sliderAccent}`}
                   />
                   <div className="flex items-center justify-between text-[9px] font-mono text-slate-400 mt-1">
                     <button
                       type="button"
                       onClick={() => onSetBinCapacity ? onSetBinCapacity(1, 10) : onSetBinCount?.(1, 10)}
-                      className="hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer transition-colors"
+                      className={`${bin1Theme.presetHover} cursor-pointer transition-colors`}
                     >
                       10 SP
                     </button>
                     <button
                       type="button"
                       onClick={() => onSetBinCapacity ? onSetBinCapacity(1, 30) : onSetBinCount?.(1, 30)}
-                      className="hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer font-bold transition-colors"
+                      className={`${bin1Theme.presetHover} cursor-pointer font-bold transition-colors`}
                     >
                       30 SP
                     </button>
@@ -1058,24 +1109,19 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
 
           {/* MÁNG KHAY 2 (PISTON 2 - 72%) */}
           <div 
-            onClick={() => {
-              setConfirmBinClear(2);
-            }}
-            role="button"
-            tabIndex={0}
-            className={`relate-card relative overflow-hidden rounded-2xl border p-3.5 shadow-sm transition-all cursor-pointer flex flex-col justify-between gap-3 group hover:scale-[1.01] ${
+            className={`relate-card relative overflow-hidden rounded-2xl border p-3.5 shadow-sm transition-all flex flex-col justify-between gap-3 group ${
               binCounts.bin2 >= cap2 
                 ? "border-amber-500 bg-amber-500/15 animate-pulse ring-2 ring-amber-500/60 shadow-[0_0_16px_rgba(245,158,11,0.4)]" 
-                : "border-blue-500/30 bg-white dark:bg-[#161822] dark:border-blue-500/20 hover:border-blue-500/60 hover:shadow-md"
+                : bin2Theme.cardNormalBorder
             }`}
           >
             <div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-black tracking-wider text-blue-700 dark:text-blue-400 flex items-center gap-1.5 truncate">
+                <span className={`text-xs font-black tracking-wider flex items-center gap-1.5 truncate ${bin2Theme.titleText}`}>
                   {binCounts.bin2 >= cap2 ? (
                     <Boxes className="h-4 w-4 text-amber-500 animate-bounce shrink-0" />
                   ) : (
-                    <span className="h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_6px_#3b82f6] shrink-0" />
+                    <span className={`h-2 w-2 rounded-full shrink-0 ${bin2Theme.dotClass}`} />
                   )}
                   <span className="truncate">MÁNG TRƯỢT 2 (PISTON 2)</span>
                 </span>
@@ -1095,7 +1141,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                     </button>
                   ) : (
                     <>
-                      <span className="rounded-md border border-blue-500/30 bg-blue-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-blue-700 dark:text-blue-400">
+                      <span className={`rounded-md px-2 py-0.5 text-[10px] font-mono font-bold ${bin2Theme.badgeClass}`}>
                         Piston IO24
                       </span>
                       <button
@@ -1104,7 +1150,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                           e.stopPropagation();
                           setConfirmBinClear(2);
                         }}
-                        className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-md transition-all border border-blue-500/40 bg-blue-500/10 hover:bg-blue-600 hover:text-white text-blue-600 dark:text-blue-300 shadow-xs active:scale-95"
+                        className={`flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-md transition-all shadow-xs active:scale-95 ${bin2Theme.clearBtnClass}`}
                         title={`Dọn khay ngay lập tức (không cần đợi đủ ${cap2} SP)`}
                       >
                         <Trash2 className="h-3 w-3" />
@@ -1118,7 +1164,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
               {/* Tên nhãn gạt chính */}
               <div className="mt-2 flex items-center justify-between text-xs">
                 <span className="text-slate-500 dark:text-slate-400 text-[11px]">Nhãn gạt chính:</span>
-                <span className="font-bold text-blue-600 dark:text-blue-400">
+                <span className={`font-bold ${bin2Theme.brandText}`}>
                   {bin2Brands.map((bId) => CATALOG_BRANDS[bId]?.name || bId).join(", ") || "Chưa cấu hình"}
                 </span>
               </div>
@@ -1131,7 +1177,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                 <div className={`text-3xl font-black font-mono shrink-0 ${
                   binCounts.bin2 >= cap2 
                     ? "text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.8)] animate-pulse" 
-                    : "text-blue-600 dark:text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]"
+                    : bin2Theme.countNormalText
                 }`}>
                   {binCounts.bin2} <span className="text-xs font-normal text-slate-500">SP</span>
                 </div>
@@ -1152,7 +1198,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                         isFull
                           ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,1)] animate-pulse"
                           : isFilled
-                          ? "bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.9)]"
+                          ? bin2Theme.ledActive
                           : "bg-slate-200 dark:bg-slate-800/90 border border-slate-300/40 dark:border-white/5"
                       }`}
                     />
@@ -1170,9 +1216,6 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                   <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{binCounts.bin2}/{binCapacities.bin2 || 50} SP (Định mức)</span>
                 )}
               </div>
-              <div className="mt-1 text-center text-[9px] text-slate-400 dark:text-slate-500 italic">
-                💡 Click khay hoặc bấm nút để dọn dẹp bất kỳ lúc nào
-              </div>
 
               {/* Thanh trượt điều chỉnh sức chứa định mức của Máng 2 */}
               {(onSetBinCapacity || onSetBinCount) && (
@@ -1182,12 +1225,17 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                 >
                   <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     <span className="flex items-center gap-1">
-                      <SlidersHorizontal className="h-3 w-3 text-blue-500" />
+                      <SlidersHorizontal className={`h-3 w-3 ${bin2Theme.sliderIcon}`} />
                       <span>Độ rộng / Sức chứa khay:</span>
                     </span>
-                    <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
-                      {binCapacities.bin2 || 50} SP (Tối đa)
-                    </span>
+                    <BinCapacityInput
+                      value={binCapacities.bin2 || 50}
+                      onChange={(newVal) => {
+                        if (onSetBinCapacity) onSetBinCapacity(2, newVal);
+                        else if (onSetBinCount) onSetBinCount(2, newVal);
+                      }}
+                      colorScheme={bin2Theme.colorScheme}
+                    />
                   </div>
                   <input
                     type="range"
@@ -1200,20 +1248,20 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                       if (onSetBinCapacity) onSetBinCapacity(2, val);
                       else if (onSetBinCount) onSetBinCount(2, val);
                     }}
-                    className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-blue-500"
+                    className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 ${bin2Theme.sliderAccent}`}
                   />
                   <div className="flex items-center justify-between text-[9px] font-mono text-slate-400 mt-1">
                     <button
                       type="button"
                       onClick={() => onSetBinCapacity ? onSetBinCapacity(2, 10) : onSetBinCount?.(2, 10)}
-                      className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors"
+                      className={`${bin2Theme.presetHover} cursor-pointer transition-colors`}
                     >
                       10 SP
                     </button>
                     <button
                       type="button"
                       onClick={() => onSetBinCapacity ? onSetBinCapacity(2, 30) : onSetBinCount?.(2, 30)}
-                      className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer font-bold transition-colors"
+                      className={`${bin2Theme.presetHover} cursor-pointer font-bold transition-colors`}
                     >
                       30 SP
                     </button>
@@ -1232,24 +1280,19 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
 
           {/* MÁNG KHAY 3 (ĐI THẲNG - 96%) */}
           <div 
-            onClick={() => {
-              setConfirmBinClear(3);
-            }}
-            role="button"
-            tabIndex={0}
-            className={`relate-card relative overflow-hidden rounded-2xl border p-3.5 shadow-sm transition-all cursor-pointer flex flex-col justify-between gap-3 group hover:scale-[1.01] ${
+            className={`relate-card relative overflow-hidden rounded-2xl border p-3.5 shadow-sm transition-all flex flex-col justify-between gap-3 group ${
               binCounts.bin3 >= cap3 
                 ? "border-amber-500 bg-amber-500/15 animate-pulse ring-2 ring-amber-500/60 shadow-[0_0_16px_rgba(245,158,11,0.4)]" 
-                : "border-amber-500/30 bg-white dark:bg-[#161822] dark:border-amber-500/20 hover:border-amber-500/60 hover:shadow-md"
+                : bin3Theme.cardNormalBorder
             }`}
           >
             <div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-black tracking-wider text-amber-800 dark:text-amber-400 flex items-center gap-1.5 truncate">
+                <span className={`text-xs font-black tracking-wider flex items-center gap-1.5 truncate ${bin3Theme.titleText}`}>
                   {binCounts.bin3 >= cap3 ? (
                     <Boxes className="h-4 w-4 text-amber-500 animate-bounce shrink-0" />
                   ) : (
-                    <span className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_6px_#f59e0b] shrink-0" />
+                    <span className={`h-2 w-2 rounded-full shrink-0 ${bin3Theme.dotClass}`} />
                   )}
                   <span className="truncate">KHAY 3 (MẶC ĐỊNH)</span>
                 </span>
@@ -1269,7 +1312,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                     </button>
                   ) : (
                     <>
-                      <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-amber-800 dark:text-amber-400">
+                      <span className={`rounded-md px-2 py-0.5 text-[10px] font-mono font-bold ${bin3Theme.badgeClass}`}>
                         Đi Thẳng
                       </span>
                       <button
@@ -1278,7 +1321,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                           e.stopPropagation();
                           setConfirmBinClear(3);
                         }}
-                        className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-md transition-all border border-amber-500/40 bg-amber-500/10 hover:bg-amber-600 hover:text-white text-amber-700 dark:text-amber-300 shadow-xs active:scale-95"
+                        className={`flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-md transition-all shadow-xs active:scale-95 ${bin3Theme.clearBtnClass}`}
                         title={`Dọn khay ngay lập tức (không cần đợi đủ ${cap3} SP)`}
                       >
                         <Trash2 className="h-3 w-3" />
@@ -1292,7 +1335,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
               {/* Tên nhãn gạt chính */}
               <div className="mt-2 flex items-center justify-between text-xs">
                 <span className="text-slate-500 dark:text-slate-400 text-[11px]">Nhãn tiếp nhận:</span>
-                <span className="font-bold text-amber-700 dark:text-amber-400">
+                <span className={`font-bold ${bin3Theme.brandText}`}>
                   {bin3Brands.map((bId) => CATALOG_BRANDS[bId]?.name || bId).join(", ") || "Các nhãn còn lại"}
                 </span>
               </div>
@@ -1305,7 +1348,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                 <div className={`text-3xl font-black font-mono shrink-0 ${
                   binCounts.bin3 >= cap3 
                     ? "text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.8)] animate-pulse" 
-                    : "text-amber-600 dark:text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]"
+                    : bin3Theme.countNormalText
                 }`}>
                   {binCounts.bin3} <span className="text-xs font-normal text-slate-500">SP</span>
                 </div>
@@ -1326,7 +1369,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                         isFull
                           ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,1)] animate-pulse"
                           : isFilled
-                          ? "bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.9)]"
+                          ? bin3Theme.ledActive
                           : "bg-slate-200 dark:bg-slate-800/90 border border-slate-300/40 dark:border-white/5"
                       }`}
                     />
@@ -1344,9 +1387,6 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                   <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{binCounts.bin3}/{binCapacities.bin3 || 50} SP (Định mức)</span>
                 )}
               </div>
-              <div className="mt-1 text-center text-[9px] text-slate-400 dark:text-slate-500 italic">
-                💡 Click khay hoặc bấm nút để dọn dẹp bất kỳ lúc nào
-              </div>
 
               {/* Thanh trượt điều chỉnh sức chứa định mức của Khay 3 */}
               {(onSetBinCapacity || onSetBinCount) && (
@@ -1356,12 +1396,17 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                 >
                   <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     <span className="flex items-center gap-1">
-                      <SlidersHorizontal className="h-3 w-3 text-amber-500" />
+                      <SlidersHorizontal className={`h-3 w-3 ${bin3Theme.sliderIcon}`} />
                       <span>Độ rộng / Sức chứa khay:</span>
                     </span>
-                    <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
-                      {binCapacities.bin3 || 50} SP (Tối đa)
-                    </span>
+                    <BinCapacityInput
+                      value={binCapacities.bin3 || 50}
+                      onChange={(newVal) => {
+                        if (onSetBinCapacity) onSetBinCapacity(3, newVal);
+                        else if (onSetBinCount) onSetBinCount(3, newVal);
+                      }}
+                      colorScheme={bin3Theme.colorScheme}
+                    />
                   </div>
                   <input
                     type="range"
@@ -1374,20 +1419,20 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                       if (onSetBinCapacity) onSetBinCapacity(3, val);
                       else if (onSetBinCount) onSetBinCount(3, val);
                     }}
-                    className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-amber-500"
+                    className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 ${bin3Theme.sliderAccent}`}
                   />
                   <div className="flex items-center justify-between text-[9px] font-mono text-slate-400 mt-1">
                     <button
                       type="button"
                       onClick={() => onSetBinCapacity ? onSetBinCapacity(3, 10) : onSetBinCount?.(3, 10)}
-                      className="hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer transition-colors"
+                      className={`${bin3Theme.presetHover} cursor-pointer transition-colors`}
                     >
                       10 SP
                     </button>
                     <button
                       type="button"
                       onClick={() => onSetBinCapacity ? onSetBinCapacity(3, 30) : onSetBinCount?.(3, 30)}
-                      className="hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer font-bold transition-colors"
+                      className={`${bin3Theme.presetHover} cursor-pointer font-bold transition-colors`}
                     >
                       30 SP
                     </button>

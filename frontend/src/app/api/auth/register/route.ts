@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { RegisterSchema } from "@shared/schemas";
 import { NextUsersStore, toSafeUser } from "@/app/api/users/store";
 
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
       username: trimmedUsername,
       full_name: full_name.trim(),
       email: trimmedEmail,
-      plain_password: password,
+      password_hash: await bcrypt.hash(password, 12),
       role: "user", // BẢO MẬT: Luôn gán cứng role = 'user'
       status: "active",
     });

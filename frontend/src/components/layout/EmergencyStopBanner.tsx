@@ -50,18 +50,18 @@ export const EmergencyStopBanner: React.FC<EmergencyStopBannerProps> = ({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1 rounded-md bg-black/30 px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-yellow-300 border border-yellow-300/40">
-                <ShieldAlert className="h-3.5 w-3.5" /> SYSTEM LOCKED
+                <ShieldAlert className="h-3.5 w-3.5" /> Hệ thống đã khóa
               </span>
               <span className="text-xs font-mono opacity-90">
-                {timeStr} • {incident?.mode === "simulation" ? "🧪 Chế độ Giả lập" : "🔴 Phần cứng thực tế"}
+                {timeStr} • {incident?.mode === "simulation" ? "Mô phỏng" : "Thực tế"}
               </span>
             </div>
 
             <h3 className="text-sm sm:text-base font-black tracking-tight text-white drop-shadow-sm uppercase">
-              [NGUY HIỂM] NÚT DỪNG KHẨN CẤP ĐÃ ĐƯỢC KÍCH HOẠT TẠI TRẠM {stationNum}! BĂNG CHUYỀN ĐÃ NGẮT TOÀN BỘ.
+              [Dừng khẩn] Nút dừng khẩn cấp đã được kích hoạt tại trạm {stationNum}. Băng tải đã ngắt toàn bộ.
             </h3>
             <p className="text-xs text-rose-100 font-medium">
-              Nguồn kích hoạt: <span className="font-bold underline">{triggeredBy}</span> ({stationId}). Mọi cơ cấu chấp hành và động cơ đã bị ngắt cưỡng bức.
+              Nguồn kích hoạt: <span className="font-bold underline">{triggeredBy}</span> ({stationId}). Động cơ và cơ cấu chấp hành đã ngắt.
             </p>
           </div>
         </div>
@@ -74,12 +74,12 @@ export const EmergencyStopBanner: React.FC<EmergencyStopBannerProps> = ({
               className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-black text-rose-700 hover:bg-rose-50 active:scale-95 transition-all shadow-md hover:shadow-lg uppercase tracking-wider"
             >
               <KeyRound className="h-4 w-4 text-rose-600" />
-              <span>Mở Khóa Hệ Thống (Admin)</span>
+              <span>Mở khóa hệ thống (Admin)</span>
             </button>
           ) : (
             <div className="flex items-center gap-1.5 rounded-xl bg-black/40 px-3 py-2 text-xs text-rose-200 border border-white/20">
               <AlertTriangle className="h-3.5 w-3.5 text-yellow-300" />
-              <span>Cần quyền Admin để mở khóa</span>
+              <span>Cần quyền quản trị viên để mở khóa</span>
             </div>
           )}
         </div>

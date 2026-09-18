@@ -71,6 +71,11 @@ function loadUsersFromDisk(): UserAccount[] | null {
       if (Array.isArray(parsed) && parsed.length > 0) {
         let hasFixes = false;
         for (const u of parsed) {
+          const legacyRecord = u as UserAccount & Record<string, unknown>;
+          if ("plain_password" in legacyRecord) {
+            delete legacyRecord.plain_password;
+            hasFixes = true;
+          }
           if (u.reset_otp === undefined) {
             u.reset_otp = null;
             hasFixes = true;
@@ -78,20 +83,6 @@ function loadUsersFromDisk(): UserAccount[] | null {
           if (u.reset_otp_expires_at === undefined) {
             u.reset_otp_expires_at = null;
             hasFixes = true;
-          }
-          if (u.plain_password) {
-            let matches = false;
-            if (u.password_hash) {
-              try {
-                matches = bcrypt.compareSync(u.plain_password, u.password_hash);
-              } catch {
-                matches = false;
-              }
-            }
-            if (!matches) {
-              u.password_hash = bcrypt.hashSync(u.plain_password, 10);
-              hasFixes = true;
-            }
           }
         }
         if (hasFixes) {
@@ -109,11 +100,22 @@ function loadUsersFromDisk(): UserAccount[] | null {
 function saveUsersToDisk(users: UserAccount[]): void {
   const filePath = resolveStorageFilePath();
   try {
-    const dir = path.dirname(filePath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    const directory = path.dirname(filePath);
+    fs.mkdirSync(directory, { recursive: true });
+    const temporaryPath = path.join(
+      directory,
+      `.${path.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`,
+    );
+    try {
+      fs.writeFileSync(temporaryPath, JSON.stringify(users, null, 2), "utf-8");
+      fs.renameSync(temporaryPath, filePath);
+    } finally {
+      try {
+        if (fs.existsSync(temporaryPath)) fs.unlinkSync(temporaryPath);
+      } catch {
+        // Best effort cleanup; the atomic rename already completed if this runs.
+      }
     }
-    fs.writeFileSync(filePath, JSON.stringify(users, null, 2), "utf-8");
   } catch (err) {
     console.error("[UserModel] Lỗi lưu users.json:", err);
   }
@@ -122,6 +124,7 @@ function saveUsersToDisk(users: UserAccount[]): void {
 export function toSafeUser(user: UserAccount): SafeUser {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password_hash, ...safe } = user;
+  delete (safe as Record<string, unknown>).plain_password;
   return safe;
 }
 
@@ -342,7 +345,7 @@ export const UserModel = {
       return { success: false, message: "Mã OTP không chính xác. Vui lòng kiểm tra lại" };
     }
 
-    if (!user.reset_otp_expires_at || new Date(user.reset_otp_expires_at).getTime() < Date.now()) {
+    if (!user.reset_otp_expires_at || new Date(user.reset_otp_expires_at).getTime() <= Date.now()) {
       return { success: false, message: "Mã OTP đã hết hạn hiệu lực (quá 5 phút). Vui lòng yêu cầu mã mới" };
     }
 

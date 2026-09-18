@@ -24,7 +24,6 @@ class IndustrialAudioService {
 
   // Còi mất kết nối thiết bị ngoại tuyến
   private activeOfflineOsc: OscillatorNode | null = null;
-  private activeOfflineGain: GainNode | null = null;
   private continuousOfflineInterval: NodeJS.Timeout | null = null;
 
   constructor() {
@@ -483,6 +482,8 @@ class IndustrialAudioService {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
 
+      this.activeOfflineOsc = osc;
+
       osc.type = "sawtooth";
       // Âm trầm hạ dần cảnh báo đứt kết nối (520Hz -> 260Hz)
       osc.frequency.setValueAtTime(520, this.ctx.currentTime);
@@ -493,6 +494,16 @@ class IndustrialAudioService {
 
       osc.connect(gain);
       gain.connect(this.ctx.destination);
+
+      osc.onended = () => {
+        if (this.activeOfflineOsc === osc) {
+          this.activeOfflineOsc = null;
+        }
+        try {
+          osc.disconnect();
+          gain.disconnect();
+        } catch {}
+      };
 
       osc.start();
       osc.stop(this.ctx.currentTime + 0.5);
@@ -522,7 +533,6 @@ class IndustrialAudioService {
         } catch {}
         this.activeOfflineOsc = null;
       }
-      this.activeOfflineGain = null;
     } catch (e) {}
   }
 

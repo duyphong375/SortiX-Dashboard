@@ -181,7 +181,6 @@ export interface UserAccount {
   full_name: string;
   email: string;
   password_hash: string;
-  plain_password?: string;
   role: UserRole;
   status: UserStatus;
   is_online?: boolean;

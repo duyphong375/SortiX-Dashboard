@@ -5,10 +5,10 @@
     "station_id": "MQTT_BROKER",
     "triggered_by": "AUTO_RECONNECT_SERVICE",
     "description": "[ĐÃ PHỤC HỒI] Kết nối MQTT Broker thành công",
-    "timestamp": "2026-09-18T12:48:34.759Z",
+    "timestamp": "2026-09-18T20:06:20.867Z",
     "mode": "realtime",
     "status": "resolved",
-    "id": "notif_1789735714759_ocr9a"
+    "id": "notif_1789761980867_rprvp"
   },
   {
     "event": "mqtt_disconnected",
@@ -16,10 +16,12 @@
     "station_id": "MQTT_BROKER",
     "triggered_by": "TCP_SOCKET_WATCHDOG",
     "description": "[MẤT KẾT NỐI MẠNG] Mất liên lạc với MQTT Broker! Đang thử kết nối lại lần thứ 2 (Reconnecting...)",
-    "timestamp": "2026-09-18T12:48:34.758Z",
+    "timestamp": "2026-09-18T20:06:20.865Z",
     "mode": "realtime",
-    "status": "unprocessed",
-    "id": "notif_1789735714758_8hrbe"
+    "status": "resolved",
+    "id": "notif_1789761980865_9k9oh",
+    "resolved_at": "2026-09-18T20:06:20.868Z",
+    "resolved_by": "MQTT_RECOVERY"
   },
   {
     "event": "mqtt_connected",
@@ -27,10 +29,10 @@
     "station_id": "MQTT_BROKER",
     "triggered_by": "AUTO_RECONNECT_SERVICE",
     "description": "[ĐÃ PHỤC HỒI] Kết nối MQTT Broker thành công",
-    "timestamp": "2026-09-18T12:48:34.758Z",
+    "timestamp": "2026-09-18T20:06:20.862Z",
     "mode": "realtime",
     "status": "resolved",
-    "id": "notif_1789735714758_0tt8k"
+    "id": "notif_1789761980862_9i8bj"
   },
   {
     "event": "mqtt_disconnected",
@@ -38,43 +40,12 @@
     "station_id": "MQTT_BROKER",
     "triggered_by": "TCP_SOCKET_WATCHDOG",
     "description": "[MẤT KẾT NỐI MẠNG] Mất liên lạc với MQTT Broker! Đang thử kết nối lại lần thứ 3 (Reconnecting...)",
-    "timestamp": "2026-09-18T12:48:34.757Z",
+    "timestamp": "2026-09-18T20:06:20.859Z",
     "mode": "realtime",
-    "status": "unprocessed",
-    "id": "notif_1789735714757_d6ava"
-  },
-  {
-    "event": "shift_summary",
-    "severity": "info",
-    "station_id": "SHIFT_SUPERVISOR",
-    "triggered_by": "SHIFT_END_TRIGGER",
-    "description": "[BÁO CÁO 1 NGÀY LÀM VIỆC] Ca 1 - Buổi sáng: Tổng 1.250 sản phẩm (Đạt 94.4%). Nhấn để xem chi tiết",
-    "timestamp": "2026-09-18T17:00:00Z",
-    "mode": "realtime",
-    "status": "unprocessed",
-    "id": "notif_1789735714169_afxov"
-  },
-  {
-    "event": "shift_summary",
-    "severity": "info",
-    "station_id": "SHIFT_SUPERVISOR",
-    "triggered_by": "SHIFT_END_TRIGGER",
-    "description": "[BÁO CÁO 1 NGÀY LÀM VIỆC] Ca 1 - Buổi sáng: Tổng 1.250 sản phẩm (Đạt 94.4%). Nhấn để xem chi tiết",
-    "timestamp": "2026-09-18T17:00:00Z",
-    "mode": "realtime",
-    "status": "unprocessed",
-    "id": "notif_1789735714159_ihdsx"
-  },
-  {
-    "event": "shift_summary",
-    "severity": "info",
-    "station_id": "SHIFT_SUPERVISOR",
-    "triggered_by": "SHIFT_END_TRIGGER",
-    "description": "[BÁO CÁO 1 NGÀY LÀM VIỆC] Ca 1 - Buổi sáng: Tổng 1.250 sản phẩm (Đạt 94.4%). Nhấn để xem chi tiết",
-    "timestamp": "2026-09-18T17:00:00Z",
-    "mode": "realtime",
-    "status": "unprocessed",
-    "id": "notif_1789735714158_4bb0n"
+    "status": "resolved",
+    "id": "notif_1789761980859_au09e",
+    "resolved_at": "2026-09-18T20:06:20.864Z",
+    "resolved_by": "MQTT_RECOVERY"
   },
   {
     "event": "device_offline",
@@ -82,10 +53,10 @@
     "station_id": "ESP32_MAIN_CONTROLLER",
     "triggered_by": "HEARTBEAT_WATCHDOG",
     "description": "[MẤT KẾT NỐI THIẾT BỊ] Vi điều khiển trung tâm (ESP32) đã ngoại tuyến! Dữ liệu cảm biến thời gian thực bị ngắt",
-    "timestamp": "2026-09-18T12:48:33.823Z",
+    "timestamp": "2026-09-18T20:06:19.197Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1789735713823_yscnt"
+    "id": "notif_1789761979197_bzghw"
   },
   {
     "event": "device_offline",
@@ -93,10 +64,10 @@
     "station_id": "ESP32_MAIN_CONTROLLER",
     "triggered_by": "HEARTBEAT_WATCHDOG",
     "description": "[MẤT KẾT NỐI THIẾT BỊ] Vi điều khiển trung tâm (ESP32) đã ngoại tuyến! Dữ liệu cảm biến thời gian thực bị ngắt",
-    "timestamp": "2026-09-18T12:48:33.812Z",
+    "timestamp": "2026-09-18T20:06:19.174Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1789735713813_arr85"
+    "id": "notif_1789761979174_2qi5o"
   },
   {
     "event": "temperature_warning",
@@ -104,10 +75,10 @@
     "station_id": "Main_Drive_Motor / Edge_AI_Box",
     "triggered_by": "TEMP_SENSOR_TELEMETRY",
     "description": "[QUÁ NHIỆT] Động cơ truyền động chính đang ở mức 79.2°C (Ngưỡng an toàn: 75°C). Khuyến nghị kiểm tra quạt tản nhiệt hoặc giảm tải",
-    "timestamp": "2026-09-18T12:48:33.483Z",
+    "timestamp": "2026-09-18T20:06:18.588Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1789735713483_wasof"
+    "id": "notif_1789761978588_zunfe"
   },
   {
     "event": "temperature_warning",
@@ -115,10 +86,10 @@
     "station_id": "Edge_AI_Box",
     "triggered_by": "TEMP_SENSOR_TELEMETRY",
     "description": "[QUÁ NHIỆT] CPU máy chủ Edge AI đang ở mức 82°C (Ngưỡng an toàn: 75°C). Khuyến nghị kiểm tra quạt tản nhiệt hoặc giảm tải",
-    "timestamp": "2026-09-18T12:48:33.472Z",
+    "timestamp": "2026-09-18T20:06:18.566Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1789735713472_ej64c"
+    "id": "notif_1789761978566_gmvo8"
   },
   {
     "event": "temperature_warning",
@@ -126,10 +97,10 @@
     "station_id": "Main_Drive_Motor / Edge_AI_Box",
     "triggered_by": "TEMP_SENSOR_TELEMETRY",
     "description": "[QUÁ NHIỆT] Động cơ truyền động chính đang ở mức 78.5°C (Ngưỡng an toàn: 75°C). Khuyến nghị kiểm tra quạt tản nhiệt hoặc giảm tải",
-    "timestamp": "2026-09-18T12:48:33.471Z",
+    "timestamp": "2026-09-18T20:06:18.564Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1789735713471_8glb2"
+    "id": "notif_1789761978564_htijh"
   },
   {
     "event": "bin_full",
@@ -137,10 +108,10 @@
     "station_id": "BIN_BLUE_02",
     "triggered_by": "STORAGE_BIN_BLUE_02",
     "description": "[ĐẦY KHAY CHỨA] Khay phân loại sản phẩm Xanh (#02) đã đạt giới hạn 50/50 cái. Vui lòng thay thế khay rỗng mới",
-    "timestamp": "2026-09-18T12:48:33.126Z",
+    "timestamp": "2026-09-18T20:06:17.990Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1789735713126_f1fd4"
+    "id": "notif_1789761977990_jhous"
   },
   {
     "event": "bin_full",
@@ -148,10 +119,10 @@
     "station_id": "BIN_RED_01",
     "triggered_by": "STORAGE_BIN_RED_01",
     "description": "[ĐẦY KHAY CHỨA] Khay phân loại sản phẩm Đỏ (#01) đã đạt giới hạn 50/50 cái. Vui lòng thay thế khay rỗng mới",
-    "timestamp": "2026-09-18T12:48:33.116Z",
+    "timestamp": "2026-09-18T20:06:17.969Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1789735713116_6fpbq"
+    "id": "notif_1789761977969_13fl2"
   },
   {
     "event": "jam_detected",
@@ -159,10 +130,21 @@
     "station_id": "Conveyor_Belt_Zone_A",
     "triggered_by": "OPTICAL_JAM_02",
     "description": "[CẢNH BÁO KẸT PHÔI] Phát hiện tắc nghẽn sản phẩm tại Khu vực Conveyor_Belt_Zone_A (Cảm biến OPTICAL_JAM_02 che khuất liên tục 5s). Băng tải đã tự động giảm tốc/dừng.",
-    "timestamp": "2026-09-18T12:48:32.203Z",
+    "timestamp": "2026-09-18T20:06:16.261Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1789735712203_kpskp"
+    "id": "notif_1789761976262_r3fij"
+  },
+  {
+    "event": "shift_summary",
+    "severity": "info",
+    "station_id": "SHIFT_SUPERVISOR",
+    "triggered_by": "SHIFT_END_TRIGGER",
+    "description": "[BÁO CÁO 1 NGÀY LÀM VIỆC] Ca 1 - Buổi sáng: Tổng 1.250 sản phẩm (Đạt 94.4%). Nhấn để xem chi tiết",
+    "timestamp": "2026-09-18T17:00:00.000Z",
+    "mode": "realtime",
+    "status": "unprocessed",
+    "id": "notif_1789761979764_644dn"
   },
   {
     "event": "emergency_stop",
@@ -170,11 +152,11 @@
     "station_id": "STATION_01",
     "triggered_by": "Physical E-Stop Button #1",
     "description": "[NGUY HIỂM] NÚT DỪNG KHẨN CẤP ĐÃ ĐƯỢC KÍCH HOẠT TẠI TRẠM 01! BĂNG CHUYỀN ĐÃ NGẮT TOÀN BỘ.",
-    "timestamp": "2026-09-18T10:15:30Z",
+    "timestamp": "2026-09-18T10:15:30.000Z",
     "mode": "realtime",
     "status": "resolved",
-    "id": "notif_1789735711873_weh4v",
-    "resolved_at": "2026-09-18T12:48:31.873Z",
+    "id": "notif_1789761975625_zn6d5",
+    "resolved_at": "2026-09-18T20:06:15.626Z",
     "resolved_by": "admin1"
   },
   {
@@ -183,24 +165,11 @@
     "station_id": "STATION_01",
     "triggered_by": "Physical E-Stop Button #1",
     "description": "[NGUY HIỂM] NÚT DỪNG KHẨN CẤP ĐÃ ĐƯỢC KÍCH HOẠT TẠI TRẠM 01! BĂNG CHUYỀN ĐÃ NGẮT TOÀN BỘ.",
-    "timestamp": "2026-09-18T10:15:30Z",
+    "timestamp": "2026-09-18T10:15:30.000Z",
     "mode": "realtime",
     "status": "resolved",
-    "id": "notif_1789735711871_grw5i",
-    "resolved_at": "2026-09-18T12:48:31.872Z",
-    "resolved_by": "admin1"
-  },
-  {
-    "event": "emergency_stop",
-    "severity": "critical",
-    "station_id": "STATION_01",
-    "triggered_by": "Physical E-Stop Button #1",
-    "description": "[NGUY HIỂM] NÚT DỪNG KHẨN CẤP ĐÃ ĐƯỢC KÍCH HOẠT TẠI TRẠM 01! BĂNG CHUYỀN ĐÃ NGẮT TOÀN BỘ.",
-    "timestamp": "2026-09-18T10:15:30Z",
-    "mode": "realtime",
-    "status": "resolved",
-    "id": "notif_1789735711859_ka6rx",
-    "resolved_at": "2026-09-18T12:48:31.872Z",
+    "id": "notif_1789761975596_hb9lw",
+    "resolved_at": "2026-09-18T20:06:15.623Z",
     "resolved_by": "admin1"
   }
 ]
