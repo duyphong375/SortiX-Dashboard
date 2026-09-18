@@ -1,16 +1,27 @@
-# KIẾN TRÚC HỆ THỐNG SORTIX DASHBOARD (SYSTEM ARCHITECTURE)
+# THIẾT KẾ KIẾN TRÚC HỆ THỐNG (SORTIX SYSTEM ARCHITECTURE)
 
-> **Tài liệu Kỹ Thuật Đồ Án PBL3**: Hệ thống điều khiển, giám sát và phân loại sản phẩm trên băng chuyền tự động thông minh tích hợp IoT (ESP32-C5) & Vision AI.
+> **Tài liệu Kỹ Thuật Đồ Án PBL3**: Hệ thống điều khiển, giám sát và phân loại sản phẩm trên băng chuyền tự động thông minh tích hợp vi điều khiển IoT (ESP32-C5) & Thị giác máy tính (Vision AI).
+
+---
+
+## 📌 Mục Lục
+1. [Tổng Quan Kiến Trúc (High-Level Architecture)](#1-tổng-quan-kiến-trúc-high-level-architecture)
+2. [Phân Tích Chi Tiết Từng Tầng (Layer Breakdown)](#2-phân-tích-chi-tiết-từng-tầng-layer-breakdown)
+3. [Các Luồng Dữ Liệu Cốt Lõi (Core Data Flows)](#3-các-luồng-dữ-liệu-cốt-lõi-core-data-flows)
+4. [Kiến Trúc Luồng Sự Kiện Thời Gian Thực (SSE & MQTT Architecture)](#4-kiến-trúc-luồng-sự-kiện-thời-gian-thực-sse--mqtt-architecture)
+5. [Kiến Trúc Lưu Trữ & Chuyển Đổi Dữ Liệu (Persistence & Migrations)](#5-kiến-trúc-lưu-trữ--chuyển-đổi-dữ-liệu-persistence--migrations)
+6. [Mô Hình Bảo Mật & Ràng Buộc An Toàn (Security Architecture)](#6-mô-hình-bảo-mật--ràng-buộc-an-toàn-security-architecture)
+7. [Kiến Trúc Kiểm Thử & Cổng Chất Lượng (Quality Gates & Testing)](#7-kiến-trúc-kiểm-thử--cổng-chất-lượng-quality-gates--testing)
 
 ---
 
 ## 1. Tổng Quan Kiến Trúc (High-Level Architecture)
 
-Hệ thống **SortiX Dashboard** được thiết kế theo mô hình kiến trúc phân tầng chuyên biệt (**Layered Architecture**) và quản lý mã nguồn dưới dạng **Monorepo**. Kiến trúc phân định rạch ròi 4 khối chính:
+Hệ thống **SortiX Dashboard** được thiết kế theo mô hình kiến trúc phân tầng chuyên biệt (**Layered Architecture**) và quản lý mã nguồn dưới dạng **Monorepo (npm workspaces)**. Kiến trúc phân định rõ 4 khối chức năng:
 
-1. **Frontend (Giao diện Client)**: Ứng dụng Next.js 14 App Router, chịu trách nhiệm trực quan hóa đồ họa 60fps, âm thanh công nghiệp thuần, hiển thị đồng hồ đo nhiệt độ, các thanh trượt điều chỉnh dung lượng khay (5-50 SP) và tương tác người dùng.
-2. **Backend (Máy chủ Dịch vụ API)**: Máy chủ Express/Node.js độc lập xử lý xác thực, phân quyền RBAC, giám sát an toàn (E-Stop, Kẹt phôi, Khay đầy, Quá nhiệt, Thiết bị offline, Mất kết nối MQTT, Báo cáo 1 ngày làm việc), broadcast SSE và lưu trữ dữ liệu bền vững.
-3. **Shared Layer (Tầng Dùng Chung)**: Định nghĩa kiểu dữ liệu (Types), Zod Schemas và hằng số hệ thống dùng chung cho cả Frontend và Backend.
+1. **Frontend (Giao diện Client)**: Ứng dụng Next.js 14 App Router, chịu trách nhiệm trực quan hóa đồ họa Canvas 60fps, âm thanh công nghiệp tổng hợp qua Web Audio API, đồng hồ nhiệt độ bán nguyệt 2 chế độ, các thanh trượt điều chỉnh dung lượng khay (5-50 SP) và tương tác người dùng.
+2. **Backend (Máy chủ Dịch vụ API)**: Máy chủ Express/Node.js độc lập xử lý xác thực, phân quyền RBAC, giám sát an toàn công nghiệp (E-Stop, Kẹt phôi, Khay đầy, Quá nhiệt, Thiết bị offline, Mất kết nối MQTT, Báo cáo 1 ngày làm việc), broadcast SSE và lưu trữ dữ liệu bền vững.
+3. **Shared Layer (Tầng Dùng Chung)**: Định nghĩa kiểu dữ liệu (Types), Zod Schemas và hằng số hệ thống dùng chung giữa Frontend và Backend.
 4. **IoT & Vision Gateway**: Cầu nối truyền thông hai chiều thời gian thực giữa vi điều khiển ESP32-C5, cụm cảm biến/cơ cấu piston đẩy và MQTT Broker qua Wi-Fi 6.
 
 ```
@@ -56,10 +67,10 @@ Hệ thống **SortiX Dashboard** được thiết kế theo mô hình kiến tr
 ## 2. Phân Tích Chi Tiết Từng Tầng (Layer Breakdown)
 
 ### 2.1. Shared Layer (`shared/`)
-Đóng vai trò là "nguồn sự thật duy nhất" (Single Source of Truth) giữa Client và Server:
+Đóng vai trò là nguồn sự thật duy nhất (Single Source of Truth) giữa Client và Server:
 - **`types/index.ts`**:
   - `TelemetryData`: Vận tốc encoder, nhiệt độ vi điều khiển, trạng thái cảm biến S1–S3.
-  - `VisionDetection`: Nhãn sản phẩm (brand_c, brand_p, brand_r, brand_a), độ tin cậy confidence (0.0 – 1.0), timestamp.
+  - `VisionDetection`: Nhãn sản phẩm (`brand_c`, `brand_p`, `brand_r`, `brand_a`), độ tin cậy confidence (0.0 – 1.0), timestamp.
   - `SorterConfig`: Cấu hình quy tắc phân loại nhãn vào 3 khay chứa, versioning và cơ chế áp dụng.
   - `ClassificationRecord`: Bản ghi phân loại lịch sử (id, product_id, brand, khay đích, khay thực tế, trạng thái).
   - `User`, `SafeUser`, `AuthCredentials`: Kiểu dữ liệu xác thực và quản lý tài khoản.
@@ -85,6 +96,7 @@ Hệ thống **SortiX Dashboard** được thiết kế theo mô hình kiến tr
   - `safetyService.ts`: Quản lý trạng thái khóa an toàn (`is_locked`), lưu trữ sự cố vào `notifications.json`, kiểm tra phân quyền mở khóa chỉ dành cho Admin, cơ chế chống kẹt loop echo 5s, và xử lý toàn bộ các sự kiện cảnh báo đa kênh.
   - `sseService.ts`: Quản lý danh sách kết nối SSE clients, broadcast sự kiện khẩn cấp thời gian thực tức thời qua `/api/events`.
   - `userService.ts`: Logic nghiệp vụ băm mật khẩu Bcrypt, cấp phát mã Mock OTP 6 chữ số (thời hạn 5 phút), kiểm tra phân quyền RBAC và ràng buộc an toàn (chặn tự xóa Admin, bảo vệ tối thiểu 1 Admin).
+  - `authToken.ts`: Quản lý ký và kiểm tra tính hợp lệ của token phiên làm việc.
   - `alertNotificationService.ts`: Tích hợp Nodemailer (SMTP) và Telegram Bot API kèm gắn nhãn định danh chế độ (`🧪 Chế độ Giả Lập` / `🔴 Phần cứng Thực Tế`) và Rate Limiting chống spam.
   - `historyService.ts` & `configService.ts`: Quản lý nghiệp vụ lịch sử và cấu hình.
 - **Models (`backend/src/models/`)**:
@@ -148,125 +160,84 @@ Xây dựng trên nền tảng Next.js 14 App Router với hiệu năng tối ư
             ├──> Bật còi báo động hú liên tục (Continuous Alarm)
             ├──> Hiển thị Banner khóa toàn màn hình (is_locked = true)
             │
-            ▼
-     [POST /api/safety/estop]
-            ├──> Lưu thông báo sự cố vào data/notifications.json
-            ├──> Gửi Email SMTP & Telegram Bot (gắn nhãn Mô phỏng / Thực tế)
-            └──> Broadcast sự kiện SSE tới toàn bộ client qua /api/events
+            ▼ (POST /api/safety/estop)
+     [Safety Service]
+            ├──> Lưu trữ sự cố vào data/notifications.json
+            ├──> Gửi Email & Telegram cảnh báo
+            └──> Broadcast SSE: event "emergency_stop" tới tất cả Clients
+            
+                        ═════════════════════════════
+                        
+[Admin Xác Thực Mở Khóa (POST /api/safety/unlock)]
             │
-            ▼
-  [Yêu cầu Mở Khóa: POST /api/safety/unlock]
-            ├──> Kiểm tra quyền Quản trị viên (Admin Only - Chặn 403 đối với User)
-            ├──> Bắt buộc nhập ghi chú xác nhận an toàn hiện trường
-            ├──> Áp dụng thời gian ân hạn 5 giây chống lặp echo từ MQTT/SSE
-            └──> Tắt còi hú, gỡ bỏ banner khóa, cho phép băng tải tái khởi động
-```
-
-### 3.3. Luồng Phân Định: Kẹt Phôi (`jam_detected`) vs Đầy Khay (`bin_full`)
-```
-[Vật cản che khuất > 5s tại Sensor #02]     [Khay chứa đạt định mức (vd: 30/30 hoặc 50/50 SP)]
-                 │                                                │
-                 ▼                                                ▼
-     [SỰ CỐ KẸT PHÔI]                                 [CẢNH BÁO ĐẦY KHAY]
-  - MQTT: conveyor/sensor/jam                      - MQTT: conveyor/storage/bin_status
-  - Dừng băng tải ngay lập tức                     - Băng tải vẫn tiếp tục hoặc tạm dừng nạp
-  - Còi hú gián đoạn báo kẹt                       - Còi chuông cảnh báo đầy khay
-  - Banner đỏ kẹt phôi (JamIncidentBanner)         - Banner vàng cam (BinFullIncidentBanner)
-  - Phôi trên Canvas đổi sang đỏ chớp nháy         - Toast thông báo nhắc thay khay mới
-  - Nút "Xác nhận gỡ kẹt" gỡ lỗi                   - Nút "Xác nhận đã thay khay mới" reset khay
-```
-
-### 3.4. Luồng Giám Sát Nhiệt Độ & Gauge Dial 2 Chế Độ
-```
-                      [Chế Độ Hoạt Động]
-                      /                \
-           (Mô phỏng)                   (Thực tế)
-               │                            │
-               ▼                            ▼
-   [Thanh Trượt Ảo 30°C - 95°C]      [Cảm biến ESP32 DS18B20]
-   [Presets: 42.5°C, 72°C, 78.5°C]    [Telemetry qua MQTT: conveyor/telemetry/temp]
-               │                            │
-               └─────────────┬──────────────┘
-                             ▼
-              [Đồng Hồ Bán Nguyệt (Gauge Dial)]
-              - < 70°C: Vùng xanh an toàn
-              - 70°C - 75°C: Vùng vàng chú ý
-              - > 75°C: Vùng đỏ QUÁ NHIỆT (Temperature Warning)
-                             │
-                             ▼ (Nếu > 75°C)
-              - Gửi cảnh báo: POST /api/safety/temp-warning
-              - Toast vàng cam & còi báo quá nhiệt
-```
-
-### 3.5. Luồng Giám Sát Mất Kết Nối MQTT Broker
-```
-[Client Socket / TCP Disconnected]
-            │
-            ▼ (Bắt đầu bộ đếm thời gian mất kết nối)
-   [Debounce Watchdog 5 Giây]
-            │ (Nếu mất kết nối liên tục >= 5s)
-            ▼
-    [Kích Hoạt Cảnh Báo CRITICAL: mqtt_disconnected]
-            ├──> TopHeader đổi huy hiệu sang: "MQTT: DISCONNECTED" (Đỏ chớp nháy)
-            ├──> Hiển thị MqttDisconnectedToast với số lần thử kết nối
-            ├──> Phát còi cảnh báo mất kết nối (Web Audio API)
-            └──> Gửi POST /api/safety/mqtt-disconnected lưu notifications.json
-            │
-            ▼ (Lịch trình Auto-Reconnect Backoff: 3s -> 5s -> 10s)
-[Kết Nối Thành Công Trở Lại]
-            ├──> TopHeader phục hồi: "MQTT: ONLINE" (Xanh)
-            ├──> Phát chime âm thanh phục hồi
-            ├──> Hiển thị Toast thông báo phục hồi thành công
-            └──> Gửi POST /api/safety/mqtt-connected cập nhật trạng thái
-```
-
-### 3.6. Luồng Đồng Bộ Báo Cáo 1 Ngày Làm Việc (Shift Summary)
-```
-[Tự động lúc 17:00 HOẶC Nhấn nút "Báo cáo 1 ngày làm việc" trên TopHeader]
-            │
-            ▼
-   [Tổng hợp dữ liệu thời gian thực từ Sorter Data]
-   - Số lượng từng khay: Khay 1 (Coca), Khay 2 (Pepsi), Khay 3 (Lỗi/Khác)
-   - Tổng sản phẩm = Tổng 3 khay
-   - Tỷ lệ đạt = (Khay 1 + Khay 2) / Tổng * 100%
-   - Số lần E-Stop ghi nhận trong ca
-   - Thời gian vận hành băng tải
-            │
-            ▼
-   [Đồng bộ sang Backend: POST /api/safety/shift-summary]
-            ├──> Lưu bản ghi [BÁO CÁO 1 NGÀY LÀM VIỆC] vào notifications.json
-            ├──> Broadcast sự kiện SSE shift_summary tới các client
-            │
-            ▼
-   [Hiển thị Modal & Hỗ trợ Xuất dữ liệu]
-   - ShiftSummaryModal: Biểu đồ trực quan và bảng số liệu
-   - Nút "Xuất file CSV": Xuất file UTF-8 BOM hiển thị chuẩn tiếng Việt
-   - Nút "In báo cáo": Mẫu in tiêu chuẩn A4
+            ├──> Kiểm tra quyền Quản trị viên (Admin RBAC Gate)
+            ├──> Ghi nhận lý do mở khóa vào lịch sử sự cố
+            ├──> Thiết lập thời gian ân hạn 5 giây chống lặp echo tín hiệu
+            ├──> Tắt còi báo động và ẩn Banner khóa
+            └──> Broadcast SSE: event "safety_unlocked"
 ```
 
 ---
 
-## 4. Cơ Chế Độ Tin Cậy & An Toàn Hệ Thống
+## 4. Kiến Trúc Luồng Sự Kiện Thời Gian Thực (SSE & MQTT Architecture)
 
-1. **Bộ Đệm Lịch Sử Giới Hạn (Bounded Store Pattern)**:
-   - Bộ nhớ máy chủ giới hạn lưu trữ tối đa 1000 bản ghi phân loại và 100 sự kiện cảnh báo.
-   - Khi vượt ngưỡng, các bản ghi cũ nhất tự động được giải phóng (FIFO eviction) để bảo vệ bộ nhớ RAM.
-2. **Kẹp Giới Hạn Sức Chứa Khay (Clamping [5, 50] SP)**:
-   - Sức chứa định mức của mỗi khay được kiểm soát an toàn trong khoảng từ 5 đến 50 sản phẩm.
-   - Mọi giá trị nhập vào vượt biên đều được tự động kẹp về cận an toàn gần nhất.
-3. **Ngăn Ngừa Tấn Công Leo Thang Đặc Quyền (Privilege Escalation Prevention)**:
-   - Endpoint đăng ký tự do (`/api/auth/register`) luôn gán cứng quyền `role: 'user'` bất kể dữ liệu gửi lên.
-   - Chỉ duy nhất Admin đã đăng nhập mới có quyền thay đổi role hoặc tạo tài khoản Admin mới qua `/api/users`.
-4. **Bảo Vệ Tính Toàn Vẹn Của Ban Quản Trị**:
-   - Hệ thống từ chối mọi yêu cầu xóa tài khoản Admin nếu số lượng Admin còn lại $\le 1$.
-   - Admin không được phép tự xóa tài khoản của chính mình khi phiên làm việc đang kích hoạt.
-5. **Cơ Chế Chống Kẹt Lặp Tín Hiệu Dừng Khẩn Cấp (Anti-Echo Grace Period)**:
-   - Sau khi Admin mở khóa an toàn thành công, hệ thống tự động kích hoạt bộ đếm thời gian ân hạn 5 giây.
-   - Trong khoảng thời gian này, mọi tín hiệu dừng khẩn cấp gửi từ MQTT hoặc SSE đều bị bỏ qua để tránh việc hệ thống bị tái khóa ngoài ý muốn do độ trễ mạng.
-6. **Cô Lập Kiểm Thử Tuyệt Đối Giữa Mô Phỏng & Thực Tế (Strict Simulation Isolation)**:
-   - Toàn bộ các nút kiểm thử giả lập (test kẹt phôi, giả lập E-Stop, nạp phôi mẫu, tạo dữ liệu demo, ngắt thử MQTT, thanh trượt nhiệt độ ảo) **chỉ hiển thị ở chế độ Mô phỏng (`isSimulation === true`)**.
-   - Khi chuyển sang chế độ Thực tế (`isSimulation === false`):
-     - Giao diện ẩn hoàn toàn tất cả các nút bấm và thanh trượt giả lập thử nghiệm.
-     - Hiển thị bảng telemetry cảm biến phần cứng thật (ESP32 DS18B20).
-     - Các hàm xử lý kẹt phôi / nạp phôi ảo đều kiểm tra và chặn các thao tác có nguồn gốc từ người dùng hoặc động cơ vật lý canvas ảo.
-     - Đảm bảo 100% dữ liệu thống kê sản xuất và cảnh báo sự cố phản ánh chính xác tín hiệu từ phần cứng ESP32-C5 và camera thật.
+Hệ thống kết hợp cả hai mô hình truyền thông thời gian thực:
+1. **MQTT qua WebSocket**: Dành cho dữ liệu telemetry cao tần (60fps, tọa độ cảm biến, nhận diện camera).
+2. **Server-Sent Events (SSE)**: Dành cho các sự kiện trạng thái hệ thống, cảnh báo an toàn và đồng bộ đa màn hình từ máy chủ xuống client.
+
+```
+[IoT Hardware / Controller] ──(MQTT)──> [MQTT Broker] ──(WSS)──> [Frontend Clients]
+                                                                        ▲
+[Backend Safety Engine] ─────(SSE /api/events Broadcast)────────────────┘
+```
+
+---
+
+## 5. Kiến Trúc Lưu Trữ & Chuyển Đổi Dữ Liệu (Persistence & Migrations)
+
+Hệ thống cung cấp cơ chế lưu trữ hai tầng linh hoạt:
+- **Tầng 1 (Mặc định - Zero Setup)**: Lưu trữ bền vững trên JSON file store (`data/users.json`, `data/notifications.json`).
+- **Tầng 2 (Doanh Nghiệp - Production)**: Bộ migrations chuẩn hóa trong `backend/database/migrations/` sẵn sàng triển khai trên:
+  - SQLite: `001_create_users_table_sqlite.sql`
+  - PostgreSQL: `001_create_users_table_postgres.sql`
+  - MySQL: `001_create_users_table_mysql.sql`
+  - MongoDB: `001_create_users_mongodb.js`
+
+---
+
+## 6. Mô Hình Bảo Mật & Ràng Buộc An Toàn (Security Architecture)
+
+1. **Mật khẩu an toàn**: Mọi mật khẩu được băm bằng thuật toán `bcrypt` với `10 salt rounds`.
+2. **Phiên làm việc ký số**: Token phiên làm việc được ký số bảo mật, xác thực người dùng và vai trò qua `authToken.ts`.
+3. **Phân quyền vai trò chặt chẽ (RBAC)**:
+   - Chỉ người dùng có vai trò `admin` mới được truy cập các tài nguyên quản trị máy, xóa lịch sử, thay đổi quy tắc phân loại và mở khóa E-Stop.
+4. **Ngăn ngừa leo thang đặc quyền**: Luồng đăng ký tài khoản tự do luôn bị ép cứng vai trò `user`.
+5. **Ràng buộc sinh tồn Admin**:
+   - Admin không thể tự xóa tài khoản của chính mình khi đang đăng nhập.
+   - Không thể xóa tài khoản Admin nếu chỉ còn duy nhất 1 Quản trị viên trong hệ thống.
+6. **Mã Mock OTP 6 chữ số**: Thời hạn hiệu lực 5 phút (300 giây), vô hiệu hóa ngay sau khi sử dụng và chặn khôi phục từ bên ngoài đối với các tài khoản Admin.
+
+---
+
+## 7. Kiến Trúc Kiểm Thử & Cổng Chất Lượng (Quality Gates & Testing)
+
+Dự án áp dụng quy trình kiểm định chất lượng phần mềm nghiêm ngặt với 15 bộ test suites tự động bảo đảm **108/108 tests PASS (100%)**:
+
+```
+tests/
+├── api_schemas.test.cjs               # Zod validation & passthrough
+├── bin_full.test.cjs                  # Sự cố đầy khay & cảnh báo
+├── bin_sliders_sync.test.cjs          # Đồng bộ dung lượng khay (5-50 SP)
+├── daily_report_sync.test.cjs         # Chuẩn hóa Báo Cáo 1 Ngày Làm Việc
+├── device_offline.test.cjs            # Watchdog mất kết nối ESP32 (6s)
+├── estop_safety.test.cjs              # Dừng khẩn cấp E-Stop & mở khóa
+├── history.test.cjs                   # Quản lý bộ nhớ đệm lịch sử
+├── jam_detection.test.cjs             # Sự cố kẹt phôi cảm biến quang
+├── jam_simulation_audio.test.cjs      # Âm thanh còi hú & UI Guard
+├── mqtt_disconnected.test.cjs         # Watchdog mất kết nối MQTT (5s)
+├── shift_summary.test.cjs             # Tổng kết ca & xuất báo cáo CSV
+├── simulation_mode_guard.test.cjs     # Cô lập chế độ Mô phỏng & Thực tế
+├── temperature_gauge_simulation_vs_real.test.cjs # Đồng hồ nhiệt độ 2 chế độ
+├── temperature_warning.test.cjs       # Cảnh báo quá nhiệt động cơ/CPU
+└── users.test.cjs                     # Bảo mật tài khoản, Bcrypt & RBAC
+```

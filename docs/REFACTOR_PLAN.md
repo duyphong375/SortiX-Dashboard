@@ -1,12 +1,20 @@
-# KẾ HOẠCH TÁI CẤU TRÚC VÀ LỘ TRÌNH PHÁT TRIỂN HỆ THỐNG SORTIX DASHBOARD
+# KẾ HOẠCH TÁI CẤU TRÚC VÀ LỘ TRÌNH PHÁT TRIỂN (REFACTORING PLAN)
 
 > **Dự án**: SortiX Dashboard (Đồ án PBL3)  
-> **Phiên bản kiến trúc**: Monorepo v2.6.0  
-> **Trạng thái**: Đã hoàn thành Tái cấu trúc Monorepo, Tầng Shared, Backend độc lập, Xác thực đa lớp, Hệ thống An toàn Công nghiệp (E-Stop, Jam Detection, Bin Full, Temperature Warning, Device Offline Heartbeat, MQTT Disconnected Alert, Dynamic Bin Width/Capacity Sliders 5-50 SP, Dual-Mode Temperature Gauge Dial, Báo Cáo 1 Ngày Làm Việc Live Sync) & Bộ kiểm thử tự động toàn diện 108/108 tests PASS (100% - 15 Test Suites).
+> **Kiến trúc**: Monorepo Workspaces (Frontend, Backend, Shared, Data, Scripts, Tests)  
+> **Trạng thái**: ✅ **100% Hoàn Thành Các Giai Đoạn Cốt Lõi (108/108 Tests PASS - 15 Test Suites)**.
 
 ---
 
-## 1. Mục Tiêu Tái Cấu Trúc (Refactoring Goals)
+## 📌 Mục Lục
+1. [Mục Tiêu Tái Cấu Trúc Toàn Diện](#1-mục-tiêu-tái-cấu-trúc-toàn-diện)
+2. [Tiến Độ Thực Thi Từng Giai Đoạn](#2-tiến-độ-thực-thi-từng-giai-đoạn)
+3. [Tổng Hợp Ma Trận Kiểm Thử Tự Động (Quality Matrix)](#3-tổng-hợp-ma-trận-kiểm-thử-tự-động-quality-matrix)
+4. [Lộ Trình Triển Khai Mở Rộng Tiếp Theo](#4-lộ-trình-triển-khai-mở-rộng-tiếp-theo)
+
+---
+
+## 1. Mục Tiêu Tái Cấu Trúc Toàn Diện
 
 1. **Phân rã Monolithic Codebase**: Tách biệt dứt điểm giữa Frontend (Next.js 14 App Router), Backend (Node.js/Express + TypeScript) và Thư viện Dùng chung (`shared/`).
 2. **Loại bỏ sự phụ thuộc quá mức vào LocalStorage**: Thiết lập kiến trúc dữ liệu phân tầng với API RESTful, file store bền vững (`data/users.json`, `data/notifications.json`), và bộ scripts migration sẵn sàng kết nối các hệ quản trị cơ sở dữ liệu lớn (SQLite, PostgreSQL, MySQL, MongoDB).
@@ -32,22 +40,22 @@
 
 ---
 
-## 2. Nhật Ký Tiến Độ Thực Thi (Execution Progress)
+## 2. Tiến Độ Thực Thi Từng Giai Đoạn
 
 ### ✅ Giai Đoạn 1: Tách Tầng Dùng Chung (Shared Layer) & Schema Hardening
 - [x] **Task 1.1**: Tạo không gian làm việc `shared/` (`types/`, `schemas/`, `constants/`).
-- [x] **Task 1.2**: Định nghĩa các Interface dữ liệu cốt lõi (`TelemetryData`, `VisionDetection`, `SorterConfig`, `ClassificationRecord`, `AlertEvent`, `User`, `SafeUser`, `EmergencyStopPayload`, `JamDetectedPayload`, `BinFullPayload`, `TemperatureWarningPayload`, `DeviceOfflinePayload`, `HeartbeatPayload`, `ShiftSummaryPayload`, `MqttDisconnectedPayload`).
-- [x] **Task 1.3**: Xây dựng bộ Zod Schemas với cơ chế `.passthrough()` đảm bảo tính tương thích với firmware ESP32-C5.
+- [x] **Task 1.2**: Định nghĩa các Interface dữ liệu cốt lõi (`TelemetryData`, `VisionDetection`, `SorterConfig`, `ClassificationRecord`, `AlertEvent`, `User`, `SafeUser`, payloads an toàn).
+- [x] **Task 1.3**: Xây dựng bộ Zod Schemas với cơ chế `.passthrough()` đảm bảo tính tương thích mở rộng cho firmware ESP32-C5.
 - [x] **Task 1.4**: Cấu hình TypeScript path alias `@shared/*` trong `tsconfig.json`.
 
 ### ✅ Giai Đoạn 2: Phân Rã Giao Diện Frontend (Frontend Modularization)
-- [x] **Task 2.1**: Phân rã tệp `src/app/page.tsx` từ 988 dòng xuống ~90 dòng với các subcomponents độc lập (`KpiStatGrid.tsx`, `LiveHealthAndBinWidget.tsx`, `CalendarWidget.tsx`, `RecentActivityList.tsx`, `TemperatureGaugeWidget.tsx`).
+- [x] **Task 2.1**: Phân rã tệp `src/app/page.tsx` từ 988 dòng xuống component tinh gọn với các subcomponents độc lập (`KpiStatGrid.tsx`, `LiveHealthAndBinWidget.tsx`, `CalendarWidget.tsx`, `RecentActivityList.tsx`, `TemperatureGaugeWidget.tsx`).
 - [x] **Task 2.2**: Chuẩn hóa cụm điều khiển Băng Tải trong `src/components/conveyor/` (`ConveyorControls.tsx`, `QuickFeedBar.tsx`, `BinTrays.tsx`).
-- [x] **Task 2.3**: Xây dựng các Modal giao diện bảo mật & an toàn (`ForgotPasswordModal.tsx`, `ChangePasswordModal.tsx`, `ExportDialog.tsx`, `EmergencyConfirmModal.tsx`, `EmergencyUnlockToast.tsx`, `JamUnlockToast.tsx`, `BinFullToast.tsx`, `TemperatureWarningToast.tsx`, `DeviceOfflineToast.tsx`, `ShiftSummaryModal.tsx`, `ShiftSummaryToast.tsx`, `MqttDisconnectedToast.tsx`).
+- [x] **Task 2.3**: Xây dựng các Modal và Toast thông báo an toàn (`ForgotPasswordModal.tsx`, `ChangePasswordModal.tsx`, `ExportDialog.tsx`, `EmergencyConfirmModal.tsx`, `EmergencyUnlockToast.tsx`, `JamUnlockToast.tsx`, `BinFullToast.tsx`, `TemperatureWarningToast.tsx`, `DeviceOfflineToast.tsx`, `ShiftSummaryModal.tsx`, `ShiftSummaryToast.tsx`, `MqttDisconnectedToast.tsx`).
 
 ### ✅ Giai Đoạn 3: Xây Dựng Tầng Backend Độc Lập & Xác Thực Đa Lớp
 - [x] **Task 3.1**: Thiết lập máy chủ Express độc lập tại `backend/src/server.ts` (Port 5000).
-- [x] **Task 3.2**: Xây dựng tầng Điều khiển & Nghiệp vụ (Controllers & Services: `user`, `config`, `history`, `stats`, `alertNotification`, `safetyService`, `safetyController`, `mqttService`, `sseService`).
+- [x] **Task 3.2**: Xây dựng tầng Điều khiển & Nghiệp vụ (`userController`, `configController`, `historyController`, `statsController`, `alertController`, `safetyController`, `safetyService`, `mqttService`, `sseService`).
 - [x] **Task 3.3**: Quản lý dữ liệu bền vững và Seeder (`data/users.json`, `data/notifications.json`, `seed_admins.ts`, `seed_admins.sql`).
 - [x] **Task 3.4**: Chuẩn bị DDL Migrations cho đa hệ quản trị cơ sở dữ liệu (SQLite, PostgreSQL, MySQL, MongoDB).
 
@@ -59,43 +67,55 @@
 - [x] **Task 4.5**: Tạo kho dữ liệu thông báo bền vững `data/notifications.json` và `notificationModel.ts`.
 - [x] **Task 4.6**: Gắn nhãn định danh chế độ trong Email & Telegram cảnh báo (`🧪 Chế độ Giả Lập` / `🔴 Phần cứng Thực Tế`).
 - [x] **Task 4.7**: Cô lập triệt để các chức năng test giả lập (chỉ xuất hiện và hoạt động ở chế độ Mô phỏng, hoàn toàn bị ẩn và chặn ở chế độ Thực tế).
-- [x] **Task 4.8**: Xây dựng tính năng Cảnh Báo Khay Đầy (`bin_full`): topic MQTT `conveyor/storage/bin_status`, Severity `warning`, Toast & Banner vàng cam bền vững, thanh tiến trình 100%, icon nhấp nháy, nút "Xác nhận đã thay khay mới" reset về 0.
-- [x] **Task 4.9**: Xây dựng tính năng Cảnh Báo Quá Nhiệt Động Cơ / CPU Edge AI (`temperature_warning`): topic MQTT `conveyor/telemetry/temp`, Severity `warning`, Toast cảnh báo vàng cam, Đồng hồ đo nhiệt độ bán nguyệt (Gauge Chart) trên Dashboard tự động đổi kim vào vùng đỏ.
-- [x] **Task 4.10**: Xây dựng tính năng Cảnh Báo Thiết Bị Phần Cứng / ESP32 Ngoại Tuyến (`device_offline`): Cơ chế nhịp tim ping `conveyor/heartbeat` chu kỳ 2s, watchdog phát hiện gián đoạn > 6s, Severity `ERROR`, Toast đỏ góc màn hình.
-- [x] **Task 4.11**: Xây dựng tính năng Báo Cáo 1 Ngày Làm Việc (`shift_summary`): Event Code `shift_summary`, Severity `INFO`, trigger tự động lúc 17:00 hàng ngày hoặc bấm nút "Báo cáo 1 ngày làm việc" trên TopHeader, Toast xanh `[BÁO CÁO 1 NGÀY LÀM VIỆC]`, Modal bảng thống kê trực quan, nút Tải báo cáo CSV UTF-8 BOM chuẩn tiếng Việt và in báo cáo.
-- [x] **Task 4.12**: Xây dựng thanh trượt điều chỉnh mức số lượng độc lập cho từng khay (Khay 1, Khay 2, Khay 3) với biên độ 0 - 50 SP, nút preset nhanh (0 Rỗng, 25 Nửa khay, 50 Đầy), đồng bộ tức thời dữ liệu sang LocalStorage, state toàn hệ thống, widget giám sát, băng chuyền trực quan và chẩn đoán cấu hình.
-- [x] **Task 4.13**: Xây dựng cảnh báo "Mất kết nối máy chủ tin nhắn MQTT Broker" (`mqtt_disconnected`): Event Code `mqtt_disconnected`, Severity `CRITICAL`, watchdog mất kết nối quá 5 giây, huy hiệu Header đổi `MQTT: ONLINE (Xanh)` sang `MQTT: DISCONNECTED (Đỏ chớp nháy)`, Toast nổi, cơ chế auto-reconnect backoff 3s, 5s, 10s, Toast phục hồi xanh `[ĐÃ PHỤC HỒI] Kết nối MQTT Broker thành công`, nút demo "Ngắt kết nối MQTT Client" / "Khôi phục kết nối MQTT" trong trang Cấu hình và Thiết bị.
-- [x] **Task 4.14**: Xây dựng thanh trượt điều chỉnh độ rộng / sức chứa khay (5 - 50 SP): Cho phép đặt sức chứa định mức riêng biệt cho từng khay (ví dụ chỉnh Khay 1 là 30 thì chỉ chứa tối đa 30 sản phẩm là báo đầy), đồng bộ hóa toàn diện qua `useSorterData.ts`, `ConveyorVisualizer.tsx`, `BinTrays.tsx`, `LiveHealthAndBinWidget.tsx`, `ConfigAndDiagnostics.tsx` và lưu trữ bền vững trên `localStorage ('sortix_bin_capacities')`.
-- [x] **Task 4.15**: Xây dựng Đồng Hồ Nhiệt Độ Bán Nguyệt 2 Chế Độ (`TemperatureGaugeWidget.tsx`): Chế độ Mô phỏng cung cấp thanh trượt ảo (30°C - 95°C) và các nút preset (42.5°C, 72.0°C, 78.5°C); Chế độ Thực tế tự động ẩn thanh trượt giả lập, hiển thị bảng telemetry cảm biến phần cứng thật (ESP32 DS18B20) với cờ `[PHẦN CỨNG THẬT]`.
-- [x] **Task 4.16**: Chuẩn hóa nhãn "BÁO CÁO 1 NGÀY LÀM VIỆC" và luồng đồng bộ trực tiếp số liệu: Kết nối live số lượng từ 3 khay chứa, số sản phẩm đạt/lỗi, thời gian vận hành và số lần dừng khẩn cấp vào Modal báo cáo, file xuất CSV và template in ấn.
+- [x] **Task 4.8**: Xây dựng tính năng Cảnh Báo Khay Đầy (`bin_full`): topic MQTT `conveyor/storage/bin_status`, Severity `warning`, Toast & Banner vàng cam bền vững, nút "Xác nhận đã thay khay mới" reset về 0.
+- [x] **Task 4.9**: Xây dựng tính năng Cảnh Báo Quá Nhiệt Động Cơ / CPU Edge AI (`temperature_warning`): topic MQTT `conveyor/telemetry/temp`, Gauge Chart đổi kim vào vùng đỏ.
+- [x] **Task 4.10**: Xây dựng tính năng Cảnh Báo Thiết Bị Phần Cứng / ESP32 Ngoại Tuyến (`device_offline`): Cơ chế nhịp tim ping `conveyor/heartbeat` chu kỳ 2s, watchdog phát hiện gián đoạn > 6s.
+- [x] **Task 4.11**: Xây dựng tính năng Báo Cáo 1 Ngày Làm Việc (`shift_summary`): Event Code `shift_summary`, Severity `INFO`, trigger tự động lúc 17:00 hàng ngày hoặc bấm nút trên TopHeader, xuất CSV UTF-8 BOM chuẩn tiếng Việt và in báo cáo.
+- [x] **Task 4.12**: Xây dựng thanh trượt điều chỉnh dung lượng từng khay (5 - 50 SP), đồng bộ tức thời sang LocalStorage, state toàn hệ thống, widget giám sát, băng chuyền trực quan và chẩn đoán cấu hình.
+- [x] **Task 4.13**: Xây dựng cảnh báo Mất kết nối MQTT Broker (`mqtt_disconnected`): Watchdog mất kết nối quá 5 giây, huy hiệu Header đổi đỏ chớp nháy, cơ chế auto-reconnect backoff 3s, 5s, 10s.
+- [x] **Task 4.14**: Xây dựng Đồng Hồ Nhiệt Độ Bán Nguyệt 2 Chế Độ (`TemperatureGaugeWidget.tsx`): Mô phỏng với thanh trượt ảo 30°C - 95°C; Thực tế với bảng telemetry cảm biến DS18B20 thật.
 
-### ✅ Giai Đoạn 5: Đảm Bảo Chất Lượng & Kiểm Thử Toàn Diện (108/108 Tests PASS - 15 Suites)
-- [x] **Task 5.1**: `tests/history.test.cjs` (9 tests PASS): Bounded buffer, migration, normalization.
-- [x] **Task 5.2**: `tests/api_schemas.test.cjs` (3 tests PASS): Schema validation, passthrough.
-- [x] **Task 5.3**: `tests/users.test.cjs` (14 tests PASS): Bcrypt, OTP, RBAC, Privilege Escalation, Admin deletion constraints.
-- [x] **Task 5.4**: `tests/estop_safety.test.cjs` (5 tests PASS): Dừng khẩn cấp, admin unlock, chống loop echo 5s.
-- [x] **Task 5.5**: `tests/jam_detection.test.cjs` (6 tests PASS): Cảm biến quang kẹt phôi, broadcast SSE, MQTT topic.
-- [x] **Task 5.6**: `tests/simulation_mode_guard.test.cjs` (3 tests PASS): Phân định và cô lập chế độ Mô phỏng và Thực tế.
-- [x] **Task 5.7**: `tests/jam_simulation_audio.test.cjs` (5 tests PASS): Kiểm thử còi báo kẹt phôi, còi khay đầy và UI Guard.
-- [x] **Task 5.8**: `tests/bin_full.test.cjs` (7 tests PASS): Schema validation, MQTT topic `conveyor/storage/bin_status`, SafetyService warning record, SSE broadcast, Controller.
-- [x] **Task 5.9**: `tests/temperature_warning.test.cjs` (8 tests PASS): Schema validation, MQTT topic `conveyor/telemetry/temp`, SafetyService warning record, SSE broadcast, Controller, Edge AI label handling.
-- [x] **Task 5.10**: `tests/device_offline.test.cjs` (10 tests PASS): Schema validation, default values, heartbeat ping schema, MQTT topic `conveyor/heartbeat`, Watchdog 6s evaluation, SafetyService trigger/recover, SSE broadcast, Controller.
-- [x] **Task 5.11**: `tests/shift_summary.test.cjs` (8 tests PASS): Schema validation, default fallback values, SafetyService INFO record, SSE broadcast, Controller handler, UTF-8 BOM CSV export logic, Admin role gate.
-- [x] **Task 5.12**: `tests/bin_sliders_sync.test.cjs` (8 tests PASS): LocalStorage persistence độc lập cho từng khay, clamp logic [5, 50], hook contract useSorterData, DashboardLayout Context provider, LiveHealthAndBinWidget sliders, ConveyorVisualizer chute sliders, ConfigAndDiagnostics simulation sliders.
-- [x] **Task 5.13**: `tests/mqtt_disconnected.test.cjs` (12 tests PASS): Schema validation, 5s watchdog threshold, auto-reconnect backoff 3s-5s-10s, trigger/recover SafetyService, SSE broadcast, Header badge toggle, audio alarm/chime, toast message contracts.
-- [x] **Task 5.14**: `tests/temperature_gauge_simulation_vs_real.test.cjs` (4 tests PASS): Kiểm thử chuyển đổi giao diện và logic giữa Mô phỏng và Thực tế của TemperatureGaugeWidget.
-- [x] **Task 5.15**: `tests/daily_report_sync.test.cjs` (6 tests PASS): Kiểm thử nhãn chuẩn hóa "BÁO CÁO 1 NGÀY LÀM VIỆC" và luồng đồng bộ trực tiếp số liệu từ khay chứa và lịch sử phân loại.
+### ✅ Giai Đoạn 5: Tích Hợp Toàn Diện, Chuẩn Hóa Monorepo & Kiểm Thử QA
+- [x] **Task 5.1**: Tích hợp build script backend tự động vá alias module `@shared/*` (`backend/scripts/patch-dist-aliases.cjs`).
+- [x] **Task 5.2**: Chuẩn hóa script chạy đồng thời `npm run dev:all` (`scripts/dev-all.cjs`).
+- [x] **Task 5.3**: Bổ sung xác thực session token an toàn qua `authToken.ts` và chuẩn hóa endpoint logout.
+- [x] **Task 5.4**: Xác thực toàn diện 15 bộ test suites với **108/108 Tests PASS (100%)**.
+- [x] **Task 5.5**: Typecheck 0 lỗi (`npx tsc --noEmit --pretty false`), Production build Next.js thành công 29/29 routes.
 
 ---
 
-## 3. Lộ Trình Phát Triển Tiếp Theo (Future Roadmap)
+## 3. Tổng Hợp Ma Trận Kiểm Thử Tự Động (Quality Matrix)
 
-### 📌 Giai Đoạn 6: Kết Nối Cơ Sở Dữ Liệu Thực Tế & Docker Hóa (Upcoming)
-1. **Tích hợp Database Driver**:
-   - Cung cấp tùy chọn cấu hình `DB_DIALECT=sqlite|postgres|mysql` trong `.env` để tự động chuyển từ JSON File Store sang ORM/Query Builder (Prisma hoặc Drizzle ORM).
+| Test Suite | Số lượng Tests | Trạng thái | Nội dung kiểm tra |
+| :--- | :---: | :---: | :--- |
+| `tests/history.test.cjs` | 9 | ✅ PASS | Bộ đệm giới hạn 1000 bản ghi, phân trang, migration |
+| `tests/api_schemas.test.cjs` | 3 | ✅ PASS | Zod schema validation & thuộc tính `.passthrough()` |
+| `tests/users.test.cjs` | 14 | ✅ PASS | Bcrypt, OTP, RBAC, chống leo thang đặc quyền, xóa Admin |
+| `tests/estop_safety.test.cjs` | 5 | ✅ PASS | Dừng khẩn cấp, admin unlock, chống loop echo 5s |
+| `tests/jam_detection.test.cjs` | 6 | ✅ PASS | Cảm biến quang kẹt phôi, broadcast SSE, MQTT topic |
+| `tests/jam_simulation_audio.test.cjs` | 5 | ✅ PASS | Còi báo kẹt phôi, còi khay đầy và UI Guard |
+| `tests/bin_full.test.cjs` | 7 | ✅ PASS | Cảnh báo đầy khay, topic bin_status, SSE broadcast |
+| `tests/temperature_warning.test.cjs` | 8 | ✅ PASS | Quá nhiệt thiết bị, topic telemetry/temp, nhãn Edge AI |
+| `tests/device_offline.test.cjs` | 10 | ✅ PASS | ESP32 offline watchdog 6s, heartbeat ping 2s |
+| `tests/shift_summary.test.cjs` | 8 | ✅ PASS | Tổng kết ca, CSV UTF-8 BOM, phân quyền tải báo cáo |
+| `tests/bin_sliders_sync.test.cjs` | 8 | ✅ PASS | Thanh trượt dung lượng 5-50 SP, clamp logic, đồng bộ UI |
+| `tests/mqtt_disconnected.test.cjs` | 12 | ✅ PASS | Mất kết nối MQTT 5s, auto-reconnect backoff, âm thanh báo |
+| `tests/temperature_gauge_simulation_vs_real.test.cjs` | 4 | ✅ PASS | Chuyển đổi giao diện Mô phỏng vs Thực tế |
+| `tests/daily_report_sync.test.cjs` | 6 | ✅ PASS | Đồng bộ số liệu live Báo Cáo 1 Ngày Làm Việc |
+| `tests/simulation_mode_guard.test.cjs` | 3 | ✅ PASS | Cô lập tuyệt đối chế độ Mô phỏng và Thực tế |
+| **TỔNG CỘNG** | **108** | **100% PASS** | **15 Test Suites hoàn thành không lỗi** |
+
+---
+
+## 4. Lộ Trình Triển Khai Mở Rộng Tiếp Theo
+
+### 📌 Giai Đoạn 6: Đóng Gói Docker & Triển Khai Môi Trường Sản Xuất
+1. **Tích hợp Database Driver Chính Thức**:
+   - Cung cấp tùy chọn chuyển đổi cấu hình `DB_TYPE=sqlite|postgres|mysql` trong `.env`.
+   - Kết nối Prisma / Drizzle ORM tới cơ sở dữ liệu vật lý dựa trên các tệp DDL migrations đã chuẩn bị sẵn.
 2. **Đóng Gói Docker & Orchestration**:
-   - Viết `Dockerfile` tối ưu hóa đa tầng (multi-stage build) cho Frontend Next.js và Backend Express.
-   - Tạo `docker-compose.yml` tích hợp sẵn EMQX MQTT Broker, Backend API, Frontend Dashboard và cơ sở dữ liệu PostgreSQL.
-3. **Thực Nghiệm Phần Cứng IoT ESP32-C5**:
-   - Tiến hành kiểm thử áp lực (stress test) truyền nhận 100 gói tin telemetry/giây trên băng chuyền thật.
-   - Hiệu chỉnh độ trễ xử lý piston khí nén khi nhận diện sản phẩm ở vận tốc băng tải cao nhất (100%).
+   - Xây dựng `Dockerfile` tối ưu hóa đa tầng (multi-stage build) cho Frontend Next.js và Backend Express.
+   - Viết `docker-compose.yml` tích hợp sẵn EMQX MQTT Broker, Backend API, Frontend Dashboard và PostgreSQL.
+3. **Thực Nghiệm Phần Cứng IoT ESP32-C5 & Stress Testing**:
+   - Kiểm thử áp lực truyền nhận 100 gói tin telemetry/giây trên băng chuyền vật lý thực tế.
+   - Đo lường độ trễ mạng Wi-Fi 6 trong môi trường nhà xưởng công nghiệp.

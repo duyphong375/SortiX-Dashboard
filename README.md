@@ -1,6 +1,6 @@
 # SortiX Dashboard — Hệ Thống Giám Sát & Phân Loại Sản Phẩm Thông Minh (IoT Sorter)
 
-> **Đồ án PBL3 / Capstone Project**: Hệ thống điều khiển, giám sát và phân loại sản phẩm theo thời gian thực trên băng tải công nghiệp tích hợp IoT (ESP32-C5), thị giác máy tính và ứng dụng quản trị phân tầng.
+> **Đồ án PBL3 / Capstone Project**: Hệ thống điều khiển, giám sát và phân loại sản phẩm theo thời gian thực trên băng chuyền công nghiệp tích hợp vi điều khiển IoT (ESP32-C5), thị giác máy tính (Vision AI) và bảng điều khiển quản trị phân tầng.
 
 ---
 
@@ -17,6 +17,7 @@
 10. [Kiểm Thử & Đảm Bảo Chất Lượng (QA)](#10-kiểm-thử--đảm-bảo-chất-lượng-qa)
 11. [Biến Môi Trường (Environment Variables)](#11-biến-môi-trường-environment-variables)
 12. [Xử Lý Sự Cố Thường Gặp (Troubleshooting)](#12-xử-lý-sự-cố-thường-gặp-troubleshooting)
+13. [Nhóm Tác Giả & Đóng Góp](#13-nhóm-tác-giả--đóng-góp)
 
 ---
 
@@ -24,12 +25,12 @@
 
 **SortiX Dashboard** là nền tảng quản trị và vận hành toàn diện cho dây chuyền phân loại sản phẩm tự động. Hệ thống kết nối đồng bộ giữa vi điều khiển IoT (**ESP32-C5**), camera nhận diện thương hiệu/nhãn chai lọ, cụm cảm biến hồng ngoại & quang học, cơ cấu phân loại piston khí nén 3 khay và giao diện Dashboard giám sát 60fps trên nền tảng Web.
 
-### Tính năng nổi bật:
+### 🌟 Tính năng nổi bật:
 - 🚀 **Trực quan hóa vật lý 60fps (HTML5 Canvas)**: Mô phỏng hành vi di chuyển của phôi chai/lon trên băng tải, qua cảm biến phát hiện và kích hoạt piston đẩy vào đúng khay theo thời gian thực.
 - 🎚️ **Độ Rộng & Sức Chứa Khay Tùy Chỉnh (Dynamic Bin Capacities 5 - 50 SP)**: Mỗi khay cho phép tùy chỉnh định mức chứa từ 5 đến 50 sản phẩm qua thanh trượt mượt mà; tự động đồng bộ tức thời giữa thanh trượt máng trượt Canvas, Widget giám sát, trang Cấu hình và LocalStorage.
 - 🌡️ **Đồng Hồ Đo Nhiệt Độ Bán Nguyệt (Dual-Mode Temperature Gauge)**: 
   - *Chế độ Mô phỏng*: Cung cấp thanh trượt ảo (30°C - 95°C) và các nút đặt nhanh (42.5°C, 72.0°C, 78.5°C) để thử nghiệm phản ứng quá nhiệt.
-  - *Chế độ Thực tế*: Tự động ẩn thanh trượt giả lập, hiển thị bảng telemetry phần cứng (cảm biến DS18B20 / ESP32) với nhãn "Phần cứng đo trực tiếp" và kim đo nhảy theo telemetry thực.
+  - *Chế độ Thực tế*: Tự động ẩn thanh trượt giả lập, hiển thị bảng telemetry phần cứng (cảm biến DS18B20 / ESP32) với nhãn `[PHẦN CỨNG THẬT]` và kim đo nhảy theo telemetry thực.
 - 📡 **Giám Sát Kết Nối IoT & Mạng Đa Tầng**:
   - Tự động phát hiện mất kết nối MQTT Broker quá 5 giây (`mqtt_disconnected`), đổi huy hiệu Header sang đỏ chớp nháy, phát còi cảnh báo và tự động kết nối lại theo lịch trình (3s -> 5s -> 10s).
   - Watchdog 6 giây giám sát nhịp tim định kỳ 2 giây (`conveyor/heartbeat`), cảnh báo tức thì khi vi điều khiển ESP32 ngoại tuyến (`device_offline`).
@@ -56,6 +57,7 @@ SortiX-Dashboard/
 │   ├── database/             # File migrations (SQLite, PostgreSQL, MySQL, MongoDB) & Seeds
 │   │   ├── migrations/       # SQL scripts tạo bảng Users & Schema
 │   │   └── seeds/            # Khởi tạo 4 tài khoản Quản trị viên ban đầu
+│   ├── scripts/              # Build helper scripts (patch-dist-aliases.cjs)
 │   ├── src/
 │   │   ├── config/           # Cấu hình biến môi trường (env.ts)
 │   │   ├── controllers/      # Điều phối nghiệp vụ (user, config, history, stats, alert, safety)
@@ -90,7 +92,7 @@ SortiX-Dashboard/
 │   │   ├── contexts/         # React Contexts (AuthContext, Theme, DashboardContext)
 │   │   ├── hooks/            # useConveyorPhysics, useMQTT, useSorterData
 │   │   ├── lib/              # Client utilities, Audio Service, Data Processor, CSV Exporter
-│   │   └── services/         # API Clients (apiSafetyClient, apiConfigClient, apiHistoryClient, apiStatsClient)
+│   │   └── services/         # API Clients (apiSafetyClient, apiConfigClient, apiHistoryClient, apiStatsClient, sseService)
 │   ├── package.json
 │   └── tsconfig.json
 ├── shared/                   # Tầng dùng chung giữa Frontend và Backend
@@ -103,22 +105,11 @@ SortiX-Dashboard/
 │   ├── architecture.md       # Thiết kế kiến trúc phân tầng, data flows & an toàn
 │   ├── api.md                # Đặc tả toàn bộ RESTful API endpoints & SSE
 │   └── REFACTOR_PLAN.md      # Kế hoạch & lộ trình nâng cấp hệ thống
+├── scripts/                  # Root orchestration scripts (dev-all.cjs)
 ├── tests/                    # Bộ kiểm thử tự động toàn diện (108/108 Tests PASS 100% - 15 Suites)
-│   ├── api_schemas.test.cjs           # Kiểm thử schema Zod (Config, Record, Query)
-│   ├── bin_full.test.cjs              # Kiểm thử cảnh báo đầy khay chứa (50/50 SP hoặc định mức)
-│   ├── bin_sliders_sync.test.cjs      # Kiểm thử đồng bộ thanh trượt độ rộng / dung lượng khay (5-50 SP)
-│   ├── daily_report_sync.test.cjs     # Kiểm thử đồng bộ dữ liệu Báo Cáo 1 Ngày Làm Việc
-│   ├── device_offline.test.cjs        # Kiểm thử mất kết nối ESP32 và nhịp tim ping
-│   ├── estop_safety.test.cjs          # Kiểm thử dừng khẩn cấp E-Stop & mở khóa an toàn
-│   ├── history.test.cjs               # Kiểm thử lưu trữ, phân trang & dọn dẹp lịch sử
-│   ├── jam_detection.test.cjs         # Kiểm thử cảnh báo kẹt phôi & cảm biến quang học
-│   ├── jam_simulation_audio.test.cjs  # Kiểm thử âm thanh còi báo kẹt phôi & khay đầy
-│   ├── mqtt_disconnected.test.cjs     # Kiểm thử mất kết nối Broker 5s & auto-reconnect
-│   ├── shift_summary.test.cjs         # Kiểm thử tổng kết ca làm việc & xuất file báo cáo
-│   ├── simulation_mode_guard.test.cjs # Kiểm thử cô lập giữa chế độ Mô phỏng và Thực tế
-│   ├── temperature_gauge_simulation_vs_real.test.cjs # Kiểm thử đồng hồ nhiệt độ 2 chế độ
-│   ├── temperature_warning.test.cjs   # Kiểm thử cảnh báo quá nhiệt động cơ / CPU AI
-│   └── users.test.cjs                 # Kiểm thử bảo mật tài khoản, Bcrypt, OTP & RBAC
+├── FINAL_INTEGRATION_REPORT.md # Báo cáo tổng kết tích hợp hệ thống cuối cùng
+├── CHANGELOG.md              # Nhật ký thay đổi hệ thống
+├── AGENTS.md                 # Quy chuẩn kỹ thuật & bảo mật bắt buộc
 ├── .env.example              # Mẫu biến môi trường cho Frontend Next.js
 └── package.json              # Root package quản lý Monorepo Workspaces
 ```
@@ -130,8 +121,8 @@ SortiX-Dashboard/
 - **Frontend**: Next.js 14 (App Router), React 18, TypeScript, TailwindCSS, Lucide React, Recharts.
 - **Backend**: Node.js, Express.js, TypeScript, Bcryptjs, Nodemailer, Telegram Bot API.
 - **Dữ liệu & Xác thực**: Zod, JSON Store bền vững (`data/users.json`, `data/notifications.json`), Sẵn sàng kết nối SQLite / PostgreSQL / MySQL / MongoDB.
-- **Truyền thông IoT**: MQTT over WebSocket (MQTT.js), Giao thức kết nối vi điều khiển ESP32-C5 qua Wi-Fi 6.
-- **Đồ họa & Âm thanh**: HTML5 Canvas API (Physics Loop 60fps), Web Audio API (Chíp âm công nghiệp tổng hợp đa tầng).
+- **Truyền thông IoT**: MQTT over WebSocket (MQTT.js), Giao thức kết nối vi điều khiển ESP32-C5 qua Wi-Fi 6, Server-Sent Events (SSE).
+- **Đồ họa & Âm thanh**: HTML5 Canvas API (Physics Loop 60fps), Web Audio API (Bộ tổng hợp âm công nghiệp không phụ thuộc tài nguyên ngoài).
 
 ---
 
@@ -147,8 +138,9 @@ Hệ thống được khởi tạo sẵn **4 tài khoản Quản trị viên (Ad
 | **Nguyễn Đình Anh Tuấn** | `admin4` / `admin4@gmail.com` | `123456` | **Quản trị viên (Admin)** | Toàn quyền cấu hình máy, xóa dữ liệu, dừng khẩn cấp, mở khóa an toàn, quản lý thành viên |
 | **Tài khoản Thử nghiệm** | `duyphong` / `duyphong@gmail.com` | `123456` | **Người vận hành (User)** | Theo dõi dashboard, giám sát băng tải, xem thống kê & lịch sử phân loại |
 
-> 🔒 **Cơ chế bảo vệ an toàn cao cấp**:
-> - Mọi tài khoản mới tạo qua trang Đăng ký tự do đều **bị ép cứng role: 'user'** để ngăn chặn leo thang đặc quyền.
+> [!IMPORTANT]
+> **Cơ chế bảo vệ an toàn cao cấp:**
+> - Mọi tài khoản mới tạo qua trang Đăng ký tự do đều **bị ép cứng `role: 'user'`** để ngăn chặn leo thang đặc quyền.
 > - Quản trị viên **không thể tự xóa tài khoản của chính mình** khi đang đăng nhập.
 > - Hệ thống **bắt buộc luôn duy trì tối thiểu 1 Quản trị viên** (chặn thao tác xóa nếu chỉ còn duy nhất 1 Admin).
 
@@ -175,15 +167,13 @@ copy backend\.env.example backend\.env
 
 ### 5.4. Khởi chạy ứng dụng
 
-#### Cách 1: Khởi chạy nhanh toàn bộ hệ thống bằng npm scripts
-- **Chạy đồng thời Frontend & Backend**:
-  ```powershell
-  npm run dev
-  ```
-- **Chạy riêng máy chủ Backend (Port 5000)**:
-  ```powershell
-  npm run dev --workspace=backend
-  ```
+| Lệnh thực thi | Mô tả | Cổng dịch vụ |
+| :--- | :--- | :--- |
+| `npm run dev:all` | **Khởi chạy đồng thời cả Frontend & Backend** | Frontend: `3000`, Backend: `5000` |
+| `npm run dev` hoặc `npm run dev:frontend` | Khởi chạy riêng giao diện người dùng Next.js | `http://localhost:3000` |
+| `npm run dev:backend` | Khởi chạy riêng máy chủ Express API | `http://localhost:5000` |
+| `npm run build` | Biên dịch toàn bộ dự án cho môi trường sản xuất | — |
+| `npm test` | Chạy bộ kiểm thử tự động toàn diện (108 tests) | — |
 
 Truy cập Dashboard tại: **[http://localhost:3000](http://localhost:3000)**.
 
@@ -316,6 +306,7 @@ Xem chi tiết tại [`.env.example`](.env.example):
 | `NEXT_PUBLIC_MQTT_TOPIC_TELEMETRY` | Topic nhận telemetry cảm biến | `sorter/01/telemetry` |
 | `NEXT_PUBLIC_MQTT_TOPIC_VISION` | Topic nhận kết quả nhận diện camera | `sorter/01/vision` |
 | `NEXT_PUBLIC_MQTT_TOPIC_CONTROL` | Topic gửi lệnh điều khiển | `sorter/01/control` |
+| `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_BACKEND_URL` | Địa chỉ Backend API | `http://localhost:5000` |
 | `TELEGRAM_BOT_TOKEN` | Token Bot gửi thông báo cảnh báo | `123456789:ABCdefGhI...` |
 | `TELEGRAM_CHAT_ID` | ID phòng chat nhận cảnh báo Telegram | `-100123456789` |
 | `SMTP_HOST` / `SMTP_PORT` | Máy chủ SMTP gửi email khẩn cấp | `smtp.gmail.com` / `587` |
@@ -325,18 +316,20 @@ Xem chi tiết tại [`.env.example`](.env.example):
 
 ## 12. Xử Lý Sự Cố Thường Gặp (Troubleshooting)
 
-- **Cổng 3000 bị chiếm dụng**:
-  Chạy ứng dụng trên cổng khác: `npm run dev -- -p 3001`.
+- **Cổng 3000 hoặc 5000 bị chiếm dụng**:
+  - Chạy frontend cổng khác: `npm run dev -- -p 3001`.
+  - Hoặc giải phóng cổng bằng PowerShell: `Get-Process -Id (Get-NetTCPConnection -LocalPort 5000).OwningProcess | Stop-Process -Force`.
 - **Trang Máy Thật hiển thị MQTT Disconnected**:
-  Kiểm tra Broker URL trong tệp `.env` có đúng định dạng WebSocket Secure (`wss://broker.emqx.io:8084/mqtt` hoặc `ws://...:8083/mqtt`) và kiểm tra kết nối mạng cục bộ tới Broker.
+  - Kiểm tra Broker URL trong tệp `.env` có đúng định dạng WebSocket Secure (`wss://broker.emqx.io:8084/mqtt` hoặc `ws://...:8083/mqtt`) và kiểm tra kết nối mạng cục bộ tới Broker.
 - **Lịch sử không hiển thị bản ghi mới**:
-  Ở chế độ Mô phỏng, nhấn các nút nạp nhanh sản phẩm hoặc nhấn nút **Tạo dữ liệu demo** tại trang Băng Tải.
+  - Ở chế độ Mô phỏng, nhấn các nút nạp nhanh sản phẩm hoặc nhấn nút **Tạo dữ liệu demo** tại trang Băng Tải.
 - **Đồng hồ nhiệt độ không hiển thị thanh trượt**:
-  Thanh trượt nhiệt độ ảo chỉ hiển thị ở chế độ Mô phỏng. Nếu đang ở chế độ Thực tế, hệ thống hiển thị bảng telemetry của cảm biến phần cứng DS18B20 thật.
+  - Thanh trượt nhiệt độ ảo chỉ hiển thị ở chế độ Mô phỏng. Nếu đang ở chế độ Thực tế, hệ thống hiển thị bảng telemetry của cảm biến phần cứng DS18B20 thật.
 
 ---
 
-## 👥 Nhóm Tác Giả & Đóng Góp (PBL3 Team)
+## 13. Nhóm Tác Giả & Đóng Góp
+
 - **Nguyễn Tá Duy Phong** (Trưởng nhóm)
 - **Nguyễn Nhật Minh**
 - **Trần Đăng Lợi**

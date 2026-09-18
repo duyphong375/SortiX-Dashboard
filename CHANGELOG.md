@@ -2,6 +2,29 @@
 
 Tất cả các thay đổi về kiến trúc, tính năng, sửa lỗi và nâng cấp chất lượng của dự án **SortiX Dashboard** được ghi lại tại tài liệu này theo tiêu chuẩn [Keep a Changelog](https://keepachangelog.com/).
 
+---
+
+## [2.4.0] - 2026-09-19 (Tích Hợp Toàn Diện, Chuẩn Hóa Monorepo & Khóa Kiểm Thử Cuối)
+
+### 🚀 Added (Thêm mới)
+- **Kịch Bản Điều Phối Monorepo (`scripts/dev-all.cjs`)**:
+  - Hỗ trợ lệnh `npm run dev:all` khởi chạy song song và tự động quản lý vòng đời của cả Frontend (Next.js 14 tại Port 3000) và Backend (Express tại Port 5000) chỉ bằng một câu lệnh duy nhất.
+- **Tự Động Vá Path Alias Backend (`backend/scripts/patch-dist-aliases.cjs`)**:
+  - Khắc phục triệt để lỗi không resolve được alias module `@shared/*` trong mã nguồn JavaScript sau khi biên dịch `tsc` bằng cơ chế rewrite module specifier thời gian thực.
+- **Xác Thực Token Phiên Ký Số (`backend/src/services/authToken.ts`)**:
+  - Chuẩn hóa cơ chế ký số token xác thực phiên người dùng, kiểm tra chéo trạng thái hoạt động (`status: 'active'`) và vai trò phân quyền.
+- **API Heartbeat & Token Đồng Bộ**:
+  - Bổ sung các routes `/api/auth/heartbeat`, `/api/auth/token` và `/api/auth/logout` ở cả Frontend proxy và Native Express Backend.
+- **Báo Cáo Tích Hợp Cuối Cùng (`FINAL_INTEGRATION_REPORT.md`)**:
+  - Tổng kết toàn bộ kết quả kiểm tra chất lượng, chứng minh 108/108 tests pass, TypeScript 0 lỗi và sản phẩm sẵn sàng triển khai.
+
+### 🛡️ Security & Quality (Bảo mật & Chất lượng)
+- Chuẩn hóa toàn bộ biến môi trường qua `backend/src/config/env.ts` với khả năng tự động đọc file `.env` linh hoạt và an toàn.
+- Loại bỏ toàn bộ trường mật khẩu thô `plain_password` trong kho dữ liệu demo `data/users.json`, 100% tài khoản sử dụng mật khẩu băm Bcrypt.
+- Xác nhận kiểm thử hồi quy tự động: **108/108 Tests PASS (100% - 15 Test Suites)** không có lỗi tồn đọng.
+
+---
+
 ## [2.3.0] - 2026-09-18 (Dung Lượng Khay Động 5-50 SP, Đồng Hồ Nhiệt Độ 2 Chế Độ, Báo Cáo 1 Ngày Làm Việc & MQTT Watchdog)
 
 ### 🚀 Added (Thêm mới)
@@ -26,18 +49,16 @@ Tất cả các thay đổi về kiến trúc, tính năng, sửa lỗi và nân
   - Chuẩn hóa tên gọi thành **`[BÁO CÁO 1 NGÀY LÀM VIỆC]`**.
   - Tự động đồng bộ hóa trực tiếp số liệu thời gian thực từ 3 khay chứa, số sản phẩm đạt/lỗi, thời gian vận hành và số lần dừng khẩn cấp.
   - Modal trực quan hóa số liệu, nút Tải báo cáo CSV có UTF-8 BOM hiển thị tiếng Việt chuẩn trên Excel, và mẫu in ấn chuẩn.
-- **Nâng Cấp Bộ Kiểm Thử Tự Động Toàn Diện**:
-  - Bổ sung 9 bộ test suites mới:
-    - `tests/bin_sliders_sync.test.cjs` (8 tests)
-    - `tests/mqtt_disconnected.test.cjs` (12 tests)
-    - `tests/temperature_gauge_simulation_vs_real.test.cjs` (4 tests)
-    - `tests/daily_report_sync.test.cjs` (6 tests)
-    - `tests/temperature_warning.test.cjs` (8 tests)
-    - `tests/device_offline.test.cjs` (10 tests)
-    - `tests/shift_summary.test.cjs` (8 tests)
-    - `tests/bin_full.test.cjs` (7 tests)
-    - `tests/jam_simulation_audio.test.cjs` (5 tests)
-  - Toàn bộ hệ thống đạt mốc kiểm thử kỷ lục: **108/108 Tests PASS (100% - 15 Test Suites)**.
+- **Bổ Sung 9 Bộ Test Suites Mới**:
+  - `tests/bin_sliders_sync.test.cjs` (8 tests)
+  - `tests/mqtt_disconnected.test.cjs` (12 tests)
+  - `tests/temperature_gauge_simulation_vs_real.test.cjs` (4 tests)
+  - `tests/daily_report_sync.test.cjs` (6 tests)
+  - `tests/temperature_warning.test.cjs` (8 tests)
+  - `tests/device_offline.test.cjs` (10 tests)
+  - `tests/shift_summary.test.cjs` (8 tests)
+  - `tests/bin_full.test.cjs` (7 tests)
+  - `tests/jam_simulation_audio.test.cjs` (5 tests)
 
 ---
 
@@ -55,24 +76,19 @@ Tất cả các thay đổi về kiến trúc, tính năng, sửa lỗi và nân
   - `/api/safety/jam`: Endpoint ghi nhận sự cố kẹt phôi và lưu trữ bền vững.
   - Toast thông báo màu đỏ cảnh báo kẹt phôi kèm hướng dẫn xử lý và dừng băng tải.
   - Cơ cấu chuyển hướng nâng cấp: Đổi sang kiểu **Piston đẩy thụt ra thụt vô** thay vì servo gạt xoay truyền thống.
-  - Tính năng **Dọn khay chủ động**: Bấm dọn khay bất kỳ lúc nào ngay trên máng trượt (không cần chờ đủ định mức 50 SP).
+  - Tính năng **Dọn khay chủ động**: Bấm dọn khay bất kỳ lúc nào ngay trên máng trượt (không cần chờ đủ định mức).
 - **Server-Sent Events (SSE Real-time Event Stream)**:
   - `backend/src/services/sseService.ts` & `/api/events`: Stream sự kiện thời gian thực (E-Stop, Jam Detected, Safety Unlocked) tới tất cả các client đang mở.
 - **Kho Dữ Liệu Thông Báo Bền Vững (Notifications Persistence)**:
-  - `data/notifications.json` & `backend/src/models/notificationModel.ts`: Lưu trữ vĩnh viễn các thông báo dừng khẩn cấp và kẹt phôi với trạng thái `unprocessed` / `processed`.
+  - `data/notifications.json` & `backend/src/models/notificationModel.ts`: Lưu trữ vĩnh viễn các thông báo dừng khẩn cấp và kẹt phôi với trạng thái `unprocessed` / `resolved`.
 - **Gắn Nhãn Chế Độ Trong Cảnh Báo Tự Động**:
   - Email (SMTP) và Telegram Bot tự động kèm nhãn định danh: `🧪 Chế độ Giả Lập` hoặc `🔴 Phần cứng Thực Tế`.
-- **3 Bộ Kiểm Thử Mới**:
-  - `tests/estop_safety.test.cjs`: 5 tests kiểm tra toàn bộ luồng E-Stop, thông báo và phân quyền mở khóa.
-  - `tests/jam_detection.test.cjs`: 6 tests kiểm tra sự cố kẹt phôi, Zod validation, SSE broadcast và topic MQTT.
-  - `tests/simulation_mode_guard.test.cjs`: 3 tests kiểm tra cô lập kiểm thử giữa Mô phỏng và Thực tế.
 
 ### 🛡️ Security & Reliability (Bảo mật & Độ tin cậy)
 - **Cô lập Tuyệt đối Chế độ Mô phỏng (Strict Simulation Isolation)**:
   - Các nút test giả lập kẹt phôi, giả lập E-Stop, nạp phôi mẫu, tạo dữ liệu demo hoàn toàn bị ẩn và bị chặn thực thi khi ở chế độ Thực tế (Real Hardware Mode).
   - Động cơ vật lý canvas không tự sinh kẹt phôi giả khi đang kết nối máy thật; 100% dữ liệu dựa trên cảm biến quang học thật qua MQTT.
 - Chống kẹt lặp bản tin E-Stop: Bỏ qua các tín hiệu dừng lặp lại trong thời gian ân hạn 5 giây sau khi Admin đã mở khóa an toàn.
-- Toàn bộ hệ thống nâng mốc kiểm thử tự động từ 26 lên **40/40 Tests PASS (100%)**.
 
 ---
 
@@ -87,24 +103,12 @@ Tất cả các thay đổi về kiến trúc, tính năng, sửa lỗi và nân
   - `data/users.json`: Lưu trữ thông tin tài khoản an toàn với mật khẩu băm Bcrypt.
 - **Khởi Tạo Admin & Cơ Sở Dữ Liệu (Migrations & Seeds)**:
   - `backend/database/seeds/seed_admins.ts` & `seed_admins.sql`: Tự động khởi tạo 4 tài khoản Ban Quản trị đại diện nhóm đề tài PBL3 (`admin1`, `admin2`, `admin3`, `admin4`).
-  - `backend/database/migrations/`: 4 tệp DDL tạo bảng người dùng chuẩn hóa cho đa hệ quản trị CSDL:
-    - `001_create_users_table_sqlite.sql` (SQLite)
-    - `001_create_users_table_postgres.sql` (PostgreSQL)
-    - `001_create_users_table_mysql.sql` (MySQL)
-    - `001_create_users_mongodb.js` (MongoDB)
+  - `backend/database/migrations/`: 4 tệp DDL tạo bảng người dùng chuẩn hóa cho đa hệ quản trị CSDL (SQLite, PostgreSQL, MySQL, MongoDB).
 - **Giao Diện & Trải Nghiệm Người Dùng (Frontend UI)**:
   - `frontend/src/app/users/page.tsx`: Giao diện quản trị thành viên trực quan, phân quyền theo vai trò (Admin / User), tạo mới và khóa tài khoản.
   - `frontend/src/app/login/page.tsx`: Nâng cấp giao diện đăng nhập với liên kết mở Modal Quên mật khẩu.
   - `frontend/src/components/ui/ForgotPasswordModal.tsx`: Hộp thoại yêu cầu mã OTP và đặt lại mật khẩu mới.
   - `frontend/src/components/ui/ChangePasswordModal.tsx`: Hộp thoại đổi mật khẩu với xác thực độ phức tạp.
-- **Bộ Kiểm Thử Bảo Mật & RBAC Mới**:
-  - `tests/users.test.cjs`: Bổ sung 14 bài kiểm thử hồi quy tự động kiểm tra toàn bộ luồng bảo mật (Admin Seeder, băm Bcrypt, Mock OTP, chống Privilege Escalation, chặn 403 Forbidden, chặn Admin tự xóa mình, bảo vệ tối thiểu 1 Admin).
-
-### 🛡️ Security & Reliability (Bảo mật & Độ tin cậy)
-- Ngăn chặn triệt để tấn công leo thang đặc quyền: Đăng ký tài khoản tự do luôn bị ép cứng `role: 'user'`.
-- Chặn khôi phục mật khẩu từ bên ngoài màn hình Login đối với các tài khoản Quản trị viên (Admin).
-- Chặn thao tác xóa Admin nếu số lượng Admin trong hệ thống chỉ còn 1 người.
-- Bộ kiểm thử tự động đạt mốc **26/26 Tests PASS (100%)** trên toàn hệ thống.
 
 ---
 
@@ -118,40 +122,5 @@ Tất cả các thay đổi về kiến trúc, tính năng, sửa lỗi và nân
 - **Tầng Backend Độc Lập (`backend/`)**:
   - `backend/src/controllers/`: `configController`, `historyController`, `statsController`, `alertController`.
   - `backend/src/routes/`: `configRoutes`, `historyRoutes`, `statsRoutes`, `alertRoutes`.
-  - `backend/src/services/`: `configService`, `historyService`, `statsService`, `alertNotificationService`.
-  - `backend/src/models/`: `configModel`, `historyModel` (quản lý in-memory tối đa 1000 bản ghi an toàn).
-  - `backend/src/middlewares/`: `validateMiddleware.ts` (xác thực Zod), `errorMiddleware.ts`.
-  - `backend/src/server.ts`: HTTP Server độc lập cổng 5000 chuẩn RESTful, có sẵn CORS và `/api/health`.
-- **Tầng Frontend Services (`src/services/`)**:
-  - `apiConfigClient.ts`: Fetch wrapper gọi REST API cấu hình.
-  - `apiHistoryClient.ts`: Fetch wrapper gọi REST API lịch sử (hỗ trợ phân trang, lọc).
-  - `apiStatsClient.ts`: Fetch wrapper gọi REST API thống kê KPI.
-- **Tài Liệu & Tự Động Hóa**:
-  - `docs/architecture.md`: Tài liệu kiến trúc phân tầng, phân định Simulation vs Live Hardware.
-  - `docs/api.md`: Đặc tả chi tiết toàn bộ các RESTful API endpoints.
-  - `scripts/dev.ps1`: Script PowerShell khởi động hệ thống nhanh.
-  - `scripts/test.ps1`: Script PowerShell chạy toàn bộ bộ kiểm tra chất lượng tự động.
-  - `tests/api_schemas.test.cjs`: Kiểm thử tự động cho các Zod Schemas.
-  - `.env.example`: Mẫu cấu hình môi trường chuẩn hóa cho toàn hệ thống.
-
-### 🔄 Changed (Cải tiến & Tái cấu trúc)
-- **Phân rã Monolithic Component**:
-  - Tách `src/app/page.tsx` từ 988 dòng (47KB) xuống ~90 dòng, đưa các khối giao diện thành 4 subcomponents độc lập:
-    - `src/components/overview/KpiStatGrid.tsx`
-    - `src/components/overview/LiveHealthAndBinWidget.tsx`
-    - `src/components/overview/CalendarWidget.tsx`
-    - `src/components/overview/RecentActivityList.tsx`
-- **Subcomponents Băng Tải**:
-  - Chuẩn hóa các thành phần điều khiển trong `src/components/conveyor/` (`ConveyorControls.tsx`, `QuickFeedBar.tsx`, `BinTrays.tsx`).
-- **Tương thích ngược an toàn (Backward Compatibility)**:
-  - `src/lib/types.ts` và `src/lib/schemas.ts` re-export trực tiếp từ `shared/`, giúp toàn bộ code cũ không bị đứt gãy.
-  - Cập nhật cấu hình `tsconfig.json` hỗ trợ path alias `@shared/*`.
-
----
-
-## [1.0.0] - 2026-09-15 (Phiên Bản Khởi Động Ban Đầu)
-- Khởi tạo dự án SortiX Dashboard trên nền Next.js 14 App Router, TailwindCSS, Recharts, Lucide Icons.
-- Mô phỏng băng tải vật lý 60fps trên HTML5 Canvas qua `useConveyorPhysics.ts`.
-- Bộ tổng hợp âm thanh công nghiệp qua Web Audio API thuần (`audioService.ts`).
-- Kết nối MQTT broker qua WebSocket cho thiết bị vi điều khiển ESP32-C5 (`mqttClient.ts`).
-- Quản lý lịch sử và cấu hình phân loại trên LocalStorage trình duyệt.
+  - `backend/src/models/`: `historyModel`, `configModel` (bộ đệm an toàn giới hạn tối đa 1000 bản ghi).
+  - `backend/src/server.ts`: Express Server độc lập chạy song song trên cổng 5000.

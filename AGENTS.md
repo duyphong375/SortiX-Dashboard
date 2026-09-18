@@ -1,15 +1,33 @@
-# QUY TẮC PHÁT TRIỂN DỰ ÁN SORTIX DASHBOARD (AGENTS.md)
+# QUY TẮC PHÁT TRIỂN DỰ ÁN (AGENTS.md)
 
 Tài liệu này quy định các tiêu chuẩn kỹ thuật, ràng buộc kiến trúc và nguyên tắc bảo mật **BẮT BUỘC** áp dụng cho tất cả các AI Agent và Lập trình viên khi làm việc với codebase của **SortiX Dashboard** (Đồ án PBL3).
 
 ---
 
-## 1. Kiến Trúc Monorepo & Công Nghệ Lõi
+## 📌 Mục Lục
+1. [Kiến Trúc Monorepo & Quy Chuẩn Mã Nguồn](#1-kiến-trúc-monorepo--quy-chuẩn-mã-nguồn)
+2. [Tiêu Chuẩn TypeScript Khắt Khe (Strict Typing)](#2-tiêu-chuẩn-typescript-khắt-khe-strict-typing)
+3. [Xác Thực Dữ Liệu & Quy Tắc Zod Schema](#3-xác-thực-dữ-liệu--quy-tắc-zod-schema)
+4. [Nguyên Tắc Bảo Mật & Xác Thực (Security & RBAC)](#4-nguyên-tắc-bảo-mật--xác-thực-security--rbac)
+5. [An Toàn Công Nghiệp & Cô Lập Mô Phỏng (Industrial Safety & Simulation Isolation)](#5-an-toàn-công-nghiệp--cô-lập-mô-phỏng-industrial-safety--simulation-isolation)
+6. [Đảm Bảo Chất Lượng & Bảo Vệ Kiểm Thử (Testing Gates)](#6-đảm-bảo-chất-lượng--bảo-vệ-kiểm-thử-testing-gates)
+
+---
+
+## 1. Kiến Trúc Monorepo & Quy Chuẩn Mã Nguồn
+
 - **Mô hình Monorepo (npm workspaces)**:
   - `frontend/`: Ứng dụng Next.js 14 App Router (`frontend/src/app/`).
   - `backend/`: Máy chủ độc lập Node.js/Express + TypeScript (`backend/src/`).
   - `shared/`: Thư viện dùng chung (`types/`, `schemas/`, `constants/`).
-- **Server vs. Client Components**: Ưu tiên tối đa Server Components trong Next.js. Chỉ khai báo chỉ thị `'use client'` khi bắt buộc tương tác với Browser APIs (React state/hooks, HTML5 Canvas, Web Audio API, Recharts, MQTT WebSocket Client).
+  - `scripts/`: Kịch bản điều phối môi trường (`dev-all.cjs`).
+- **Khởi chạy ứng dụng**:
+  - Chạy đồng thời cả Frontend và Backend: `npm run dev:all`.
+  - Chạy riêng Frontend: `npm run dev:frontend` (Port 3000).
+  - Chạy riêng Backend: `npm run dev:backend` (Port 5000).
+- **Server vs. Client Components**:
+  - Mặc định ưu tiên Server Components trong Next.js.
+  - Chỉ khai báo `'use client'` khi bắt buộc sử dụng Browser APIs (React state/hooks, Canvas, Web Audio API, Recharts, MQTT WebSocket Client).
 - **Quy tắc Path Alias**:
   - Tại Frontend: Luôn sử dụng alias `@/` trỏ tới `frontend/src/` và `@shared/*` trỏ tới `shared/*`.
   - Tại Backend: Luôn import từ `@shared/*` hoặc relative path chuẩn mực.
@@ -18,7 +36,8 @@ Tài liệu này quy định các tiêu chuẩn kỹ thuật, ràng buộc kiế
 ---
 
 ## 2. Tiêu Chuẩn TypeScript Khắt Khe (Strict Typing)
-- **TypeScript Strict Mode**: Toàn bộ dự án đã bật `"strict": true` trong `tsconfig.json`.
+
+- **TypeScript Strict Mode**: Toàn bộ dự án bắt buộc duy trì `"strict": true` trong `tsconfig.json`.
 - **Nghiêm cấm kiểu `any` tùy tiện**: Tuyệt đối không khai báo biến kiểu `any` hoặc gắn comment `@ts-ignore` để che giấu lỗi type.
 - **Sử dụng Kiểu Dữ Liệu Tập Trung**:
   - Mọi interface cốt lõi (`TelemetryData`, `VisionDetection`, `SorterConfig`, `ClassificationRecord`, `AlertEvent`, `User`, `SafeUser`) phải được import trực tiếp từ `shared/types`.
@@ -30,6 +49,7 @@ Tài liệu này quy định các tiêu chuẩn kỹ thuật, ràng buộc kiế
 ---
 
 ## 3. Xác Thực Dữ Liệu & Quy Tắc Zod Schema
+
 - **Xác thực Untrusted Input**: Mọi dữ liệu nhận từ giao thức mạng (gói tin MQTT từ ESP32-C5 hoặc HTTP request từ client) **BẮT BUỘC** phải được parse và xác thực bằng Zod schemas định nghĩa trong `shared/schemas/`.
 - **Quy tắc `.passthrough()` Bắt Buộc**:
   - Các Zod Schema định nghĩa cho thiết bị (như `TelemetrySchema`, `VisionDetectionSchema`, `SorterConfigSchema`) phải luôn kết thúc bằng `.passthrough()`.
@@ -37,7 +57,8 @@ Tài liệu này quy định các tiêu chuẩn kỹ thuật, ràng buộc kiế
 
 ---
 
-## 4. Nguyên Tắc Bảo Mật & Xác Thực (Security & RBAC Rules)
+## 4. Nguyên Tắc Bảo Mật & Xác Thực (Security & RBAC)
+
 - **Băm mật khẩu Bcrypt**:
   - Mọi mật khẩu người dùng lưu trữ trong cơ sở dữ liệu hoặc `data/users.json` **bắt buộc** phải được băm bằng thuật toán `bcrypt` với tối thiểu `10 salt rounds`. Tuyệt đối không lưu trữ hay so khớp mật khẩu dạng plain text.
 - **Chống Tấn Công Leo Thang Đặc Quyền (Privilege Escalation Prevention)**:
@@ -55,6 +76,7 @@ Tài liệu này quy định các tiêu chuẩn kỹ thuật, ràng buộc kiế
 ---
 
 ## 5. An Toàn Công Nghiệp & Cô Lập Mô Phỏng (Industrial Safety & Simulation Isolation)
+
 - **An Toàn Dừng Khẩn Cấp (E-Stop)**:
   - Khi kích hoạt Dừng khẩn cấp: Lập tức ngắt băng tải (`isRunning = false`), bật còi hú liên tục, hiển thị banner toàn màn hình khóa hệ thống và lưu bản ghi vào `data/notifications.json`.
   - **Mở khóa an toàn (Safe Unlock)**: Chỉ Quản trị viên (Admin) mới có quyền mở khóa, bắt buộc nhập ghi chú xác nhận hiện trường.
@@ -82,6 +104,7 @@ Tài liệu này quy định các tiêu chuẩn kỹ thuật, ràng buộc kiế
 ---
 
 ## 6. Đảm Bảo Chất Lượng & Bảo Vệ Kiểm Thử (Testing Gates)
+
 - **BẢO VỆ TUYỆT ĐỐI THƯ MỤC `tests/`**:
   - Tuyệt đối không được xóa, đổi tên hoặc sửa đổi logic để "lách" các bài test trong 15 bộ kiểm thử:
     1. `tests/history.test.cjs` (9 tests: Bounded buffer, migration, normalization)
@@ -98,25 +121,9 @@ Tài liệu này quy định các tiêu chuẩn kỹ thuật, ràng buộc kiế
     12. `tests/mqtt_disconnected.test.cjs` (12 tests: Mất kết nối MQTT 5s, auto-reconnect backoff, âm thanh báo)
     13. `tests/temperature_gauge_simulation_vs_real.test.cjs` (4 tests: Chuyển đổi giao diện Mô phỏng vs Thực tế)
     14. `tests/daily_report_sync.test.cjs` (6 tests: Đồng bộ số liệu live Báo Cáo 1 Ngày Làm Việc)
-    15. `tests/simulation_mode_guard.test.cjs` (3 tests: Cô lập chế độ Mô phỏng và Thực tế)
-- **Tiêu chuẩn nghiệm thu**: Toàn bộ **108/108 tests bắt buộc phải PASS 100%**:
+    15. `tests/simulation_mode_guard.test.cjs` (3 tests: Cô lập chế độ Mô phỏng & Thực tế)
+- **Lệnh thực thi kiểm thử trước khi bàn giao**:
   ```powershell
   npm test
   ```
-- **Kiểm tra TypeScript & Linting**:
-  ```powershell
-  npx tsc --noEmit --pretty false
-  npx eslint src/
-  ```
-
----
-
-## 7. Phân Phối Tác Vụ Trong Hệ Sinh Thái Google Antigravity
-
-Dự án vận hành 100% trên nền tảng **Google Antigravity**:
-
-| Tác nhân / Công cụ | Mô hình đề xuất | Trách nhiệm chính |
-| :--- | :--- | :--- |
-| **Antigravity Agent** | **Gemini Pro – High** | Khảo sát tổng thể, thiết kế kiến trúc phân tầng, lập và cập nhật tài liệu kỹ thuật (`README.md`, `architecture.md`, `api.md`, `REFACTOR_PLAN.md`, `CHANGELOG.md`). |
-| **Antigravity CLI** | **Gemini Flash High** hoặc **Pro Medium** | Triển khai tính năng, sửa lỗi file, chạy lệnh terminal, cập nhật Zod schemas, thêm controllers/services. |
-| **Antigravity CLI (Việc khó)** | **Pro High** | Refactor cấu trúc lớn, xử lý lỗi typecheck phức tạp, tối ưu hóa thuật toán Canvas 60fps, nâng cấp hệ thống bảo mật & database migrations. |
+  Tất cả **108/108 bài kiểm thử phải đạt PASS 100%**.
