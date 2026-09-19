@@ -42,12 +42,13 @@ import type { DashboardSyncState } from "@/services/syncService";
 
 export interface UseSorterDataProps {
   configRef: React.MutableRefObject<SorterConfig>;
+  onIncomingConfig?: (config: SorterConfig) => void;
   onSpawnRealVisualItem?: (item: VisualItem) => void;
   onPublishCommand?: (cmd: string, value?: number) => void;
   onBinFullTrigger?: (binIndex: 1 | 2 | 3, count: number, maxCapacity?: number) => void;
 }
 
-export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishCommand, onBinFullTrigger }: UseSorterDataProps) {
+export function useSorterData({ configRef, onIncomingConfig, onSpawnRealVisualItem, onPublishCommand, onBinFullTrigger }: UseSorterDataProps) {
   const [isClient, setIsClient] = useState(false);
   const [isSimulation, setIsSimulation] = useState<boolean>(false);
   const { success: showToastSuccess } = useToast();
@@ -618,7 +619,7 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishComma
     }
   }, []);
 
-  const applyIncomingSyncRecords = useCallback((incomingRecords: ClassificationRecord[], incomingCounts?: BinCounts) => {
+  const applyIncomingSyncRecords = useCallback((incomingRecords: ClassificationRecord[], incomingCounts?: BinCounts, incomingBrands?: Record<string, number>) => {
     if (!Array.isArray(incomingRecords) || incomingRecords.length === 0) return;
     if (isSimulationRef.current) {
       setSimRecords((prev) => {
@@ -633,6 +634,9 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishComma
         simBinCountsRef.current = incomingCounts;
         saveBinCountsLocal(incomingCounts, true);
       }
+      if (incomingBrands) {
+        setSimBrandCounts(incomingBrands);
+      }
     } else {
       setRealRecords((prev) => {
         const ids = new Set(prev.map((r) => r.id));
@@ -646,8 +650,28 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishComma
         realBinCountsRef.current = incomingCounts;
         saveBinCountsLocal(incomingCounts, false);
       }
+      if (incomingBrands) {
+        setRealBrandCounts(incomingBrands);
+      }
     }
   }, []);
+
+  const triggerManualSync = useCallback(async (): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/sync");
+      if (!res.ok) return false;
+      const data = await res.json();
+      if (data.state) {
+        applyIncomingSyncState(data.state);
+      }
+      if (data.history && Array.isArray(data.history) && data.history.length > 0) {
+        applyIncomingSyncRecords(data.history, data.state?.binCounts, data.state?.brandCounts);
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }, [applyIncomingSyncState, applyIncomingSyncRecords]);
 
   const applyIncomingClearHistory = useCallback(() => {
     if (isSimulationRef.current) {
@@ -704,6 +728,7 @@ export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishComma
     applyIncomingSyncState,
     applyIncomingSyncRecords,
     applyIncomingClearHistory,
+    triggerManualSync,
   };
 }
 

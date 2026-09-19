@@ -109,12 +109,12 @@ export const UserTable: React.FC<UserTableProps> = ({
                           {userItem.username.substring(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-slate-900 dark:text-white truncate">
+                          <div className="flex items-center gap-1.5 flex-nowrap">
+                            <span className="font-bold text-slate-900 dark:text-white shrink-0">
                               {userItem.username}
                             </span>
                             {isSelf && (
-                              <span className="rounded bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/25 text-[9px] px-1.5 py-0.5 font-bold shrink-0">
+                              <span className="rounded bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/25 text-[9px] px-1.5 py-0.5 font-bold shrink-0 whitespace-nowrap">
                                 Bạn (Đang đăng nhập)
                               </span>
                             )}

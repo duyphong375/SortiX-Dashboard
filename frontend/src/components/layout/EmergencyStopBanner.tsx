@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
-import { OctagonAlert, ShieldAlert, KeyRound, AlertTriangle } from "lucide-react";
+import React, { useState } from "react";
+import { OctagonAlert, ShieldAlert, KeyRound, AlertTriangle, Volume2, VolumeX } from "lucide-react";
 import { EmergencyStopPayload } from "@shared/types";
 import { useAuth } from "@/contexts/AuthContext";
+import { industrialAudio } from "@/lib/audioService";
 
 interface EmergencyStopBannerProps {
   isLocked: boolean;
@@ -18,6 +19,7 @@ export const EmergencyStopBanner: React.FC<EmergencyStopBannerProps> = ({
 }) => {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const [isSirenSilenced, setIsSirenSilenced] = useState(false);
 
   if (!isLocked) return null;
 
@@ -27,6 +29,16 @@ export const EmergencyStopBanner: React.FC<EmergencyStopBannerProps> = ({
   const timeStr = incident?.timestamp
     ? new Date(incident.timestamp).toLocaleTimeString("vi-VN")
     : new Date().toLocaleTimeString("vi-VN");
+
+  const handleToggleSiren = () => {
+    if (isSirenSilenced) {
+      industrialAudio.startContinuousEmergencyAlarm();
+      setIsSirenSilenced(false);
+    } else {
+      industrialAudio.stopContinuousEmergencyAlarm();
+      setIsSirenSilenced(true);
+    }
+  };
 
   return (
     <div
@@ -66,12 +78,35 @@ export const EmergencyStopBanner: React.FC<EmergencyStopBannerProps> = ({
           </div>
         </div>
 
-        {/* Nút hành động mở khóa */}
+        {/* Nút hành động mở khóa & Tắt còi */}
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleToggleSiren}
+            className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer ${
+              isSirenSilenced
+                ? "border-amber-300 bg-amber-500/30 text-amber-100 hover:bg-amber-500/40"
+                : "border-white/40 bg-black/40 hover:bg-black/60 text-white animate-pulse"
+            }`}
+            title={isSirenSilenced ? "Bật lại còi hú báo động" : "Tắt còi để đỡ ồn trong lúc kiểm tra"}
+          >
+            {isSirenSilenced ? (
+              <>
+                <Volume2 className="h-4 w-4 text-amber-300" />
+                <span>Bật còi</span>
+              </>
+            ) : (
+              <>
+                <VolumeX className="h-4 w-4 text-white" />
+                <span>Tắt còi</span>
+              </>
+            )}
+          </button>
+
           {isAdmin ? (
             <button
               onClick={onOpenUnlockDialog}
-              className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-black text-rose-700 hover:bg-rose-50 active:scale-95 transition-all shadow-md hover:shadow-lg uppercase tracking-wider"
+              className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-black text-rose-700 hover:bg-rose-50 active:scale-95 transition-all shadow-md hover:shadow-lg uppercase tracking-wider cursor-pointer"
             >
               <KeyRound className="h-4 w-4 text-rose-600" />
               <span>Mở khóa hệ thống (Admin)</span>

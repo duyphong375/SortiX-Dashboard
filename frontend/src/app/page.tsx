@@ -1,12 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { useDashboard } from "@/components/layout/DashboardLayout";
 import { KpiStatGrid } from "@/components/overview/KpiStatGrid";
 import { LiveHealthAndBinWidget } from "@/components/overview/LiveHealthAndBinWidget";
 import { CalendarWidget } from "@/components/overview/CalendarWidget";
 import { RecentActivityList } from "@/components/overview/RecentActivityList";
 import { TemperatureGaugeWidget } from "@/components/ui/TemperatureGaugeWidget";
+import { calculateDailyTotalProduction } from "@/lib/history";
 
 export default function DashboardPage() {
   const {
@@ -30,7 +31,10 @@ export default function DashboardPage() {
     handleCoolDownTemperature,
   } = useDashboard();
 
-  const totalSorted = binCounts.bin1 + binCounts.bin2 + binCounts.bin3;
+  // Tổng sản lượng tích lũy trong ca/ngày (không bị sụt giảm hay mất số liệu khi công nhân dọn khay)
+  const totalSorted = useMemo(() => {
+    return calculateDailyTotalProduction(records, binCounts);
+  }, [records, binCounts]);
 
   // Xác định ESP32 có đang online thực sự hay không (nhịp tim ping mỗi 2s, quá 6s coi như ngắt)
   const isEspConnected =

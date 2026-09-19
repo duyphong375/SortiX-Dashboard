@@ -20,6 +20,7 @@ import { ShiftSummaryPayload } from "@shared/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { exportShiftSummaryToCSV, printShiftSummaryReport } from "@/lib/exportCsv";
 import { useToast } from "@/components/ui/Toast";
+import { formatVietnameseDate } from "@/lib/history";
 
 interface ShiftSummaryModalProps {
   isOpen: boolean;
@@ -127,7 +128,7 @@ export const ShiftSummaryModal: React.FC<ShiftSummaryModalProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Thời gian xuất: {new Date(summary.timestamp || Date.now()).toLocaleString("vi-VN")} • Chế độ: {summary.mode === "simulation" ? "Mô phỏng" : "Thực tế"}
+              Kỳ làm việc: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">{formatVietnameseDate(summary.timestamp).fullTextDate}</strong> • Xuất lúc: {new Date(summary.timestamp || Date.now()).toLocaleString("vi-VN")} • Chế độ: {summary.mode === "simulation" ? "Mô phỏng" : "Thực tế"}
             </p>
           </div>
         </div>

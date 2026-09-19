@@ -1,7 +1,7 @@
 import { ClassificationRecord } from "@shared/types";
 import { fetchWithTimeout } from "./apiFetch";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/api/history` : "/api/history";
+const BASE_URL = "/api/history";
 
 export interface QueryHistoryOptions {
   limit?: number;

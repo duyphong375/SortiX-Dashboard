@@ -29,8 +29,12 @@ import {
   loadSorterConfigLocal,
   saveSorterConfigLocal,
   resetSorterConfigLocal,
+  filterTodayRecords,
+  calculateDailyTotalProduction,
+  getBusinessDateKey,
+  formatVietnameseDate,
 } from "@/lib/history";
-import { triggerAlertDispatch } from "@/lib/alertService";
+import { triggerAlertDispatch, sendTelegramAlert, sendEmailAlert } from "@/lib/alertService";
 import { industrialAudio } from "@/lib/audioService";
 import { EmergencyStopBanner } from "./EmergencyStopBanner";
 import { BinFullIncidentBanner } from "./BinFullIncidentBanner";
@@ -113,7 +117,7 @@ export interface DashboardState {
   isShiftSummaryModalOpen: boolean;
   handleTriggerShiftSummary: (
     payload?: Partial<ShiftSummaryPayload>,
-    source?: "user_action" | "timer_17h" | "sse_in"
+    source?: "user_action" | "timer_17h" | "new_day_transition" | "sse_in"
   ) => Promise<void>;
   handleCloseShiftSummaryToast: () => void;
   handleOpenShiftSummaryModal: () => void;
@@ -247,8 +251,10 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
   const [isShiftSummaryToastOpen, setIsShiftSummaryToastOpen] = useState(false);
   const [isShiftSummaryModalOpen, setIsShiftSummaryModalOpen] = useState(false);
   const hasTriggered17hTodayRef = useRef<string>("");
+  const hasTriggeredNewDayRef = useRef<string>("");
+  const lastActiveDayRef = useRef<string>(getBusinessDateKey());
   const triggerShiftSummaryRef = useRef<
-    (payload?: Partial<ShiftSummaryPayload>, source?: "user_action" | "timer_17h" | "sse_in") => Promise<void>
+    (payload?: Partial<ShiftSummaryPayload>, source?: "user_action" | "timer_17h" | "new_day_transition" | "sse_in") => Promise<void>
   >(() => Promise.resolve());
 
   // Sidebar & Layout State
@@ -274,7 +280,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       cpu_temp: 42.5,
       wifi_rssi: -58,
       wifi_band: "5.0 GHz (Wi-Fi 6)",
-      conveyor_running: true,
+      conveyor_running: false,
       conveyor_speed: 65,
       s1_entry: false,
       s2_sorter1: false,
@@ -360,6 +366,10 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
   applyIncomingSyncRecordsRef.current = sorterData.applyIncomingSyncRecords;
   const applyIncomingClearHistoryRef = useRef(sorterData.applyIncomingClearHistory);
   applyIncomingClearHistoryRef.current = sorterData.applyIncomingClearHistory;
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
+  const setAlertsRef = useRef(sorterData.setAlerts);
+  setAlertsRef.current = sorterData.setAlerts;
 
   // Tài khoản người dùng (role: user) chỉ có duy nhất chế độ thực tế, không có mô phỏng
   useEffect(() => {
@@ -485,8 +495,8 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         conveyor_running: false,
       }));
 
-      // Báo động âm thanh
-      industrialAudio.playEmergencyAlarm();
+      // Báo động âm thanh còi hú E-Stop liên tục cho đến khi mở khóa
+      industrialAudio.startContinuousEmergencyAlarm();
 
       // Ghi sự kiện vào danh sách cảnh báo
       const stationNum = payload.station_id.replace(/[^0-9]/g, "") || "01";
@@ -561,7 +571,6 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Xử lý xác nhận kích hoạt Dừng Khẩn Cấp từ Modal cảnh báo liên tục
   const handleConfirmEstopAction = useCallback(() => {
-    industrialAudio.stopContinuousEmergencyAlarm();
     setEstopConfirmModalOpen(false);
     void handleTriggerEmergencyStop(undefined, "user_action");
     toast.error("ĐÃ KÍCH HOẠT DỪNG KHẨN CẤP (E-STOP)! Toàn bộ hệ thống băng chuyền đã dừng.");
@@ -998,7 +1007,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
   const handleTriggerShiftSummary = useCallback(
     async (
       customPayload?: Partial<ShiftSummaryPayload>,
-      source: "user_action" | "timer_17h" | "sse_in" = "user_action"
+      source: "user_action" | "timer_17h" | "new_day_transition" | "sse_in" = "user_action"
     ) => {
       // ĐỒNG BỘ DỮ LIỆU THỜI GIAN THỰC TỪ HỆ THỐNG
       const liveBinCounts = sorterData.binCounts;
@@ -1009,10 +1018,16 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       const records = sorterData.records || [];
       const totalFromRecords = records.length;
 
-      // Ưu tiên đếm theo khay thực tế hoặc theo danh sách bản ghi
-      // Toàn bộ sản phẩm phân loại vào các khay (Khay 1, Khay 2, Khay 3) đều là sản phẩm đạt chuẩn.
-      // Hệ thống không có sản phẩm nào là lỗi hay phế phẩm.
-      const computedTotal = totalFromBins > 0 ? totalFromBins : totalFromRecords;
+      // Tính tổng sản lượng tích lũy thực tế trong 1 ngày làm việc:
+      // Lọc các bản ghi hôm nay (múi giờ Việt Nam Asia/Ho_Chi_Minh).
+      // Khi công nhân dọn khay (thay khay mới, binCounts về 0), tổng sản lượng cả ngày
+      // KHÔNG bao giờ bị sụt giảm hay mất mát, đảm bảo báo cáo ngày phản ánh đúng 100% sản lượng thực tế.
+      const todayRecords = filterTodayRecords(records);
+      const computedTotal = Math.max(
+        todayRecords.length,
+        totalFromBins,
+        totalFromRecords > 0 && todayRecords.length === 0 ? totalFromRecords : 0
+      );
       const computedGood = computedTotal;
       const computedDefect = 0;
 
@@ -1031,11 +1046,13 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         ? `${hours.toFixed(1)} giờ`
         : `${Math.max(1, Math.round(uptimeSec / 60))} phút`;
 
-      const todayStr = new Date().toLocaleDateString("vi-VN");
+      // Định dạng ngày tháng năm rõ ràng chuẩn tiếng Việt (Ngày DD/MM/YYYY - Ngày DD tháng MM năm YYYY)
+      const dateInfo = formatVietnameseDate(customPayload?.timestamp);
+      const defaultShiftName = `Ngày ${dateInfo.shortDate} (${dateInfo.fullTextDate})`;
 
       const payload: ShiftSummaryPayload = {
         event: "shift_summary",
-        shift_name: customPayload?.shift_name || `Báo cáo 1 ngày làm việc (${todayStr})`,
+        shift_name: customPayload?.shift_name || defaultShiftName,
         total_products: customPayload?.total_products ?? computedTotal,
         sorted_good: customPayload?.sorted_good ?? computedGood,
         sorted_defect: customPayload?.sorted_defect ?? computedDefect,
@@ -1067,8 +1084,14 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       sorterData.setAlerts((prev) => [alertItem, ...prev.filter((a) => a.event_id !== alertItem.event_id)].slice(0, 100));
       triggerAlertDispatch(alertItem);
 
-      // Gửi đồng bộ tới backend nếu từ thao tác người dùng hoặc timer_17h
-      if (source === "user_action" || source === "timer_17h") {
+      // Tự động gửi thông báo báo cáo ngày tới cả Telegram và Email (bỏ qua cooldown)
+      void Promise.allSettled([
+        sendTelegramAlert(alertItem, true),
+        sendEmailAlert(alertItem, true),
+      ]);
+
+      // Gửi đồng bộ tới backend nếu từ thao tác người dùng, timer_17h hoặc qua ngày mới
+      if (source === "user_action" || source === "timer_17h" || source === "new_day_transition") {
         await Promise.allSettled([
           ApiSafetyClient.triggerShiftSummary(payload),
         ]);
@@ -1194,7 +1217,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         industrialAudio.stopContinuousDeviceOfflineAlarm();
         setIsDeviceOffline(false);
         setDeviceOfflineIncident(null);
-        toast.info("Vi điều khiển ESP32 đã kết nối trực tuyến trở lại.");
+        toastRef.current.info("Vi điều khiển ESP32 đã kết nối trực tuyến trở lại.");
       });
 
       eventSource.addEventListener("system_unlocked", () => {
@@ -1203,10 +1226,10 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         setIsSystemLocked(false);
         setEstopIncident(null);
         setTelemetry((prev) => ({ ...prev, estop_pressed: false }));
-        sorterData.setAlerts((prev) =>
+        setAlertsRef.current((prev) =>
           prev.map((a) => (a.event_type === "emergency_stop" ? { ...a, resolved: true } : a))
         );
-        toast.info("Hệ thống đã được mở khóa an toàn bởi Quản trị viên.");
+        toastRef.current.info("Hệ thống đã được mở khóa an toàn bởi Quản trị viên.");
       });
 
       eventSource.addEventListener("status", (e) => {
@@ -1285,7 +1308,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     return () => {
       eventSource?.close();
     };
-  }, [sorterData.isClient, setTelemetry, toast, sorterData]);
+  }, [sorterData.isClient]);
 
   // Auth Redirect check
   useEffect(() => {
@@ -1313,13 +1336,17 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     const interval = setInterval(() => {
       const isSimMode = isSimulationRef.current;
-      const hasItems = conveyor.visualItemsRef.current.length > 0;
+      const hasItems = conveyor.visualItemsRef.current.some(
+        (it) => !it.sorted || (it.yOffset || 0) < 45
+      );
       
-      // In simulation, belt only moves if there are items. In reality, it depends on actual hardware status, but we simulate it similarly.
+      // Băng chuyền chỉ chuyển động khi có mẫu vật/phôi trên băng, dừng chờ khi rỗng (ở cả User và Admin)
       const isBeltMoving =
         isRunningRef.current &&
         !telemetryRef.current.estop_pressed &&
-        (!isSimMode || hasItems);
+        !isJammedRef.current &&
+        !isBinFullRef.current &&
+        hasItems;
 
       if (isBeltMoving) {
         if (isSimMode) {
@@ -1450,12 +1477,33 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
 
-      // 4. Kiểm tra Tự động hết ca lúc 17:00 hàng ngày (Shift Summary)
+      // 4. Kiểm tra Tự động chuyển qua ngày mới (00:00 hoặc thay đổi ngày) & hết ca lúc 17:00 hàng ngày (Shift Summary)
       const dateNow = new Date();
+      const todayKey = getBusinessDateKey(dateNow);
+
+      // a. Tự động gửi thông báo báo cáo ngày khi phát hiện chuyển sang ngày mới (date key thay đổi)
+      if (!lastActiveDayRef.current) {
+        lastActiveDayRef.current = todayKey;
+      } else if (lastActiveDayRef.current !== todayKey) {
+        lastActiveDayRef.current = todayKey;
+        if (hasTriggeredNewDayRef.current !== todayKey) {
+          hasTriggeredNewDayRef.current = todayKey;
+          void triggerShiftSummaryRef.current(undefined, "new_day_transition");
+        }
+      }
+
+      // b. Tự động gửi thông báo báo cáo ngày vào đúng mốc 00:00 nửa đêm
+      if (dateNow.getHours() === 0 && dateNow.getMinutes() === 0) {
+        if (hasTriggeredNewDayRef.current !== todayKey) {
+          hasTriggeredNewDayRef.current = todayKey;
+          void triggerShiftSummaryRef.current(undefined, "new_day_transition");
+        }
+      }
+
+      // c. Tự động hết ca lúc 17:00 hàng ngày
       if (dateNow.getHours() === 17 && dateNow.getMinutes() === 0) {
-        const todayDateStr = dateNow.toISOString().slice(0, 10);
-        if (hasTriggered17hTodayRef.current !== todayDateStr) {
-          hasTriggered17hTodayRef.current = todayDateStr;
+        if (hasTriggered17hTodayRef.current !== todayKey) {
+          hasTriggered17hTodayRef.current = todayKey;
           void triggerShiftSummaryRef.current(undefined, "timer_17h");
         }
       }

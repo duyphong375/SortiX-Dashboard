@@ -67,12 +67,13 @@ export const DEFAULT_INITIAL_CONFIG: SorterConfig = {
  * @returns true nếu là Mô phỏng, false nếu là Thực tế
  */
 export function loadOperatingMode(): boolean {
-  if (typeof window === "undefined") return false;
+  if (typeof window === "undefined") return true;
   try {
     const saved = localStorage.getItem(STORAGE_KEYS.MODE);
+    if (saved === null) return true;
     return saved === "sim";
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -427,3 +428,103 @@ export function factoryResetAll(): void {
   localStorage.removeItem(STORAGE_KEYS.MODE);
 }
 
+export const BUSINESS_TIME_ZONE = "Asia/Ho_Chi_Minh";
+
+/**
+ * Lấy mã ngày theo múi giờ kinh doanh (mặc định Việt Nam GMT+7: YYYY-MM-DD)
+ */
+export function getBusinessDateKey(timestamp?: string | Date | number): string {
+  const date = timestamp ? new Date(timestamp) : new Date();
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: BUSINESS_TIME_ZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(date);
+    const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+    return `${values.year}-${values.month}-${values.day}`;
+  } catch {
+    return date.toISOString().slice(0, 10);
+  }
+}
+
+/**
+ * Lọc danh sách bản ghi phân loại phát sinh trong ngày hôm nay (Asia/Ho_Chi_Minh)
+ */
+export function filterTodayRecords(
+  records: ClassificationRecord[],
+  targetDateKey?: string
+): ClassificationRecord[] {
+  const todayKey = targetDateKey || getBusinessDateKey();
+  return records.filter((r) => {
+    if (!r || !r.timestamp) return false;
+    return getBusinessDateKey(r.timestamp) === todayKey;
+  });
+}
+
+/**
+ * Tính tổng sản lượng tích lũy trong 1 ngày làm việc (Shift / Daily Output)
+ * Đảm bảo khi công nhân dọn khay (thay khay mới, binCounts về 0), tổng sản lượng cả ngày
+ * KHÔNG bao giờ bị sụt giảm hoặc trở về 0, phản ánh đúng 100% sản lượng thực tế.
+ */
+export function calculateDailyTotalProduction(
+  records: ClassificationRecord[],
+  binCounts?: BinCounts
+): number {
+  const todayRecords = filterTodayRecords(records);
+  const totalInBins = binCounts
+    ? (binCounts.bin1 || 0) + (binCounts.bin2 || 0) + (binCounts.bin3 || 0)
+    : 0;
+
+  if (todayRecords.length > 0) {
+    return Math.max(todayRecords.length, totalInBins);
+  }
+  if (records.length > 0) {
+    return Math.max(records.length, totalInBins);
+  }
+  return totalInBins;
+}
+
+export interface VietnameseDateInfo {
+  day: string;          // ví dụ: "19"
+  month: string;        // ví dụ: "09"
+  year: string;         // ví dụ: "2026"
+  shortDate: string;    // ví dụ: "19/09/2026"
+  fullTextDate: string; // ví dụ: "Ngày 19 tháng 09 năm 2026"
+  displayDate: string;  // ví dụ: "Ngày 19/09/2026 (Ngày 19 tháng 09 năm 2026)"
+}
+
+/**
+ * Định dạng ngày tháng năm chuẩn tiếng Việt rõ ràng, đầy đủ ngày, tháng, năm
+ * Dùng cho các báo cáo 1 ngày làm việc, thông báo Telegram và Email
+ */
+export function formatVietnameseDate(timestamp?: string | Date | number): VietnameseDateInfo {
+  const date = timestamp ? new Date(timestamp) : new Date();
+  const validDate = isNaN(date.getTime()) ? new Date() : date;
+
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: BUSINESS_TIME_ZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(validDate);
+    const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+    const day = values.day || "01";
+    const month = values.month || "01";
+    const year = values.year || "2026";
+    const shortDate = `${day}/${month}/${year}`;
+    const fullTextDate = `Ngày ${day} tháng ${month} năm ${year}`;
+    const displayDate = `Ngày ${shortDate} (${fullTextDate})`;
+    return { day, month, year, shortDate, fullTextDate, displayDate };
+  } catch {
+    const day = String(validDate.getDate()).padStart(2, "0");
+    const month = String(validDate.getMonth() + 1).padStart(2, "0");
+    const year = String(validDate.getFullYear());
+    const shortDate = `${day}/${month}/${year}`;
+    const fullTextDate = `Ngày ${day} tháng ${month} năm ${year}`;
+    const displayDate = `Ngày ${shortDate} (${fullTextDate})`;
+    return { day, month, year, shortDate, fullTextDate, displayDate };
+  }
+}

@@ -2,6 +2,12 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Use worker_threads for type/lint checks so production builds remain
+  // reliable in restricted Windows environments where child_process.spawn can
+  // be denied by endpoint policy.
+  experimental: {
+    workerThreads: true,
+  },
   async headers() {
     return [{
       source: "/(.*)",

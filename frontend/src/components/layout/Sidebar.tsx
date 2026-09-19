@@ -19,10 +19,9 @@ import {
   ChevronLeft,
   ChevronRight,
   KeyRound,
-  FlaskConical,
-  Radio,
 } from "lucide-react";
 import { ChangePasswordModal } from "@/components/ui/ChangePasswordModal";
+import { SortixLogo } from "@/components/ui/SortixLogo";
 
 const ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
   LayoutDashboard,
@@ -45,7 +44,7 @@ interface SidebarProps {
   onToggleSimulationMode?: (targetMode?: boolean) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({
+const SidebarComponent: React.FC<SidebarProps> = ({
   collapsed,
   onToggleCollapse,
   alertCount = 0,
@@ -55,8 +54,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleSimulationMode,
 }) => {
   const pathname = usePathname();
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
   const { user, logout } = useAuth();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+
+  // Tự động giải phóng trạng thái pending khi Next.js chuyển route hoàn tất
+  React.useEffect(() => {
+    setPendingHref(null);
+  }, [pathname]);
 
   const canViewConfig = usePermission("config.view");
   const canViewDevices = usePermission("devices.view");
@@ -71,8 +76,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
-    return pathname.startsWith(href);
+    const current = pendingHref || pathname;
+    if (href === "/") return current === "/";
+    return current.startsWith(href);
   };
 
   return (
@@ -86,61 +92,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         } border-slate-200/80 bg-white/95 dark:border-white/[0.06] dark:bg-[#111319] backdrop-blur-xl`}
       >
         {/* Logo Area */}
-        <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200/80 px-4 dark:border-white/[0.06]">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-[#161822] text-white shadow-sm dark:border-white/10 dark:bg-[#161822] dark:text-white">
-            <Boxes className="h-5 w-5 text-cyan-400" />
-          </div>
-          {!collapsed && (
-            <div className="min-w-0 flex-1 overflow-hidden">
-              <div className="flex items-center gap-1.5">
-                <h2 className="truncate text-sm font-extrabold tracking-tight text-slate-900 dark:text-white">
-                  Sorti<span className="text-cyan-500">X</span>
-                </h2>
-                <span className="rounded bg-cyan-500/10 border border-cyan-500/20 px-1.5 py-0.2 text-[9px] font-bold text-cyan-600 dark:text-cyan-400">
-                  AI PRO
-                </span>
-              </div>
-              <p className="truncate text-[11px] font-normal text-slate-500 dark:text-slate-400">
-                Phân loại thông minh
-              </p>
-            </div>
-          )}
+        <div className="flex h-16 shrink-0 items-center border-b border-slate-200/80 px-4 dark:border-white/[0.06]">
+          <Link href="/" className="w-full flex items-center">
+            <SortixLogo collapsed={collapsed} />
+          </Link>
         </div>
-
-        {/* Chuyển Chế độ Vận hành (Mô phỏng <-> Thực tế) - Hiển thị rõ ràng trên Menu Mobile */}
-        {!collapsed && onToggleSimulationMode && (
-          <div className="px-3 pt-3 pb-1 border-b border-slate-200/60 dark:border-white/[0.05]">
-            <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-              Chế độ vận hành
-            </p>
-            <div className="flex items-center rounded-xl border border-slate-200/90 bg-slate-100/90 p-1 dark:border-white/[0.08] dark:bg-[#161822] shadow-xs">
-              <button
-                type="button"
-                onClick={() => onToggleSimulationMode(true)}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-bold transition-all ${
-                  isSimulation
-                    ? "bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 text-white shadow-xs"
-                    : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-                }`}
-              >
-                <FlaskConical className="h-3.5 w-3.5" />
-                <span>Mô phỏng</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onToggleSimulationMode(false)}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-bold transition-all ${
-                  !isSimulation
-                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xs"
-                    : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-                }`}
-              >
-                <Radio className="h-3.5 w-3.5" />
-                <span>Thực tế</span>
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Navigation */}
         <nav aria-label="Các trang trong hệ thống" className="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin">
@@ -166,7 +122,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <Link
                         key={item.id}
                         href={item.href}
-                        onClick={() => onCloseMobile?.()}
+                        prefetch={true}
+                        onClick={() => {
+                          setPendingHref(item.href);
+                          onCloseMobile?.();
+                        }}
                         title={collapsed ? item.label : undefined}
                         className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs transition-all duration-150 border ${
                           active
@@ -202,21 +162,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Bottom Section */}
         <div className="shrink-0 border-t border-slate-200/80 p-3 dark:border-white/[0.06] space-y-2">
-          {/* System Status */}
-          {!collapsed && (
-            <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 border border-slate-200/60 dark:bg-[#161822] dark:border-white/[0.07]">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
-              </span>
-              <div className="flex flex-col">
-                <span className="text-[11px] font-semibold text-slate-800 dark:text-white">
+          {/* Trạng thái Hệ thống trực tuyến */}
+          {!collapsed ? (
+            <div className="flex items-center justify-between rounded-xl bg-slate-50/80 px-3 py-2 border border-slate-200/60 dark:bg-[#161822] dark:border-white/[0.07]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="relative flex h-2.5 w-2.5 shrink-0">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
+                </span>
+                <span className="text-[11px] font-bold text-slate-800 dark:text-white truncate">
                   Hệ thống trực tuyến
                 </span>
-                <span className="text-[9px] font-normal text-slate-500 dark:text-slate-400">
-                  ESP32 & Node-RED Sync
-                </span>
               </div>
+              <span className="rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                ONLINE
+              </span>
+            </div>
+          ) : (
+            <div className="flex justify-center py-1" title="Hệ thống trực tuyến">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
+              </span>
             </div>
           )}
 
@@ -247,11 +214,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     >
                       {user.role === "admin" ? "Quản trị viên" : "Người dùng"}
                     </span>
-                    {user.username && (
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono truncate">
-                        @{user.username}
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>
@@ -307,3 +269,5 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </>
   );
 };
+
+export const Sidebar = React.memo(SidebarComponent);

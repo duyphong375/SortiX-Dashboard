@@ -122,15 +122,24 @@ export function KpiStatGrid({
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {/* KPI 1: Sản lượng ca */}
-      <StatCard
-        icon={Boxes}
-        title="Sản lượng ca"
-        value={`${animatedTotal.toLocaleString()} SP`}
-        subtitle={`Khay 1: ${binCounts.bin1} | Khay 2: ${binCounts.bin2} | Khay 3: ${binCounts.bin3}`}
-        trend={{ value: `+${totalSorted} trong ca`, positive: true }}
-        color="cyan"
-        highlight
-      />
+      {(() => {
+        const totalInBins = (binCounts.bin1 || 0) + (binCounts.bin2 || 0) + (binCounts.bin3 || 0);
+        const clearedCount = Math.max(0, totalSorted - totalInBins);
+        const trayDetail = `Hiện trong khay: K1: ${binCounts.bin1} | K2: ${binCounts.bin2} | K3: ${binCounts.bin3}${
+          clearedCount > 0 ? ` (Đã dọn: ${clearedCount} SP)` : ""
+        }`;
+        return (
+          <StatCard
+            icon={Boxes}
+            title="Sản lượng ca"
+            value={`${animatedTotal.toLocaleString()} SP`}
+            subtitle={trayDetail}
+            trend={{ value: `+${totalSorted} hôm nay`, positive: true }}
+            color="cyan"
+            highlight
+          />
+        );
+      })()}
 
       {/* KPI 2: Vận hành */}
       <StatCard

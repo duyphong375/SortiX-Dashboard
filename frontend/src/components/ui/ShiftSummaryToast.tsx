@@ -30,6 +30,11 @@ export const ShiftSummaryToast: React.FC<ShiftSummaryToastProps> = ({
   if (!isOpen || !incident) return null;
 
   const shiftName = incident.shift_name || "1 Ngày làm việc";
+  let displayShiftName = shiftName;
+  if (displayShiftName.startsWith("Báo cáo 1 ngày làm việc (") && displayShiftName.endsWith(")")) {
+    const rawDate = displayShiftName.slice("Báo cáo 1 ngày làm việc (".length, -1);
+    displayShiftName = `Ngày ${rawDate}`;
+  }
   const total = incident.total_products ?? 0;
   const accuracy = incident.accuracy_rate || "100.0%";
 
@@ -94,7 +99,7 @@ export const ShiftSummaryToast: React.FC<ShiftSummaryToastProps> = ({
           </div>
 
           <p className="mt-1.5 text-xs font-bold text-slate-100 leading-snug">
-            [BÁO CÁO 1 NGÀY LÀM VIỆC] {shiftName}: Tổng {total.toLocaleString("vi-VN")} sản phẩm (Đạt {accuracy}). Nhấn để xem chi tiết.
+            [BÁO CÁO 1 NGÀY LÀM VIỆC] {displayShiftName}: Tổng {total.toLocaleString("vi-VN")} sản phẩm (Đạt {accuracy}). Nhấn để xem chi tiết.
           </p>
 
           {/* Chi tiết nhanh */}

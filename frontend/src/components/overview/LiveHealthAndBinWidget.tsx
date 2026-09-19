@@ -89,15 +89,17 @@ export function LiveHealthAndBinWidget({
                   ? "border-slate-500/30 bg-slate-500/10 text-slate-600 dark:text-slate-400"
                   : telemetry.estop_pressed
                   ? "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400"
-                  : isRunning
+                  : isRunning && telemetry.conveyor_running
                   ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                  : isRunning
+                  ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400"
                   : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
               }`}
             >
               <span className="relative flex h-2 w-2">
                 <span
                   className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                    !isDeviceOffline && (isEspConnected || isSimulation) && isRunning && !telemetry.estop_pressed
+                    !isDeviceOffline && (isEspConnected || isSimulation) && isRunning && !telemetry.estop_pressed && telemetry.conveyor_running
                       ? "animate-ping bg-emerald-400"
                       : ""
                   }`}
@@ -108,8 +110,10 @@ export function LiveHealthAndBinWidget({
                       ? "bg-slate-500"
                       : telemetry.estop_pressed
                       ? "bg-rose-500"
-                      : isRunning
+                      : isRunning && telemetry.conveyor_running
                       ? "bg-emerald-500"
+                      : isRunning
+                      ? "bg-cyan-500"
                       : "bg-amber-500"
                   }`}
                 />
@@ -119,9 +123,11 @@ export function LiveHealthAndBinWidget({
                   ? "Ngoại tuyến"
                   : telemetry.estop_pressed
                   ? "E-Stop kích hoạt"
-                  : isRunning
+                  : !isRunning
+                  ? "Tạm dừng"
+                  : telemetry.conveyor_running
                   ? "Đang chạy"
-                  : "Tạm dừng"}
+                  : "Chờ phôi"}
               </span>
             </span>
           </div>

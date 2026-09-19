@@ -26,6 +26,7 @@ import {
   FlaskConical,
   Radio,
   ClipboardCheck,
+  RefreshCw,
 } from "lucide-react";
 
 // Map path → breadcrumb labels
@@ -66,9 +67,11 @@ interface TopHeaderProps {
   onToggleSimulationMode?: (targetMode?: boolean) => void;
   isDeviceOffline?: boolean;
   onTriggerShiftSummary?: () => void;
+  onManualSync?: () => Promise<void> | void;
+  isSyncing?: boolean;
 }
 
-export const TopHeader: React.FC<TopHeaderProps> = ({
+const TopHeaderComponent: React.FC<TopHeaderProps> = ({
   themeMode,
   onToggleTheme,
   isMuted,
@@ -83,6 +86,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onToggleSimulationMode,
   isDeviceOffline = false,
   onTriggerShiftSummary,
+  onManualSync,
+  isSyncing = false,
 }) => {
   const pathname = usePathname();
   const router = useRouter();
@@ -159,7 +164,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           </div>
 
           {/* Nút Chuyển Chế độ Nhanh trên Mobile */}
-          {!isOperatorUser && onToggleSimulationMode && (
+          {onToggleSimulationMode && (
             <button
               type="button"
               onClick={() => onToggleSimulationMode(!isSimulation)}
@@ -229,25 +234,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             </div>
           )}
 
-
-          {/* NÚT CHUYỂN ĐỔI CHẾ ĐỘ VẬN HÀNH: MÔ PHỎNG <-> THỰC TẾ (User chỉ có duy nhất Thực tế) */}
-          {isOperatorUser ? (
-            <div
-              className="hidden sm:flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300 shadow-xs"
-              title="Chế độ Vận hành Thực tế (Real Hardware) - Dữ liệu trực tiếp từ cảm biến & Camera AI"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
-              </span>
-              <Radio className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span className="tracking-wide">Thực tế</span>
-              <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-400/40 text-emerald-200">
-                LIVE
-              </span>
-            </div>
-          ) : (
-            onToggleSimulationMode && (
+          {/* NÚT CHUYỂN ĐỔI CHẾ ĐỘ VẬN HÀNH: MÔ PHỎNG <-> THỰC TẾ */}
+          {onToggleSimulationMode && (
               <div className="hidden sm:flex items-center rounded-full border border-slate-200/90 bg-slate-100/90 p-1 dark:border-white/[0.08] dark:bg-[#161822] shadow-xs">
                 {/* Chế độ 1: Mô phỏng */}
                 <button
@@ -300,8 +288,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                   )}
                 </button>
               </div>
-            )
-          )}
+            )}
         </div>
 
         {/* Right Section: Utilities & Actions */}
@@ -317,6 +304,21 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               <ClipboardCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
               <span className="hidden md:inline">Báo cáo ngày</span>
               <span className="sr-only">Báo cáo 1 ngày làm việc</span>
+            </button>
+          )}
+
+          {/* Nút Đồng bộ tức thì giữa các thiết bị (Web PC, iPhone, Android) */}
+          {onManualSync && (
+            <button
+              type="button"
+              onClick={() => void onManualSync()}
+              disabled={isSyncing}
+              title="Đồng bộ tức thì dữ liệu giữa Web PC và iPhone/Android"
+              className="flex items-center gap-1.5 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-1.5 text-xs font-semibold text-cyan-700 hover:bg-cyan-500/20 dark:border-cyan-500/30 dark:bg-cyan-500/15 dark:text-cyan-300 dark:hover:bg-cyan-500/25 transition-all shadow-xs disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400 ${isSyncing ? "animate-spin" : ""}`} />
+              <span className="hidden md:inline">Đồng bộ</span>
+              <span className="sr-only">Đồng bộ dữ liệu tức thì</span>
             </button>
           )}
 
@@ -470,3 +472,5 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     </>
   );
 };
+
+export const TopHeader = React.memo(TopHeaderComponent);

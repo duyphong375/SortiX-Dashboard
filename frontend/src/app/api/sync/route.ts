@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { SyncService } from "@/services/syncService";
-import { HistoryModel } from "../../../../../backend/src/models/historyModel";
+import { SyncActionSchema } from "@shared/schemas";
+import { HistoryModel } from "@/services/historyService";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ export async function GET() {
       success: true,
       state,
       history,
-    });
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal Server Error";
     return NextResponse.json({ success: false, error: message }, { status: 500 });
@@ -21,27 +22,24 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { type, state, records, binCounts, item, senderId } = body || {};
+    const action = SyncActionSchema.parse(await request.json());
+    const { type } = action;
 
-    if (type === "update_state" && state) {
-      const updatedState = SyncService.updateState(state, senderId);
-      return NextResponse.json({ success: true, state: updatedState });
+    if (type === "update_state") {
+        const state = SyncService.updateState(action.state, action.senderId);
+        return NextResponse.json({ success: true, state });
     }
-
-    if (type === "sync_records" && Array.isArray(records)) {
-      SyncService.syncRecords(records, binCounts, senderId);
-      return NextResponse.json({ success: true, state: SyncService.getState() });
+    if (type === "sync_records") {
+        SyncService.syncRecords(action.records, action.binCounts, action.brandCounts, action.senderId);
+        return NextResponse.json({ success: true, state: SyncService.getState() });
     }
-
     if (type === "clear_history") {
-      SyncService.clearHistory(senderId);
-      return NextResponse.json({ success: true, state: SyncService.getState() });
+        SyncService.clearHistory(action.senderId);
+        return NextResponse.json({ success: true, state: SyncService.getState() });
     }
-
-    if (type === "spawn_item" && item) {
-      SyncService.spawnItem(item, senderId);
-      return NextResponse.json({ success: true });
+    if (type === "spawn_item") {
+        SyncService.spawnItem(action.item, action.senderId);
+        return NextResponse.json({ success: true });
     }
 
     return NextResponse.json({ success: false, error: "Invalid sync action type" }, { status: 400 });

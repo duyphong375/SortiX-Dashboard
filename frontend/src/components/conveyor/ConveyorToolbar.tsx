@@ -62,7 +62,7 @@ export const ConveyorToolbar: React.FC<ConveyorToolbarProps> = ({
                   ? "bg-rose-500 shadow-[0_0_6px_#f43f5e]"
                   : !isRunning
                   ? "bg-amber-400 shadow-[0_0_6px_#f59e0b]"
-                  : itemsCount > 0
+                  : isBeltMoving
                   ? "bg-emerald-400 shadow-[0_0_6px_#10b981]"
                   : "bg-slate-400"
               }`}
@@ -80,7 +80,7 @@ export const ConveyorToolbar: React.FC<ConveyorToolbarProps> = ({
                     ? "bg-rose-500/10 text-rose-600 border-rose-500/20 dark:text-rose-400"
                     : !isRunning
                     ? "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400"
-                    : itemsCount > 0
+                    : isBeltMoving
                     ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400"
                     : "bg-white/[0.08] text-slate-300 border-white/[0.05]"
                 }`}
@@ -101,7 +101,7 @@ export const ConveyorToolbar: React.FC<ConveyorToolbarProps> = ({
                 ? "Hệ thống đang tạm dừng • Nhấn Khởi động để tiếp tục"
                 : itemsCount > 0
                 ? `Băng tải đang vận chuyển ${itemsCount} phôi qua trạm quét và cơ cấu gạt`
-                : "Băng tải tự động dừng khi không có phôi"}
+                : "Băng tải đang chờ phôi mẫu • Sẵn sàng tiếp nhận sản phẩm"}
             </p>
           </div>
         </div>

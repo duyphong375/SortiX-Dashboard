@@ -3,9 +3,22 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { SorterMQTTService } from "@/lib/mqttClient";
 import { SorterConfig, VisionDetection, ClassificationRecord, EmergencyStopPayload, JamDetectedPayload, BinFullPayload, TemperatureWarningPayload, DeviceOfflinePayload, MqttDisconnectedPayload } from "@shared/types";
-import { ClassificationRecordSchema } from "@shared/schemas";
+import {
+  BinFullPayloadSchema,
+  ClassificationRecordSchema,
+  DeviceOfflinePayloadSchema,
+  EmergencyStopPayloadSchema,
+  HeartbeatPayloadSchema,
+  JamDetectedPayloadSchema,
+  TemperatureWarningPayloadSchema,
+  TelemetrySchema,
+} from "@shared/schemas";
 import { DEFAULT_MQTT_TOPICS } from "@shared/constants";
 import { cleanVisionPayload } from "@/lib/dataProcessor";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 
 export interface UseMQTTOptions {
   isClient: boolean;
@@ -107,8 +120,9 @@ export function useMQTT({
 
   const handleIncomingMessage = useCallback((topic: string, msgText: string) => {
     try {
-      const data = JSON.parse(msgText);
-      if (data === null || typeof data !== "object") return;
+      const raw: unknown = JSON.parse(msgText);
+      if (!isRecord(raw)) return;
+      const data = raw;
       if (isSimulationRef.current || data.mode === "simulation") return;
 
       // A camera detection alone does not confirm a successful physical sort.
@@ -138,7 +152,8 @@ export function useMQTT({
       // 2. Status / Telemetry
       // Config acknowledgements are status topics too, but are not telemetry.
       if (!isConfigStatus && (topic.includes("status") || topic.includes("telemetry"))) {
-        scheduleTelemetryUpdate(data);
+        const telemetry = TelemetrySchema.safeParse(data);
+        if (telemetry.success) scheduleTelemetryUpdate(telemetry.data);
       }
 
       // 3. Vision Detection
@@ -156,32 +171,32 @@ export function useMQTT({
         data.event === "system_unlocked";
 
       if (!isReleaseMessage && (topic === (DEFAULT_MQTT_TOPICS.ESTOP || "conveyor/safety/estop") || data.event === "emergency_stop")) {
-        const estopPayload: EmergencyStopPayload = {
+        const estopPayload = EmergencyStopPayloadSchema.safeParse({
           event: "emergency_stop",
           station_id: typeof data.station_id === "string" ? data.station_id : "STATION_01",
           triggered_by: typeof data.triggered_by === "string" ? data.triggered_by : "Physical E-Stop Button #1",
           timestamp: typeof data.timestamp === "string" ? data.timestamp : new Date().toISOString(),
           mode: data.mode === "simulation" ? "simulation" : "realtime",
-        };
-        callbacksRef.current.onEmergencyStop?.(estopPayload);
+        });
+        if (estopPayload.success) callbacksRef.current.onEmergencyStop?.(estopPayload.data as EmergencyStopPayload);
       }
 
       // 5. Jam Detected Event (conveyor/sensor/jam)
       if (topic === (DEFAULT_MQTT_TOPICS.JAM || "conveyor/sensor/jam") || data.event === "jam_detected") {
-        const jamPayload: JamDetectedPayload = {
+        const jamPayload = JamDetectedPayloadSchema.safeParse({
           event: "jam_detected",
           section: typeof data.section === "string" ? data.section : "Conveyor_Belt_Zone_A",
           duration_seconds: Number.isFinite(Number(data.duration_seconds)) ? Number(data.duration_seconds) : 5,
           sensor_id: typeof data.sensor_id === "string" ? data.sensor_id : "OPTICAL_JAM_02",
           mode: data.mode === "simulation" ? "simulation" : "realtime",
           timestamp: typeof data.timestamp === "string" ? data.timestamp : new Date().toISOString(),
-        };
-        callbacksRef.current.onJamDetected?.(jamPayload);
+        });
+        if (jamPayload.success) callbacksRef.current.onJamDetected?.(jamPayload.data as JamDetectedPayload);
       }
 
       // 6. Bin Full Event (conveyor/storage/bin_status)
       if (topic === (DEFAULT_MQTT_TOPICS.BIN_STATUS || "conveyor/storage/bin_status") || data.event === "bin_full") {
-        const binFullPayload: BinFullPayload = {
+        const binFullPayload = BinFullPayloadSchema.safeParse({
           event: "bin_full",
           bin_id: typeof data.bin_id === "string" ? data.bin_id : "BIN_RED_01",
           category: typeof data.category === "string" ? data.category : "Sản phẩm loại A",
@@ -189,14 +204,13 @@ export function useMQTT({
           max_capacity: Number.isFinite(Number(data.max_capacity)) ? Number(data.max_capacity) : 50,
           mode: data.mode === "simulation" ? "simulation" : "realtime",
           timestamp: typeof data.timestamp === "string" ? data.timestamp : new Date().toISOString(),
-        };
-        callbacksRef.current.onBinFull?.(binFullPayload);
+        });
+        if (binFullPayload.success) callbacksRef.current.onBinFull?.(binFullPayload.data as BinFullPayload);
       }
 
       // 7. Temperature Warning Event (conveyor/telemetry/temp)
       if (topic === (DEFAULT_MQTT_TOPICS.TEMP || "conveyor/telemetry/temp") || data.event === "temperature_warning") {
-        if (typeof data.current_temp !== "number" || !Number.isFinite(data.current_temp)) return;
-        const tempPayload: TemperatureWarningPayload = {
+        const tempPayload = TemperatureWarningPayloadSchema.safeParse({
           event: "temperature_warning",
           device_name: typeof data.device_name === "string" ? data.device_name : "Main_Drive_Motor / Edge_AI_Box",
           current_temp: data.current_temp,
@@ -204,25 +218,26 @@ export function useMQTT({
           unit: typeof data.unit === "string" ? data.unit : "°C",
           mode: data.mode === "simulation" ? "simulation" : "realtime",
           timestamp: typeof data.timestamp === "string" ? data.timestamp : new Date().toISOString(),
-        };
-        callbacksRef.current.onTemperatureWarning?.(tempPayload);
+        });
+        if (tempPayload.success) callbacksRef.current.onTemperatureWarning?.(tempPayload.data as TemperatureWarningPayload);
       }
 
       // 8. Heartbeat & Device Offline Event (conveyor/heartbeat)
       const heartbeatTopic = DEFAULT_MQTT_TOPICS.HEARTBEAT || "conveyor/heartbeat";
       if (topic === heartbeatTopic || topic.includes("heartbeat") || data.event === "device_offline") {
         if (data.event === "device_offline") {
-          const offlinePayload: DeviceOfflinePayload = {
+          const offlinePayload = DeviceOfflinePayloadSchema.safeParse({
             event: "device_offline",
             device_id: typeof data.device_id === "string" ? data.device_id : "ESP32_MAIN_CONTROLLER",
             ip_address: typeof data.ip_address === "string" ? data.ip_address : "192.168.1.105",
             last_seen: typeof data.last_seen === "string" ? data.last_seen : "15 giây trước",
             mode: data.mode === "simulation" ? "simulation" : "realtime",
             timestamp: typeof data.timestamp === "string" ? data.timestamp : new Date().toISOString(),
-          };
-          callbacksRef.current.onDeviceOffline?.(offlinePayload);
+          });
+          if (offlinePayload.success) callbacksRef.current.onDeviceOffline?.(offlinePayload.data as DeviceOfflinePayload);
         } else {
-          callbacksRef.current.onHeartbeat?.(data);
+          const heartbeat = HeartbeatPayloadSchema.safeParse(data);
+          if (heartbeat.success) callbacksRef.current.onHeartbeat?.(heartbeat.data);
         }
       }
     } catch (e) {

@@ -26,10 +26,22 @@ class IndustrialAudioService {
   private activeOfflineOsc: OscillatorNode | null = null;
   private continuousOfflineInterval: NodeJS.Timeout | null = null;
 
+  // Thuộc tính điều chỉnh còi cảnh báo (Buzzer / Horn)
+  private buzzerVolume: number = 0.7;
+  private buzzerEnabled: boolean = true;
+
   constructor() {
     if (typeof window !== "undefined") {
       const saved = window.localStorage ? window.localStorage.getItem("pbl3_sound_muted") : null;
       this.isMuted = saved === "true";
+
+      const savedBuzzerVol = window.localStorage ? window.localStorage.getItem("pbl3_buzzer_volume") : null;
+      if (savedBuzzerVol !== null) {
+        const parsed = parseFloat(savedBuzzerVol);
+        if (!isNaN(parsed)) this.buzzerVolume = Math.max(0, Math.min(1, parsed));
+      }
+      const savedBuzzerMuted = window.localStorage ? window.localStorage.getItem("pbl3_buzzer_muted") : null;
+      this.buzzerEnabled = savedBuzzerMuted !== "true";
 
       // Tự động unlock Web AudioContext ngay khi người dùng tương tác lần đầu trên trang
       const unlockAudio = () => {
@@ -69,6 +81,45 @@ class IndustrialAudioService {
 
   public getMuted(): boolean {
     return this.isMuted;
+  }
+
+  public getBuzzerVolume(): number {
+    return this.buzzerVolume;
+  }
+
+  public setBuzzerVolume(vol: number) {
+    this.buzzerVolume = Math.max(0, Math.min(1, vol));
+    if (typeof window !== "undefined" && window.localStorage) {
+      window.localStorage.setItem("pbl3_buzzer_volume", String(this.buzzerVolume));
+    }
+  }
+
+  public isBuzzerEnabled(): boolean {
+    return this.buzzerEnabled;
+  }
+
+  public setBuzzerEnabled(enabled: boolean) {
+    this.buzzerEnabled = enabled;
+    if (typeof window !== "undefined" && window.localStorage) {
+      window.localStorage.setItem("pbl3_buzzer_muted", String(!enabled));
+    }
+    if (!enabled) {
+      this.stopContinuousEmergencyAlarm();
+      this.stopContinuousJamAlarm();
+      this.stopContinuousBinFullAlarm();
+      this.stopContinuousTemperatureAlarm();
+      this.stopContinuousDeviceOfflineAlarm();
+    }
+  }
+
+  public isAlarmSounding(): boolean {
+    return (
+      this.continuousAlarmInterval !== null ||
+      this.continuousJamInterval !== null ||
+      this.continuousBinFullInterval !== null ||
+      this.continuousTempInterval !== null ||
+      this.continuousOfflineInterval !== null
+    );
   }
 
   // 1. Tiếng bíp cảm biến quang (S1/S2/S3 phát hiện vật)
@@ -147,12 +198,14 @@ class IndustrialAudioService {
     } catch (e) {}
   }
 
-  // 4. Tiếng còi hú khẩn cấp (E-Stop hoặc sự cố nghiêm trọng)
+  // 4. Tiếng còi hú khẩn cấp (E-Stop hoặc sự cố nghiêm trọng) - Còi an toàn công nghiệp
   public playEmergencyAlarm() {
-    if (this.isMuted) return;
     try {
       this.initContext();
       if (!this.ctx) return;
+      if (this.ctx.state === "suspended") {
+        this.ctx.resume().catch(() => {});
+      }
 
       // Dừng âm thanh còi trước đó nếu đang kêu dở
       this.stopEmergencyAlarm();
@@ -164,13 +217,17 @@ class IndustrialAudioService {
       this.activeAlarmOsc = osc;
       this.activeAlarmGain = gain;
 
+      // Còi hú công nghiệp hai tần số lượn sóng (620Hz -> 960Hz)
       osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(600, now);
-      osc.frequency.linearRampToValueAtTime(950, now + 0.2);
-      osc.frequency.linearRampToValueAtTime(600, now + 0.4);
+      osc.frequency.setValueAtTime(620, now);
+      osc.frequency.linearRampToValueAtTime(960, now + 0.2);
+      osc.frequency.linearRampToValueAtTime(620, now + 0.4);
 
-      gain.gain.setValueAtTime(0.14, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+      // Âm lượng rõ nét, mạnh mẽ cho tình huống khẩn cấp
+      const vol = Math.max(0.6, this.buzzerVolume ?? 0.8);
+      const effectiveGain = 0.35 * vol;
+      gain.gain.setValueAtTime(effectiveGain, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.47);
 
       osc.connect(gain);
       gain.connect(this.ctx.destination);
@@ -183,23 +240,30 @@ class IndustrialAudioService {
       };
 
       osc.start(now);
-      osc.stop(now + 0.46);
-    } catch (e) {}
+      osc.stop(now + 0.48);
+    } catch (e) {
+      console.warn("Lỗi phát âm thanh còi khẩn cấp:", e);
+    }
   }
 
   // Bắt đầu còi E-Stop hú liên tục không ngừng cho đến khi được xác nhận / mở khóa
   public startContinuousEmergencyAlarm() {
-    if (this.isMuted) return;
+    // Luôn đảm bảo buzzer được kích hoạt khi có sự cố dừng khẩn cấp
+    this.buzzerEnabled = true;
     if (this.continuousAlarmInterval) return;
 
-    this.playEmergencyAlarm();
-    this.continuousAlarmInterval = setInterval(() => {
-      if (this.isMuted) {
-        this.stopContinuousEmergencyAlarm();
-        return;
-      }
+    this.initContext();
+    if (this.ctx && this.ctx.state === "suspended") {
+      this.ctx.resume().then(() => {
+        this.playEmergencyAlarm();
+      }).catch(() => {});
+    } else {
       this.playEmergencyAlarm();
-    }, 520);
+    }
+
+    this.continuousAlarmInterval = setInterval(() => {
+      this.playEmergencyAlarm();
+    }, 500);
   }
 
   // Dập tắt ngay lập tức còi hú E-Stop

@@ -1,7 +1,7 @@
 import { SorterConfig } from "@shared/types";
 import { fetchWithTimeout } from "./apiFetch";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/api/config` : "/api/config";
+const BASE_URL = "/api/config";
 
 export async function fetchConfig(): Promise<SorterConfig | null> {
   try {

@@ -94,9 +94,9 @@ export async function sendEmailAlert(
 export async function triggerAlertDispatch(alert: AlertEvent) {
   saveAlertHistory(alert);
 
-  // Đối với mức độ nghiêm trọng, chủ động gửi đồng thời cả Telegram và email
-  if (alert.severity === "critical") {
-    void Promise.allSettled([sendTelegramAlert(alert), sendEmailAlert(alert)]);
+  // Đối với mức độ nghiêm trọng hoặc Báo cáo 1 ngày làm việc (shift_summary), chủ động gửi đồng thời cả Telegram và Email
+  if (alert.severity === "critical" || alert.event_type === "shift_summary") {
+    void Promise.allSettled([sendTelegramAlert(alert, true), sendEmailAlert(alert, true)]);
   } else {
     // Với cảnh báo thường, ưu tiên gửi Telegram
     sendTelegramAlert(alert).catch((e) => console.warn(e));

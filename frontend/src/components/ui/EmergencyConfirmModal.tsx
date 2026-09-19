@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect } from "react";
-import { OctagonAlert, AlertTriangle, X, Volume2, ShieldAlert } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { OctagonAlert, AlertTriangle, X, Volume2, VolumeX, ShieldAlert } from "lucide-react";
+import { industrialAudio } from "@/lib/audioService";
 
 interface EmergencyConfirmModalProps {
   isOpen: boolean;
@@ -18,6 +19,31 @@ export const EmergencyConfirmModal: React.FC<EmergencyConfirmModalProps> = ({
   title = "Xác nhận dừng khẩn cấp (E-Stop)",
   message = "Bạn đang thực hiện thao tác ngắt dừng khẩn cấp toàn bộ hệ thống băng chuyền và cơ cấu phân loại.",
 }) => {
+  const [isSirenSilenced, setIsSirenSilenced] = useState(false);
+
+  // Bật còi hú liên tục ngay khi Modal mở ra
+  useEffect(() => {
+    if (isOpen) {
+      setIsSirenSilenced(false);
+      industrialAudio.startContinuousEmergencyAlarm();
+    } else {
+      industrialAudio.stopContinuousEmergencyAlarm();
+    }
+    return () => {
+      industrialAudio.stopContinuousEmergencyAlarm();
+    };
+  }, [isOpen]);
+
+  const handleToggleSiren = () => {
+    if (isSirenSilenced) {
+      industrialAudio.startContinuousEmergencyAlarm();
+      setIsSirenSilenced(false);
+    } else {
+      industrialAudio.stopContinuousEmergencyAlarm();
+      setIsSirenSilenced(true);
+    }
+  };
+
   // Lắng nghe phím ESC để hủy và phím Enter để xác nhận
   useEffect(() => {
     if (!isOpen) return;
@@ -73,9 +99,19 @@ export const EmergencyConfirmModal: React.FC<EmergencyConfirmModalProps> = ({
               <span className="inline-flex items-center gap-1 rounded-md bg-rose-500/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-rose-300 border border-rose-500/40">
                 <ShieldAlert className="h-3 w-3 text-rose-400" /> CRITICAL ACTION
               </span>
-              <span className="inline-flex items-center gap-1 rounded-md bg-yellow-500/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-yellow-300 border border-yellow-500/40 animate-pulse">
-                <Volume2 className="h-3 w-3 text-yellow-400" /> CÒI BÁO ĐỘNG ĐANG KÊU
-              </span>
+              <button
+                type="button"
+                onClick={handleToggleSiren}
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-wider border cursor-pointer transition-all ${
+                  isSirenSilenced
+                    ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                    : "bg-yellow-500/20 text-yellow-300 border-yellow-500/40 animate-pulse hover:bg-yellow-500/30"
+                }`}
+                title={isSirenSilenced ? "Bật lại còi báo động" : "Tắt còi để đỡ ồn trong lúc kiểm tra"}
+              >
+                {isSirenSilenced ? <VolumeX className="h-3 w-3 text-amber-400" /> : <Volume2 className="h-3 w-3 text-yellow-400" />}
+                <span>{isSirenSilenced ? "ĐÃ TẮT CÒI (BẤM ĐỂ BẬT)" : "CÒI ĐANG KÊU (BẤM TẮT)"}</span>
+              </button>
             </div>
 
             <h2 id="estop-modal-title" className="text-base sm:text-lg font-black tracking-tight text-white uppercase leading-snug">
@@ -90,10 +126,10 @@ export const EmergencyConfirmModal: React.FC<EmergencyConfirmModalProps> = ({
             <AlertTriangle className="h-5 w-5 text-yellow-400 shrink-0 mt-0.5" />
             <div className="text-xs text-yellow-100 leading-relaxed">
               <strong className="text-yellow-300 font-bold block mb-0.5">
-                Còi báo động đang phát liên tục trên Web!
+                Còi báo động đang phát liên tục trên hệ thống!
               </strong>
               <span>
-                Khi bạn bấm nút <strong>&quot;Đồng ý xác nhận&quot;</strong>, còi báo động sẽ lập tức tắt và hệ thống sẽ <strong>BẬT CHẾ ĐỘ E-STOP</strong> (ngắt toàn bộ nguồn động cơ và khóa cứng băng tải).
+                Còi báo động khẩn cấp đang hú. Khi bạn bấm nút <strong>&quot;Xác nhận dừng khẩn E-Stop&quot;</strong>, toàn bộ băng tải sẽ khóa cứng và còi hú sẽ tiếp tục duy trì cho đến khi Quản trị viên (Admin) mở khóa an toàn.
               </span>
             </div>
           </div>
@@ -105,14 +141,30 @@ export const EmergencyConfirmModal: React.FC<EmergencyConfirmModalProps> = ({
           <div className="rounded-xl border border-white/[0.08] bg-[#0e070a] p-3 text-[11px] text-slate-400 space-y-1">
             <div className="flex items-center justify-between">
               <span>Trạng thái còi hiện tại:</span>
-              <span className="font-bold text-rose-400 uppercase tracking-wide flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
-                Đang kêu liên tục
-              </span>
+              <div className="flex items-center gap-2">
+                {isSirenSilenced ? (
+                  <span className="font-bold text-amber-300 uppercase tracking-wide flex items-center gap-1">
+                    <VolumeX className="h-3.5 w-3.5 text-amber-400" />
+                    Đã tắt tạm thời
+                  </span>
+                ) : (
+                  <span className="font-bold text-rose-400 uppercase tracking-wide flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
+                    Đang hú liên tục
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={handleToggleSiren}
+                  className="px-1.5 py-0.5 rounded text-[10px] font-bold border border-white/20 bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                >
+                  {isSirenSilenced ? "Bật lại" : "Tắt còi"}
+                </button>
+              </div>
             </div>
             <div className="flex items-center justify-between">
               <span>Hành động sau xác nhận:</span>
-              <span className="font-bold text-emerald-400">Tắt còi & Bật E-Stop</span>
+              <span className="font-bold text-rose-400">Khóa băng tải & Duy trì còi hú</span>
             </div>
           </div>
         </div>

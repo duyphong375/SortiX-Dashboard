@@ -1,6 +1,7 @@
 import { ClassificationRecord } from "@shared/types";
 import { ClassificationRecordSchema } from "@shared/schemas";
 import { HistoryModel } from "../models/historyModel";
+export { HistoryModel };
 
 export interface HistoryFilterParams {
   limit?: number;

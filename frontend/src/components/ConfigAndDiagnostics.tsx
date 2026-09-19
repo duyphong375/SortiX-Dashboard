@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { SorterConfig, TelemetryData, AlertEvent, CATALOG_BRANDS } from "@/lib/types";
 import { sendTelegramAlert, sendEmailAlert } from "@/lib/alertService";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -110,6 +110,13 @@ export const ConfigAndDiagnostics: React.FC<ConfigAndDiagnosticsProps> = ({
   const [bin2Brand, setBin2Brand] = useState<string>(
     config.bins[1]?.brand_ids?.[0] || "brand_a"
   );
+
+  // Cấu hình đến từ SSE phải cập nhật ngay khay màu đang hiển thị,
+  // kể cả khi người dùng đang mở trang cấu hình trên thiết bị khác.
+  useEffect(() => {
+    setBin1Brand(config.bins[0]?.brand_ids?.[0] || "brand_c");
+    setBin2Brand(config.bins[1]?.brand_ids?.[0] || "brand_a");
+  }, [config]);
 
   const bin1ConfigTheme = getBinColorTheme(bin1Brand, "rose");
   const bin2ConfigTheme = getBinColorTheme(bin2Brand, "blue");

@@ -5,6 +5,7 @@ import { useDashboard } from "@/components/layout/DashboardLayout";
 import { LiveChart } from "@/components/LiveChart";
 import { determineTargetBin } from "@/lib/dataProcessor";
 import { CATALOG_BRANDS } from "@/lib/types";
+import { calculateDailyTotalProduction } from "@/lib/history";
 import {
   Layers,
   PackageCheck,
@@ -38,8 +39,10 @@ export default function AnalyticsPage() {
     sorterConfig,
   } = useDashboard();
 
-  // Tổng số sản phẩm đã phân loại (theo khay)
-  const totalSorted = binCounts.bin1 + binCounts.bin2 + binCounts.bin3;
+  // Tổng số sản phẩm đã phân loại tích lũy trong ngày (không bị sụt giảm khi dọn khay)
+  const totalSorted = useMemo(() => {
+    return calculateDailyTotalProduction(records, binCounts);
+  }, [records, binCounts]);
 
   // DỮ LIỆU BIỂU ĐỒ TRÒN CƠ CẤU SẢN PHẨM & KHAY CHỨA (BRAND SHARE DONUT CHART)
   const brandKeys = Object.keys(CATALOG_BRANDS);
@@ -186,6 +189,7 @@ export default function AnalyticsPage() {
             binCounts={binCounts}
             conveyorSpeed={conveyorSpeed}
             isRunning={isRunning}
+            totalSorted={totalSorted}
           />
         </div>
 

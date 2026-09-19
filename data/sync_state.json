@@ -1,0 +1,45 @@
+{
+  "mode": "sim",
+  "isRunning": true,
+  "speed": 50,
+  "binCounts": {
+    "bin1": 0,
+    "bin2": 3,
+    "bin3": 3
+  },
+  "binCapacities": {
+    "bin1": 38,
+    "bin2": 50,
+    "bin3": 50
+  },
+  "brandCounts": {
+    "brand_c": 100,
+    "brand_a": 3,
+    "brand_b": 2,
+    "brand_d": 1
+  },
+  "config": {
+    "schema_version": 1,
+    "config_version": 1,
+    "device_id": "sorter_01",
+    "catalog_version": "catalog_01",
+    "bins": [
+      {
+        "bin_id": 1,
+        "brand_ids": [
+          "brand_c"
+        ]
+      },
+      {
+        "bin_id": 2,
+        "brand_ids": [
+          "brand_a"
+        ]
+      }
+    ],
+    "default_bin": 3,
+    "apply_mode": "when_line_empty",
+    "timestamp": "2026-09-19T04:06:49.279Z"
+  },
+  "updatedAt": "2026-09-19T05:59:37.568Z"
+}

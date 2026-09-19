@@ -20,6 +20,7 @@ interface LiveChartProps {
   binCounts?: { bin1: number; bin2: number; bin3: number };
   conveyorSpeed?: number;
   isRunning?: boolean;
+  totalSorted?: number;
 }
 
 export const LiveChart: React.FC<LiveChartProps> = ({
@@ -28,6 +29,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({
   binCounts,
   conveyorSpeed = 65,
   isRunning = true,
+  totalSorted: totalSortedProp,
 }) => {
   // Multiple charts can render on the same page; scope SVG definition IDs per instance.
   const chartId = useId().replace(/:/g, "");
@@ -38,8 +40,11 @@ export const LiveChart: React.FC<LiveChartProps> = ({
   const latestPoint = data.length > 0 ? data[data.length - 1] : null;
   const currentPPM = latestPoint?.ppm ?? 0;
   const currentSpeed = latestPoint?.speed ?? (isRunning ? conveyorSpeed : 0);
+  const totalInBins = binCounts ? binCounts.bin1 + binCounts.bin2 + binCounts.bin3 : 0;
   const totalSorted =
-    binCounts ? binCounts.bin1 + binCounts.bin2 + binCounts.bin3 : latestPoint?.total ?? 0;
+    typeof totalSortedProp === "number"
+      ? totalSortedProp
+      : Math.max(latestPoint?.total ?? 0, totalInBins);
 
   // Custom Dot nhấp nháy tín hiệu Live (Pulse Dot) tại điểm mới nhất
   const renderPulseDot = (props: any) => {

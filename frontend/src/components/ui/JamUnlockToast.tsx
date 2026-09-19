@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { AlertTriangle, Wrench, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, Wrench, ShieldCheck, CheckCircle2, Volume2, VolumeX } from "lucide-react";
 import { JamDetectedPayload } from "@shared/types";
+import { industrialAudio } from "@/lib/audioService";
 
 interface JamUnlockToastProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export const JamUnlockToast: React.FC<JamUnlockToastProps> = ({
 }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [isSirenSilenced, setIsSirenSilenced] = useState(false);
 
   if (!isOpen) return null;
 
@@ -26,8 +28,20 @@ export const JamUnlockToast: React.FC<JamUnlockToastProps> = ({
   const sensorId = incident?.sensor_id || "OPTICAL_JAM_02";
   const duration = incident?.duration_seconds ?? 5;
 
+  const handleToggleSiren = () => {
+    if (isSirenSilenced) {
+      industrialAudio.startContinuousJamAlarm();
+      setIsSirenSilenced(false);
+    } else {
+      industrialAudio.stopContinuousJamAlarm();
+      setIsSirenSilenced(true);
+    }
+  };
+
   const handleConfirmClear = () => {
     setIsClearing(true);
+    industrialAudio.stopContinuousJamAlarm();
+    setIsSirenSilenced(false);
     onClearJam();
     setIsClearing(false);
     setShowConfirmModal(false);
@@ -55,9 +69,33 @@ export const JamUnlockToast: React.FC<JamUnlockToastProps> = ({
               <span className="text-xs font-black uppercase tracking-wider text-amber-400">
                 Cảnh báo kẹt phôi
               </span>
-              <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-300 border border-rose-500/40">
-                CRITICAL
-              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleToggleSiren}
+                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border transition-all cursor-pointer ${
+                    isSirenSilenced
+                      ? "bg-amber-500/20 text-amber-300 border-amber-400/50 hover:bg-amber-500/30"
+                      : "bg-amber-500/20 text-amber-200 border-amber-500/40 hover:bg-amber-500/40 animate-pulse"
+                  }`}
+                  title={isSirenSilenced ? "Bật lại còi kẹt phôi" : "Tắt còi để đỡ ồn trong lúc gỡ kẹt"}
+                >
+                  {isSirenSilenced ? (
+                    <>
+                      <VolumeX className="h-3 w-3 text-amber-400" />
+                      <span>Đã tắt còi</span>
+                    </>
+                  ) : (
+                    <>
+                      <Volume2 className="h-3 w-3 text-amber-300" />
+                      <span>Tắt còi</span>
+                    </>
+                  )}
+                </button>
+                <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-300 border border-rose-500/40">
+                  CRITICAL
+                </span>
+              </div>
             </div>
 
             <p className="mt-1 text-xs font-semibold text-slate-200 leading-snug">
@@ -68,7 +106,47 @@ export const JamUnlockToast: React.FC<JamUnlockToastProps> = ({
               👉 <u>Hướng dẫn:</u> Vui lòng kiểm tra khay phân loại và gỡ sản phẩm bị kẹt trước khi tiếp tục.
             </p>
 
-            <div className="mt-3">
+            {/* Thanh trạng thái & Nút tắt/bật còi để đỡ ồn trong lúc kiểm tra gỡ kẹt */}
+            <div className="mt-2.5 flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/40 px-3 py-1.5">
+              <div className="flex items-center gap-2 text-[11px]">
+                {isSirenSilenced ? (
+                  <>
+                    <VolumeX className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                    <span className="text-amber-200">Còi báo: <strong className="text-amber-300 font-bold">Đã tắt tạm thời</strong></span>
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="h-3.5 w-3.5 text-amber-400 animate-pulse shrink-0" />
+                    <span className="text-amber-200">Còi báo: <strong className="text-amber-300 font-bold">Đang kêu cảnh báo</strong></span>
+                  </>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleToggleSiren}
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all active:scale-95 cursor-pointer shadow-xs ${
+                  isSirenSilenced
+                    ? "border border-amber-400/50 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30"
+                    : "border border-amber-400/50 bg-amber-600/80 hover:bg-amber-600 text-white shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+                }`}
+                title={isSirenSilenced ? "Bật lại còi kẹt phôi" : "Tắt còi báo để đỡ ồn trong lúc gỡ kẹt"}
+              >
+                {isSirenSilenced ? (
+                  <>
+                    <Volume2 className="h-3.5 w-3.5" />
+                    <span>Bật còi</span>
+                  </>
+                ) : (
+                  <>
+                    <VolumeX className="h-3.5 w-3.5" />
+                    <span>Tắt còi</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="mt-2.5">
               <button
                 onClick={() => setShowConfirmModal(true)}
                 disabled={isClearing}

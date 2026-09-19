@@ -31,7 +31,7 @@ export const SSEService = {
     });
 
     // Gửi tín hiệu kết nối ban đầu
-    res.write(`event: connected\ndata: ${JSON.stringify({ clientId: id, timestamp: new Date().toISOString() })}\n\n`);
+    res.write(`retry: 3000\nevent: connected\ndata: ${JSON.stringify({ clientId: id, timestamp: new Date().toISOString() })}\n\n`);
 
     const client: SSEClient = { id, res };
     clients.set(id, client);
@@ -44,6 +44,10 @@ export const SSEService = {
     });
 
     return id;
+  },
+
+  hasEventId(id: string | undefined): boolean {
+    return Boolean(id && stream.history.some((entry) => entry.id === id));
   },
 
   broadcast(event: string, data: unknown): void {

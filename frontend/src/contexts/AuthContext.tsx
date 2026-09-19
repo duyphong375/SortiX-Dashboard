@@ -129,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     sendHeartbeat();
     const interval = setInterval(sendHeartbeat, 60_000);
     return () => clearInterval(interval);
-  }, [user?.id, user?.sessionToken, user?.username, user?.role]);
+  }, [user, user?.id, user?.sessionToken, user?.username, user?.role]);
 
   const login = useCallback((userOrRole: UserRole | AuthUser) => {
     let authUser: AuthUser;

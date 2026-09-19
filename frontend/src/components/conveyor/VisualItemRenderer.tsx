@@ -147,6 +147,13 @@ export const VisualItemRenderer: React.FC<VisualItemRendererProps> = ({ item }) 
         </div>
       )}
 
+      {/* Nhãn cảnh báo khay đầy trực tiếp trên phôi đang dừng đợi thay khay */}
+      {item.waitingForBin && !item.isJammed && (
+        <div className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-amber-400 bg-amber-600 px-1.5 py-0.5 text-[8px] font-black text-white shadow-[0_0_10px_rgba(245,158,11,0.8)] animate-pulse z-50 flex items-center gap-1">
+          <span>⚠️ KHAY {item.waitingForBin} ĐẦY</span>
+        </div>
+      )}
+
       {/* Nhãn mã phôi HUD */}
       <span className="absolute -top-4.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-slate-950/90 px-1.5 py-0.5 font-mono text-[8px] font-bold text-cyan-300 border border-cyan-500/40 shadow-xs tracking-wider">
         {item.id}

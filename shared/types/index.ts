@@ -20,6 +20,8 @@ export interface VisualItem {
   confidence?: number;
   timestamp?: string;
   isJammed?: boolean; // Đánh dấu phôi bị kẹt tại trạm cảm biến
+  isRemote?: boolean; // true = phôi nhận từ thiết bị khác qua mạng
+  waitingForBin?: number; // Khay đích đang đầy, phôi tạm giữ trước máng
 }
 
 export interface BrandInfo {

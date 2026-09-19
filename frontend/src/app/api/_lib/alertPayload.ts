@@ -12,6 +12,7 @@ const EVENT_TYPES = [
   "device_offline",
   "temperature_warning",
   "bin_full",
+  "shift_summary",
 ] as const;
 
 /** Request payload accepted by both alert endpoints. Unknown fields are rejected. */

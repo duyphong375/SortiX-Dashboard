@@ -5,10 +5,10 @@
     "station_id": "MQTT_BROKER",
     "triggered_by": "AUTO_RECONNECT_SERVICE",
     "description": "[ĐÃ PHỤC HỒI] Kết nối MQTT Broker thành công",
-    "timestamp": "2026-09-18T23:20:34.250Z",
+    "timestamp": "2026-09-19T06:13:56.564Z",
     "mode": "realtime",
     "status": "resolved",
-    "id": "notif_1789773634250_43ygz"
+    "id": "notif_1789798436564_3yqw0"
   },
   {
     "event": "mqtt_disconnected",
@@ -16,11 +16,11 @@
     "station_id": "MQTT_BROKER",
     "triggered_by": "TCP_SOCKET_WATCHDOG",
     "description": "[MẤT KẾT NỐI MẠNG] Mất liên lạc với MQTT Broker! Đang thử kết nối lại lần thứ 2 (Reconnecting...)",
-    "timestamp": "2026-09-18T23:20:34.249Z",
+    "timestamp": "2026-09-19T06:13:56.563Z",
     "mode": "realtime",
     "status": "resolved",
-    "id": "notif_1789773634249_ozzkv",
-    "resolved_at": "2026-09-18T23:20:34.251Z",
+    "id": "notif_1789798436563_zmfk2",
+    "resolved_at": "2026-09-19T06:13:56.564Z",
     "resolved_by": "MQTT_RECOVERY"
   },
   {
@@ -29,10 +29,10 @@
     "station_id": "MQTT_BROKER",
     "triggered_by": "AUTO_RECONNECT_SERVICE",
     "description": "[ĐÃ PHỤC HỒI] Kết nối MQTT Broker thành công",
-    "timestamp": "2026-09-18T23:20:34.248Z",
+    "timestamp": "2026-09-19T06:13:56.560Z",
     "mode": "realtime",
     "status": "resolved",
-    "id": "notif_1789773634248_vi7be"
+    "id": "notif_1789798436560_p9qmr"
   },
   {
     "event": "mqtt_disconnected",
@@ -40,11 +40,11 @@
     "station_id": "MQTT_BROKER",
     "triggered_by": "TCP_SOCKET_WATCHDOG",
     "description": "[MẤT KẾT NỐI MẠNG] Mất liên lạc với MQTT Broker! Đang thử kết nối lại lần thứ 3 (Reconnecting...)",
-    "timestamp": "2026-09-18T23:20:34.246Z",
+    "timestamp": "2026-09-19T06:13:56.559Z",
     "mode": "realtime",
     "status": "resolved",
-    "id": "notif_1789773634247_c71zm",
-    "resolved_at": "2026-09-18T23:20:34.248Z",
+    "id": "notif_1789798436559_65lzg",
+    "resolved_at": "2026-09-19T06:13:56.561Z",
     "resolved_by": "MQTT_RECOVERY"
   },
   {
@@ -53,10 +53,10 @@
     "station_id": "ESP32_MAIN_CONTROLLER",
     "triggered_by": "HEARTBEAT_WATCHDOG",
     "description": "[MẤT KẾT NỐI THIẾT BỊ] Vi điều khiển trung tâm (ESP32) đã ngoại tuyến! Dữ liệu cảm biến thời gian thực bị ngắt",
-    "timestamp": "2026-09-18T23:20:33.217Z",
+    "timestamp": "2026-09-19T06:13:55.556Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1789773633217_ro3bw"
+    "id": "notif_1789798435556_rzv6d"
   },
   {
     "event": "device_offline",
@@ -64,21 +64,10 @@
     "station_id": "ESP32_MAIN_CONTROLLER",
     "triggered_by": "HEARTBEAT_WATCHDOG",
     "description": "[MẤT KẾT NỐI THIẾT BỊ] Vi điều khiển trung tâm (ESP32) đã ngoại tuyến! Dữ liệu cảm biến thời gian thực bị ngắt",
-    "timestamp": "2026-09-18T23:20:33.207Z",
+    "timestamp": "2026-09-19T06:13:55.546Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1789773633207_u0klk"
-  },
-  {
-    "event": "temperature_warning",
-    "severity": "warning",
-    "station_id": "Main_Drive_Motor / Edge_AI_Box",
-    "triggered_by": "TEMP_SENSOR_TELEMETRY",
-    "description": "[QUÁ NHIỆT] Động cơ truyền động chính đang ở mức 79.2°C (Ngưỡng an toàn: 75°C). Khuyến nghị kiểm tra quạt tản nhiệt hoặc giảm tải",
-    "timestamp": "2026-09-18T23:20:32.864Z",
-    "mode": "realtime",
-    "status": "unprocessed",
-    "id": "notif_1789773632864_dw61r"
+    "id": "notif_1789798435546_p7pem"
   },
   {
     "event": "temperature_warning",
@@ -86,10 +75,10 @@
     "station_id": "Edge_AI_Box",
     "triggered_by": "TEMP_SENSOR_TELEMETRY",
     "description": "[QUÁ NHIỆT] CPU máy chủ Edge AI đang ở mức 82°C (Ngưỡng an toàn: 75°C). Khuyến nghị kiểm tra quạt tản nhiệt hoặc giảm tải",
-    "timestamp": "2026-09-18T23:20:32.854Z",
+    "timestamp": "2026-09-19T06:13:55.199Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1789773632854_bq9j8"
+    "id": "notif_1789798435199_0urvd"
   },
   {
     "event": "temperature_warning",
@@ -97,10 +86,10 @@
     "station_id": "Main_Drive_Motor / Edge_AI_Box",
     "triggered_by": "TEMP_SENSOR_TELEMETRY",
     "description": "[QUÁ NHIỆT] Động cơ truyền động chính đang ở mức 78.5°C (Ngưỡng an toàn: 75°C). Khuyến nghị kiểm tra quạt tản nhiệt hoặc giảm tải",
-    "timestamp": "2026-09-18T23:20:32.853Z",
+    "timestamp": "2026-09-19T06:13:55.198Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1789773632853_pajf9"
+    "id": "notif_1789798435198_ao1hx"
   },
   {
     "event": "bin_full",
@@ -108,10 +97,10 @@
     "station_id": "BIN_BLUE_02",
     "triggered_by": "STORAGE_BIN_BLUE_02",
     "description": "[ĐẦY KHAY CHỨA] Khay phân loại sản phẩm Xanh (#02) đã đạt giới hạn 50/50 cái. Vui lòng thay thế khay rỗng mới",
-    "timestamp": "2026-09-18T23:20:32.488Z",
+    "timestamp": "2026-09-19T06:13:54.856Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1789773632488_uqg79"
+    "id": "notif_1789798434856_yrvuu"
   },
   {
     "event": "bin_full",
@@ -119,10 +108,10 @@
     "station_id": "BIN_RED_01",
     "triggered_by": "STORAGE_BIN_RED_01",
     "description": "[ĐẦY KHAY CHỨA] Khay phân loại sản phẩm Đỏ (#01) đã đạt giới hạn 50/50 cái. Vui lòng thay thế khay rỗng mới",
-    "timestamp": "2026-09-18T23:20:32.475Z",
+    "timestamp": "2026-09-19T06:13:54.846Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1789773632475_s6cau"
+    "id": "notif_1789798434847_4u5g8"
   },
   {
     "event": "jam_detected",
@@ -130,10 +119,10 @@
     "station_id": "Conveyor_Belt_Zone_A",
     "triggered_by": "OPTICAL_JAM_02",
     "description": "[CẢNH BÁO KẸT PHÔI] Phát hiện tắc nghẽn sản phẩm tại Khu vực Conveyor_Belt_Zone_A (Cảm biến OPTICAL_JAM_02 che khuất liên tục 5s). Băng tải đã tự động giảm tốc/dừng.",
-    "timestamp": "2026-09-18T23:20:31.540Z",
+    "timestamp": "2026-09-19T06:13:53.882Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1789773631541_ex8la"
+    "id": "notif_1789798433883_1thtv"
   },
   {
     "event": "shift_summary",
@@ -144,7 +133,7 @@
     "timestamp": "2026-09-18T17:00:00.000Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1789773633573_aqo8a"
+    "id": "notif_1789798435898_eyfl7"
   },
   {
     "event": "emergency_stop",
@@ -155,8 +144,8 @@
     "timestamp": "2026-09-18T10:15:30.000Z",
     "mode": "realtime",
     "status": "resolved",
-    "id": "notif_1789773631185_mjgu8",
-    "resolved_at": "2026-09-18T23:20:31.185Z",
+    "id": "notif_1789798433550_0ml30",
+    "resolved_at": "2026-09-19T06:13:53.550Z",
     "resolved_by": "admin1"
   },
   {
@@ -168,8 +157,8 @@
     "timestamp": "2026-09-18T10:15:30.000Z",
     "mode": "realtime",
     "status": "resolved",
-    "id": "notif_1789773631171_0w6l9",
-    "resolved_at": "2026-09-18T23:20:31.184Z",
+    "id": "notif_1789798433537_4pt13",
+    "resolved_at": "2026-09-19T06:13:53.549Z",
     "resolved_by": "admin1"
   }
 ]

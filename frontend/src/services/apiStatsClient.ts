@@ -1,6 +1,6 @@
 import { fetchWithTimeout } from "./apiFetch";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/api/stats` : "/api/stats";
+const BASE_URL = "/api/stats";
 
 export interface SystemStatsResponse {
   totalSorted: number;

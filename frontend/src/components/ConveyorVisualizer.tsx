@@ -85,7 +85,13 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
   const arm1Active = propArm1Active ?? telemetry.arm1_active;
   const arm2Active = propArm2Active ?? telemetry.arm2_active;
 
-  const isBeltMoving = isRunning && !telemetry.estop_pressed && !isBinFull && items.length > 0;
+  const hasActiveItems = items.some((it) => !it.sorted || (it.yOffset || 0) < 45);
+  const isBeltMoving =
+    isRunning &&
+    (isSimulation ? hasActiveItems : hasActiveItems) &&
+    !telemetry.estop_pressed &&
+    !isBinFull &&
+    !isJammed;
   const linearSpeedCms = isBeltMoving ? ((speed / 100) * 35).toFixed(1) : "0.0";
   const rollerRpm = isBeltMoving ? Math.floor((speed / 100) * 120) : 0;
 
@@ -205,25 +211,34 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
               </span>
             </div>
           </div>
-        ) : items.length === 0 ? (
+        ) : !isRunning ? (
           <div className="flex justify-center mt-3 mb-1">
-            <div className="rounded-full bg-slate-900/90 px-4 py-1.5 backdrop-blur border border-cyan-500/30 text-[10px] sm:text-xs font-semibold text-cyan-300 shadow-sm flex items-center gap-2 text-center w-fit mx-auto">
-              <span className="h-2 w-2 rounded-full bg-cyan-400 animate-ping shrink-0" />
+            <div className="rounded-full bg-slate-900/90 px-4 py-1.5 backdrop-blur border border-amber-500/40 text-[10px] sm:text-xs font-semibold text-amber-300 shadow-sm flex items-center gap-2 text-center w-fit mx-auto">
+              <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />
+              <span>Băng tải đang tạm dừng • Nhấn Khởi động để tiếp tục vận hành</span>
+            </div>
+          </div>
+        ) : !isBeltMoving ? (
+          <div className="flex justify-center mt-3 mb-1">
+            <div className="rounded-full bg-slate-900/90 px-4 py-1.5 backdrop-blur border border-cyan-500/40 text-[10px] sm:text-xs font-semibold text-cyan-300 shadow-sm flex items-center gap-2 text-center w-fit mx-auto">
+              <span className="h-2 w-2 rounded-full bg-cyan-400 shrink-0" />
               <span>
                 {isSimulation
-                  ? "Băng tải đứng yên chờ phôi • Nhấn nút nạp nhanh vật mẫu phía trên để vận hành"
-                  : "Băng tải sẵn sàng • Đang chờ phôi mẫu từ Camera AI & Hệ thống nạp thực tế"}
+                  ? "Băng tải chờ phôi mẫu • Nhấn nút thả phôi phía trên để nạp sản phẩm"
+                  : "Băng tải chờ phôi mẫu • Sẵn sàng nhận phôi từ Camera AI & Hệ thống thực tế"}
               </span>
             </div>
           </div>
-        ) : !isRunning ? (
+        ) : (
           <div className="flex justify-center mt-3 mb-1">
-            <div className="rounded-full bg-slate-900/90 px-4 py-1.5 backdrop-blur border border-slate-600/50 text-[10px] sm:text-xs font-semibold text-slate-300 shadow-sm flex items-center gap-2 text-center w-fit mx-auto">
-              <span className="h-2 w-2 rounded-full bg-slate-400 shrink-0" />
-              <span>Băng tải đang tạm dừng • Nhấn nút chạy hoặc kích hoạt để tiếp tục di chuyển phôi</span>
+            <div className="rounded-full bg-slate-900/90 px-4 py-1.5 backdrop-blur border border-emerald-500/40 text-[10px] sm:text-xs font-semibold text-emerald-300 shadow-sm flex items-center gap-2 text-center w-fit mx-auto">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              <span>
+                Băng tải đang chạy • Đang vận chuyển {items.length} phôi mẫu qua các trạm phân loại
+              </span>
             </div>
           </div>
-        ) : null}
+        )}
 
         {/* DÂY ĐAI BĂNG TẢI CHÍNH & VẬT PHẨM CHẠY 2D */}
         <div className="relative my-6 flex items-center">
@@ -347,7 +362,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                   ) : (
                     <span className={`h-2 w-2 rounded-full shrink-0 ${bin1Theme.dotClass}`} />
                   )}
-                  <span className="truncate">MÁNG TRƯỢT 1 (PISTON 1)</span>
+                  <span className="truncate">KHAY 1 (PISTON 1)</span>
                 </span>
                 <div className="flex items-center gap-1.5 shrink-0">
                   {binCounts.bin1 >= cap1 ? (
@@ -396,7 +411,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
               {/* Số lượng tổng lớn nổi bật */}
               <div className="mt-2 flex items-baseline justify-between gap-2">
                 <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                  Tổng SP trong máng:
+                  Tổng SP trong khay:
                 </span>
                 <div className={`text-3xl font-black font-mono shrink-0 ${
                   binCounts.bin1 >= cap1 
@@ -518,7 +533,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                   ) : (
                     <span className={`h-2 w-2 rounded-full shrink-0 ${bin2Theme.dotClass}`} />
                   )}
-                  <span className="truncate">MÁNG TRƯỢT 2 (PISTON 2)</span>
+                  <span className="truncate">KHAY 2 (PISTON 2)</span>
                 </span>
                 <div className="flex items-center gap-1.5 shrink-0">
                   {binCounts.bin2 >= cap2 ? (
@@ -567,7 +582,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
               {/* Số lượng tổng lớn nổi bật */}
               <div className="mt-2 flex items-baseline justify-between gap-2">
                 <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                  Tổng SP trong máng:
+                  Tổng SP trong khay:
                 </span>
                 <div className={`text-3xl font-black font-mono shrink-0 ${
                   binCounts.bin2 >= cap2 
@@ -738,7 +753,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
               {/* Số lượng tổng lớn nổi bật */}
               <div className="mt-2 flex items-baseline justify-between gap-2">
                 <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                  Tổng SP trong máng:
+                  Tổng SP trong khay:
                 </span>
                 <div className={`text-3xl font-black font-mono shrink-0 ${
                   binCounts.bin3 >= cap3 

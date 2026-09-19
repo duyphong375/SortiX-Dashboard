@@ -316,5 +316,87 @@ export const MqttDisconnectedPayloadSchema = z.object({
   timestamp: z.string().optional().default(() => new Date().toISOString()),
 }).passthrough();
 
+// Cross-device synchronization payloads. These schemas sit at the network
+// boundary so malformed client, SSE replay, or WebView payloads never reach
+// the persistence layer unchecked.
+export const BinCountsSchema = z.object({
+  bin1: finiteNumber.int().nonnegative().max(50),
+  bin2: finiteNumber.int().nonnegative().max(50),
+  bin3: finiteNumber.int().nonnegative().max(50),
+});
 
+export const BrandCountsSchema = z.record(
+  z.string().trim().min(1).max(128),
+  finiteNumber.int().nonnegative()
+);
 
+export const BinCapacitiesSchema = z.object({
+  bin1: finiteNumber.int().min(5).max(50),
+  bin2: finiteNumber.int().min(5).max(50),
+  bin3: finiteNumber.int().min(5).max(50),
+});
+
+export const VisualItemSchema = z.object({
+  id: nonEmptyString.max(128),
+  brandKey: nonEmptyString.max(128),
+  progress: finiteNumber.min(0).max(100),
+  targetBin: finiteNumber.int().min(1).max(3),
+  yOffset: finiteNumber.optional(),
+  opacity: finiteNumber.min(0).max(1).optional(),
+  deflected: z.boolean().optional(),
+  sorted: z.boolean().optional(),
+  s1Triggered: z.boolean().optional(),
+  s2Triggered: z.boolean().optional(),
+  s3Triggered: z.boolean().optional(),
+  isSim: z.boolean(),
+  confidence: finiteNumber.min(0).max(1).optional(),
+  timestamp: nonEmptyString.max(128).optional(),
+  isJammed: z.boolean().optional(),
+  isRemote: z.boolean().optional(),
+}).passthrough();
+
+export const SyncStatePatchSchema = z.object({
+  mode: z.enum(["sim", "real"]).optional(),
+  isRunning: z.boolean().optional(),
+  speed: finiteNumber.min(0).max(100).optional(),
+  binCounts: BinCountsSchema.partial().optional(),
+  binCapacities: BinCapacitiesSchema.partial().optional(),
+  brandCounts: z.record(z.string().trim().min(1).max(128), finiteNumber.int().nonnegative()).optional(),
+  config: SorterConfigSchema.optional(),
+  updatedAt: nonEmptyString.max(128).optional(),
+});
+
+export const DashboardSyncStateSchema = z.object({
+  mode: z.enum(["sim", "real"]),
+  isRunning: z.boolean(),
+  speed: finiteNumber.min(0).max(100),
+  binCounts: BinCountsSchema,
+  binCapacities: BinCapacitiesSchema,
+  brandCounts: z.record(z.string().trim().min(1).max(128), finiteNumber.int().nonnegative()),
+  config: SorterConfigSchema,
+  updatedAt: nonEmptyString.max(128),
+}).passthrough();
+
+export const SyncActionSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("update_state"),
+    state: SyncStatePatchSchema,
+    senderId: nonEmptyString.max(128).optional(),
+  }),
+  z.object({
+    type: z.literal("sync_records"),
+    records: z.array(ClassificationRecordSchema).max(500),
+    binCounts: BinCountsSchema.optional(),
+    brandCounts: z.record(z.string().trim().min(1).max(128), finiteNumber.int().nonnegative()).optional(),
+    senderId: nonEmptyString.max(128).optional(),
+  }),
+  z.object({
+    type: z.literal("clear_history"),
+    senderId: nonEmptyString.max(128).optional(),
+  }),
+  z.object({
+    type: z.literal("spawn_item"),
+    item: VisualItemSchema,
+    senderId: nonEmptyString.max(128).optional(),
+  }),
+]);

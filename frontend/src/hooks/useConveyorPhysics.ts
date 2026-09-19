@@ -188,11 +188,24 @@ export function useConveyorPhysics({
       const delta = (time - lastTime) / 1000;
       lastTime = time;
 
+      // Xác định phôi mẫu đang có mặt trên băng tải
+      const hasActiveItems = visualItemsRef.current.some(
+        (it) => !it.sorted || (it.yOffset || 0) < 45
+      );
+
+      // Yêu cầu: Có mẫu vật thì băng chuyền mới chạy (ở cả User & Admin, cả Mô phỏng và Thực tế)
+      const isSimulation = isSimulationRef.current;
       const isBeltMoving =
         isRunningRef.current &&
+        (isSimulation ? hasActiveItems : hasActiveItems) &&
         !telemetryRef.current.estop_pressed &&
         !isJammedRef.current &&
         !isBinFullRef.current;
+
+      // Đồng bộ trạng thái chuyển động của băng tải vào telemetry
+      if (telemetryRef.current.conveyor_running !== isBeltMoving) {
+        setTelemetry((prev) => (prev.conveyor_running === isBeltMoving ? prev : { ...prev, conveyor_running: isBeltMoving }));
+      }
 
       // Kiểm tra phôi bị tắc nghẽn liên tục tại Cảm biến #02 / Zone A (Chỉ chạy ở chế độ Mô phỏng ảo)
       // Ở chế độ Thực tế: Tín hiệu kẹt phôi hoàn toàn phụ thuộc vào cảm biến quang học vật lý qua MQTT
@@ -278,6 +291,7 @@ export function useConveyorPhysics({
                 // Khay 1 chưa đầy -> Gạt phôi vào khay bình thường
                 item.sorted = true;
                 item.deflected = true;
+                item.waitingForBin = undefined;
                 setArm1Active(true);
                 industrialAudio.playServoArm();
                 scheduleTimeout(() => setArm1Active(false), 450);
@@ -287,6 +301,7 @@ export function useConveyorPhysics({
               } else {
                 // KHAY 1 ĐÃ ĐẦY ĐỊNH MỨC -> Dừng băng tải bảo vệ phôi mẫu, giữ nguyên toàn bộ phôi trên băng
                 item.progress = 44;
+                item.waitingForBin = 1;
                 updatedItems.push(item);
                 for (let j = i + 1; j < currentItems.length; j++) {
                   updatedItems.push(currentItems[j]);
@@ -318,6 +333,7 @@ export function useConveyorPhysics({
                 // Khay 2 chưa đầy -> Gạt phôi vào khay bình thường
                 item.sorted = true;
                 item.deflected = true;
+                item.waitingForBin = undefined;
                 setArm2Active(true);
                 industrialAudio.playServoArm();
                 scheduleTimeout(() => setArm2Active(false), 450);
@@ -327,6 +343,7 @@ export function useConveyorPhysics({
               } else {
                 // KHAY 2 ĐÃ ĐẦY ĐỊNH MỨC -> Dừng băng tải bảo vệ phôi mẫu, giữ nguyên toàn bộ phôi trên băng
                 item.progress = 71;
+                item.waitingForBin = 2;
                 updatedItems.push(item);
                 for (let j = i + 1; j < currentItems.length; j++) {
                   updatedItems.push(currentItems[j]);
@@ -349,12 +366,17 @@ export function useConveyorPhysics({
             const count3 = currentCounts.bin3 || 0;
 
             if (count3 < cap3) {
+              // Khay 3 chưa đầy -> Cho phôi trượt rơi trọng lực mượt mà vào máng Khay 3
               item.sorted = true;
+              item.deflected = true;
+              item.waitingForBin = undefined;
               onItemSortedRef.current?.(item, 3);
+              updatedItems.push(item);
               continue;
             } else {
               // KHAY 3 ĐÃ ĐẦY ĐỊNH MỨC -> Dừng băng tải bảo vệ phôi mẫu, giữ nguyên toàn bộ phôi trên băng
               item.progress = 95;
+              item.waitingForBin = 3;
               updatedItems.push(item);
               for (let j = i + 1; j < currentItems.length; j++) {
                 updatedItems.push(currentItems[j]);
