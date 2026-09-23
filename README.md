@@ -152,34 +152,34 @@ Phần này mô tả chi tiết cách thức toàn bộ hệ thống phối hợ
 ```mermaid
 flowchart TD
     subgraph HARDWARE_LAYER["1. Tầng Phần Cứng & Thu Thập Dữ Liệu"]
-        CAM["Camera AI / Edge Vision"] -->|Nhận diện nhãn phôi| DETECT["Kết quả Detection (brand, confidence)"]
-        SENSORS["Cụm Cảm Biến S1-S3 + Encoder + DS18B20"] -->|Đo tốc độ, nhiệt độ, kẹt phôi| ESP32["Vi điều khiển ESP32-C5"]
-        DETECT -->|Serial / Wi-Fi 6| ESP32
+        CAM["Camera AI YOLOv8"] -->|"Nhận diện dụng cụ y tế"| DETECT["Kết quả Detection (loại dụng cụ, confidence)"]
+        SENSORS["Cụm Cảm Biến S1-S3 + Encoder + DS18B20"] -->|"Đo tốc độ, nhiệt độ, kẹt dụng cụ"| ESP32["Vi điều khiển ESP32-C5"]
+        DETECT -->|"UART Serial / Wi-Fi 6"| ESP32
     end
 
     subgraph IOT_COMMUNICATION["2. Tầng Truyền Thông IoT (MQTT Broker)"]
-        ESP32 -->|Publish: sorter/01/vision| BROKER["MQTT Broker (EMQX / Mosquitto)"]
-        ESP32 -->|Publish: sorter/01/telemetry| BROKER
-        ESP32 -->|Publish: conveyor/heartbeat (2s)| BROKER
-        ESP32 -->|Publish: conveyor/sensor/jam| BROKER
-        ESP32 -->|Publish: conveyor/storage/bin_status| BROKER
+        ESP32 -->|"Publish: sorter/01/vision"| BROKER["MQTT Broker (EMQX / Mosquitto)"]
+        ESP32 -->|"Publish: sorter/01/telemetry"| BROKER
+        ESP32 -->|"Publish: conveyor/heartbeat (chu kỳ 2s)"| BROKER
+        ESP32 -->|"Publish: conveyor/sensor/jam"| BROKER
+        ESP32 -->|"Publish: conveyor/storage/bin_status"| BROKER
     end
 
     subgraph SERVER_LAYER["3. Tầng Máy Chủ Backend (Express Port 5000)"]
-        BROKER -->|Subscribe / Ingest| BACKEND["Express API Server"]
-        BACKEND -->|Watchdog 6s| HEARTBEAT_MONITOR["Heartbeat & Health Monitor"]
-        BACKEND -->|Ghi nhận sự cố| SAFETY_SVC["Safety & Alert Engine"]
-        SAFETY_SVC -->|Ghi Atomic Write| DB_STORE[("Persistence Data Store\ndata/users.json\ndata/notifications.json")]
-        SAFETY_SVC -->|Gửi cảnh báo khẩn| ALERT_CHANNELS["Telegram Bot & SMTP Email"]
-        SAFETY_SVC -->|Broadcast Realtime| SSE_STREAM["SSE Stream (/api/events)"]
+        BROKER -->|"Subscribe / Ingest"| BACKEND["Express API Server"]
+        BACKEND -->|"Watchdog 6s"| HEARTBEAT_MONITOR["Heartbeat & Health Monitor"]
+        BACKEND -->|"Ghi nhận sự cố"| SAFETY_SVC["Safety & Alert Engine"]
+        SAFETY_SVC -->|"Ghi Atomic Write"| DB_STORE[("Persistence Data Store\ndata/users.json\ndata/notifications.json")]
+        SAFETY_SVC -->|"Gửi cảnh báo khẩn"| ALERT_CHANNELS["Telegram Bot & SMTP Email"]
+        SAFETY_SVC -->|"Broadcast Realtime"| SSE_STREAM["SSE Stream (/api/events)"]
     end
 
     subgraph CLIENT_LAYER["4. Tầng Giao Diện Khách (Web & Mobile App)"]
-        BROKER -.->|WebSocket WSS (Telemetry cao tần)| CLIENTS["Next.js Dashboard & Mobile APK / PWA"]
-        SSE_STREAM -->|Nhận sự cố khẩn cấp| CLIENTS
-        CLIENTS -->|Vẽ Canvas 60fps & Piston| CANVAS["Canvas 60fps Visualizer"]
-        CLIENTS -->|Phát âm thanh còi / nén khí| AUDIO["Web Audio Synthesizer"]
-        CLIENTS -->|REST API Calls (Admin config, unlock)| BACKEND
+        BROKER -.->|"WebSocket WSS (Telemetry cao tần)"| CLIENTS["Next.js Dashboard & Mobile APK / PWA"]
+        SSE_STREAM -->|"Nhận sự cố khẩn cấp"| CLIENTS
+        CLIENTS -->|"Vẽ Canvas 60fps & Servo"| CANVAS["Canvas 60fps Visualizer"]
+        CLIENTS -->|"Phát âm thanh còi / gạt servo"| AUDIO["Web Audio Synthesizer"]
+        CLIENTS -->|"REST API Calls (Admin config, unlock)"| BACKEND
     end
 ```
 

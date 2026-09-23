@@ -313,16 +313,16 @@ stateDiagram-v2
 ```mermaid
 flowchart TD
     subgraph HIGH_FREQUENCY["Luồng Dữ Liệu Cao Tần (High-Frequency Realtime)"]
-        ESP32["ESP32-C5 Sensors"] -->|MQTT over Wi-Fi 6| BROKER["MQTT Broker"]
-        BROKER -->|WebSocket WSS (60fps)| CLIENT_WS["Trình duyệt Client (Canvas Loop)"]
+        ESP32["ESP32-C5 Sensors"] -->|"MQTT over Wi-Fi 6"| BROKER["MQTT Broker"]
+        BROKER -->|"WebSocket WSS (60fps)"| CLIENT_WS["Trình duyệt Client (Canvas Loop)"]
     end
 
     subgraph SYSTEM_EVENTS["Luồng Sự Kiện An Toàn & Đồng Bộ (Low-Frequency Events)"]
-        SERVER["Express Backend Engine"] -->|SSE /api/events| CLIENT_SSE["Trình duyệt Client (EventSource)"]
+        SERVER["Express Backend Engine"] -->|"SSE /api/events"| CLIENT_SSE["Trình duyệt Client (EventSource)"]
         CLIENT_SSE --> EVENT_DISPATCH{"Bộ Phân Phối Sự Kiện"}
         EVENT_DISPATCH -->|emergency_stop| ESTOP_HANDLER["Bật còi hú & Khóa Banner"]
         EVENT_DISPATCH -->|safety_unlocked| UNLOCK_HANDLER["Tắt còi & Mở khóa"]
-        EVENT_DISPATCH -->|jam_detected| JAM_HANDLER["Cảnh báo kẹt phôi đỏ"]
+        EVENT_DISPATCH -->|jam_detected| JAM_HANDLER["Cảnh báo kẹt dụng cụ đỏ"]
         EVENT_DISPATCH -->|bin_full| BINFULL_HANDLER["Toast cảnh báo đầy khay"]
         EVENT_DISPATCH -->|temperature_warning| TEMP_HANDLER["Chuyển kim đồng hồ đỏ"]
         EVENT_DISPATCH -->|device_offline| OFFLINE_HANDLER["Báo mất kết nối vi điều khiển"]
