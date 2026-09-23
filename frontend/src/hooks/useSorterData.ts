@@ -48,7 +48,7 @@ export interface UseSorterDataProps {
   onBinFullTrigger?: (binIndex: 1 | 2 | 3, count: number, maxCapacity?: number) => void;
 }
 
-export function useSorterData({ configRef, onIncomingConfig, onSpawnRealVisualItem, onPublishCommand, onBinFullTrigger }: UseSorterDataProps) {
+export function useSorterData({ configRef, onSpawnRealVisualItem, onPublishCommand, onBinFullTrigger }: UseSorterDataProps) {
   const [isClient, setIsClient] = useState(false);
   const [isSimulation, setIsSimulation] = useState<boolean>(false);
   const { success: showToastSuccess } = useToast();

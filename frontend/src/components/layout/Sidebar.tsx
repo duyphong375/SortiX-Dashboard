@@ -15,7 +15,6 @@ import {
   Cpu,
   Users,
   LogOut,
-  Boxes,
   ChevronLeft,
   ChevronRight,
   KeyRound,
@@ -50,8 +49,6 @@ const SidebarComponent: React.FC<SidebarProps> = ({
   alertCount = 0,
   mobileOpen = false,
   onCloseMobile,
-  isSimulation = true,
-  onToggleSimulationMode,
 }) => {
   const pathname = usePathname();
   const [pendingHref, setPendingHref] = useState<string | null>(null);

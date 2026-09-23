@@ -1,6 +1,7 @@
 import { SafetyController } from "../controllers/safetyController";
 
 export const SafetyRoutes = {
+  handleGetTelemetry: () => SafetyController.getTelemetry(),
   handleGetStatus: () => SafetyController.getStatus(),
   handlePostEstop: (body: unknown) => SafetyController.triggerEmergencyStop(body),
   handlePostJam: (body: unknown) => SafetyController.triggerJamAlert(body),

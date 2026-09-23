@@ -114,7 +114,6 @@ export function KpiStatGrid({
   conveyorSpeed,
   visualItemsCount,
   avgConfidence,
-  pingMs,
   isDeviceOffline = false,
 }: KpiStatGridProps) {
   const animatedTotal = useCountUp(totalSorted, 800);

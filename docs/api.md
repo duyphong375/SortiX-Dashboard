@@ -1,8 +1,8 @@
 # TÀI LIỆU ĐẶC TẢ RESTFUL API & SSE (SORTIX API SPECIFICATION)
 
 > **Dự án**: SortiX Dashboard — Hệ thống giám sát và phân loại sản phẩm trên băng chuyền IoT.  
-> **Kiến trúc phục vụ**: Cung cấp đồng thời qua Next.js App Router (`/api/*` tại Port 3000) và Standalone Express Server (`/api/*` tại Port 5000).  
-> **Định dạng dữ liệu**: `application/json; charset=utf-8`. Tất cả phản hồi tuân thủ cấu trúc envelope chuẩn:
+> **Kiến trúc phục vụ**: Cung cấp đồng thời qua Next.js App Router (`/api/*` tại Port 3000) và Standalone `node:http` Server (`/api/*` tại Port 5000).
+> **Định dạng dữ liệu**: JSON (`application/json; charset=utf-8`) cho các route thông thường; `/api/events` dùng `text/event-stream`. Phản hồi có các field hiện được từng route triển khai như sau (không phải mọi route đều có đủ tất cả field):
 > ```json
 > {
 >   "success": boolean,
@@ -13,6 +13,24 @@
 > ```
 
 ---
+
+## Ghi chú endpoint đang chạy
+
+Phần đặc tả chi tiết bên dưới được giữ lại để mô tả payload, RBAC và vòng đời sự kiện. Bảng này là danh sách route đối chiếu với source hiện tại, đặc biệt cho các route safety có alias tương thích:
+
+| Nhóm | Route backend standalone hiện tại |
+| --- | --- |
+| Health/telemetry | `GET /api/health`, `GET /api/telemetry`, `GET /api/bins` |
+| Auth | `POST /api/auth/register`, `/login`, `/logout`, `/forgot-password`, `/reset-password` |
+| Core data | `GET/POST /api/config`, `GET/POST/DELETE /api/history`, `GET /api/stats`, `GET /api/notifications` |
+| Events/sync | `GET /api/events`, `GET/POST /api/sync` |
+| Alerts/chat | `POST /api/email-alert`, `POST /api/telegram-alert`, `GET/POST /api/chat/telegram` |
+| User | `GET /api/user/profile`, `POST /api/user/change-password`, `GET/POST /api/users`, `PUT/DELETE /api/users/:id` |
+| Safety | `GET /api/safety/status`; POST `/api/safety/estop`, `/jam`, `/bin-full`, `/temp-warning`, `/device-offline`, `/heartbeat`, `/shift-summary`, `/mqtt-disconnected`, `/mqtt-connected`, `/unlock` |
+
+Safety aliases hiện được giữ cho client/firmware: `/api/storage/bin-status`, `/api/telemetry/temp`, `/api/device/offline`, `/api/heartbeat`, `/api/telemetry/heartbeat`, `/api/shift/summary`, `/api/mqtt/disconnected` và `/api/mqtt/connected`. Frontend route handlers có thể có tập route nhỏ hơn backend standalone; không coi hai lớp là một router duy nhất.
+
+Persistence runtime của backend là JSON store và config in-memory. Các bảng CSDL trong phần mapping chỉ mô tả migration tham chiếu trong `backend/database`, không có driver CSDL được gọi bởi script hiện tại.
 
 ## 📌 Mục Lục
 1. [Kiến Trúc Tương Tác Cơ Sở Dữ Liệu & Luồng API (API Data & Database Architecture)](#1-kiến-trúc-tương-tác-cơ-sở-dữ-liệu--luồng-api-api-data--database-architecture)
@@ -53,14 +71,15 @@ Mọi API trong SortiX Dashboard đều được thiết kế phân lớp nghiê
 | **History**| `/api/history` | `DELETE` | `HistoryModel`| `data/history.json` / Bảng `history` | Atomic Clear | `admin` Only |
 | **Stats** | `/api/stats` | `GET` | `HistoryModel`| `data/history.json` | Tổng hợp KPI tức thời từ bộ nhớ | Đã đăng nhập |
 | **Notif** | `/api/notifications` | `GET` | `NotificationModel`| `data/notifications.json` | Read sorted by timestamp | Đã đăng nhập |
-| **Notif** | `/api/notifications/:id/resolve`| `PUT`| `NotificationModel`| `data/notifications.json` | Atomic Update (`resolved_by`, timestamp) | `admin` Only |
+| **Notif** | `/api/notifications/:id/resolve`| `PUT`| `NotificationModel`| `data/notifications.json` | Mô tả thiết kế; không có HTTP route tương ứng trong source hiện tại | `admin` Only |
 | **Safety**| `/api/safety/estop` | `POST` | `NotificationModel` & `SafetyService` | `data/notifications.json` | Atomic Write + SSE Broadcast | Đã đăng nhập |
 | **Safety**| `/api/safety/unlock` | `POST` | `NotificationModel` & `SafetyService` | `data/notifications.json` | Atomic Update + 5s Grace Period + SSE | `admin` Only |
 | **Safety**| `/api/safety/jam` | `POST` | `NotificationModel` | `data/notifications.json` | Atomic Write + SSE Broadcast | Đã đăng nhập |
 | **Safety**| `/api/safety/bin-full` | `POST` | `NotificationModel` | `data/notifications.json` | Atomic Write + SSE Broadcast | Đã đăng nhập |
-| **Safety**| `/api/safety/temperature` | `POST` | `NotificationModel` | `data/notifications.json` | Atomic Write + SSE Broadcast | Đã đăng nhập |
+| **Safety**| `/api/safety/temp-warning` | `POST` | `NotificationModel` | `data/notifications.json` | Atomic Write + SSE Broadcast | Đã đăng nhập |
 | **Safety**| `/api/safety/device-offline`| `POST` | `NotificationModel` | `data/notifications.json` | Atomic Write + SSE Broadcast | Đã đăng nhập |
 | **Safety**| `/api/safety/shift-summary` | `POST` | `NotificationModel` | `data/notifications.json` | Atomic Write + SSE Broadcast | Đã đăng nhập |
+| **Safety**| `/api/safety/mqtt-disconnected` / `/api/safety/mqtt-connected` | `POST` | `NotificationModel` & `SafetyService` | `data/notifications.json` | Atomic Write/resolve + SSE Broadcast | Đã đăng nhập |
 
 ---
 
@@ -132,7 +151,7 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    A["Quản Trị Viên (Admin)\nĐiều chỉnh trên trang /config"] -->|POST /api/config| B["Express Backend\n(/api/config)"]
+    A["Quản Trị Viên (Admin)\nĐiều chỉnh trên trang /config"] -->|POST /api/config| B["node:http Backend\n(/api/config)"]
     B -->|1. Xác thực RBAC| C{"Vai trò Admin?"}
     C -- Không --> D["Trả về 403 Forbidden"]
     C -- Có --> E["2. Tăng config_version (+1)"]
@@ -235,11 +254,11 @@ Hủy session cookie và thu hồi token xác thực phiên làm việc.
 ---
 
 ### 2.4. Lấy Thông Tin Phiên & Token Hiện Tại
-Truy xuất thông tin người dùng đang đăng nhập dựa trên token hoặc cookie session.
+Route hiện tại dùng để cấp token phiên từ `id`/`username`/`role` trong body tại Next.js route handler; nó không phải endpoint đọc phiên `GET`.
 
-- **Method**: `GET`
+- **Method**: `POST`
 - **Path**: `/api/auth/token`
-- **Headers**: `Authorization: Bearer <TOKEN>`
+- **Request Body**: JSON có thể chứa `id`, `username` hoặc `role` theo logic trong `frontend/src/app/api/auth/token/route.ts`.
 - **Response `200 OK`**:
 ```json
 {
@@ -263,19 +282,10 @@ Truy xuất thông tin người dùng đang đăng nhập dựa trên token ho�
 ### 2.5. Nhịp Tim Phiên Người Dùng (Session Heartbeat)
 Duy trì trạng thái trực tuyến (`is_online`) và cập nhật thời gian hoạt động gần nhất của người dùng.
 
-- **Method**: `GET` / `POST`
+- **Method**: `POST` (Next.js route handler; backend standalone không có endpoint này)
 - **Path**: `/api/auth/heartbeat`
 - **Headers**: `Authorization: Bearer <TOKEN>`
-- **Response `200 OK`**:
-```json
-{
-  "success": true,
-  "data": {
-    "alive": true,
-    "timestamp": "2026-09-18T18:57:31.966Z"
-  }
-}
-```
+- **Response `200 OK`**: `{ "success": true, "data": <SafeUser> }`, với `data` lấy từ `toSafeUser(refreshed)`.
 
 ---
 
@@ -528,6 +538,7 @@ Xác thực mã OTP 6 chữ số và thiết lập mật khẩu mới.
 - **Response `200 OK`**: Danh sách thông báo (tối đa 1.000 sự cố gần nhất).
 
 ### 6.2. Đánh Dấu Sự Cố Đã Xử Lý
+- **Trạng thái source hiện tại**: Chưa có HTTP route `PUT /api/notifications/:id/resolve` trong Next route handlers hoặc backend standalone. Đoạn dưới mô tả hợp đồng dự kiến và không nên được client gọi như API đã triển khai.
 - **Method**: `PUT`
 - **Path**: `/api/notifications/:id/resolve`
 - **Database Model**: `NotificationModel` -> Atomic Update (`status = 'resolved'`)
@@ -631,7 +642,7 @@ Xác thực mã OTP 6 chữ số và thiết lập mật khẩu mới.
 
 ### 7.6. Cảnh Báo Quá Nhiệt (Temperature Warning)
 - **Method**: `POST`
-- **Path**: `/api/safety/temperature`
+- **Path**: `/api/safety/temp-warning` (alias: `/api/telemetry/temp`)
 - **Request Body**:
 ```json
 {
@@ -666,7 +677,8 @@ Xác thực mã OTP 6 chữ số và thiết lập mật khẩu mới.
 
 ### 7.9. Trạng Thái Kết Nối MQTT
 - **Method**: `POST`
-- **Path**: `/api/safety/mqtt-status`
+- **Path**: `/api/safety/mqtt-disconnected` hoặc `/api/safety/mqtt-connected`
+- **Alias**: `/api/mqtt/disconnected`, `/api/mqtt/connected`
 - **Request Body**:
 ```json
 {

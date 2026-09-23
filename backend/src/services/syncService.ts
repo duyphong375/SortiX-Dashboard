@@ -135,6 +135,14 @@ if (!currentState.config) {
 
 export const SyncService = {
   getState(): DashboardSyncState {
+    try {
+      if (fs.existsSync(SYNC_FILE)) {
+        currentState = loadSyncStateFromFile();
+        syncGlobal.sortixDashboardSyncState = currentState;
+      }
+    } catch {
+      // fallback to current in-memory state
+    }
     return { ...currentState };
   },
 

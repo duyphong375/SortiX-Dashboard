@@ -13,23 +13,15 @@ import {
   Save,
   Send,
   Cpu,
-  Wifi,
   WifiOff,
-  Radio,
   BellRing,
   Mail,
   AlertTriangle,
   CheckCircle2,
-  AlertCircle,
-  Activity,
-  Layers,
-  Code,
   RotateCcw,
   OctagonAlert,
   Boxes,
   Thermometer,
-  Flame,
-  Wind,
   ClipboardCheck,
   FlaskConical,
 } from "lucide-react";
@@ -85,8 +77,6 @@ export const ConfigAndDiagnostics: React.FC<ConfigAndDiagnosticsProps> = ({
   isBinFull = false,
   onConfirmBinReplaced,
   onSimulateTemperatureChange,
-  isTempWarning = false,
-  onCoolDownTemperature,
   onSimulateDeviceOffline,
   isDeviceOffline = false,
   onReconnectDevice,
@@ -120,7 +110,6 @@ export const ConfigAndDiagnostics: React.FC<ConfigAndDiagnosticsProps> = ({
 
   const bin1ConfigTheme = getBinColorTheme(bin1Brand, "amber");
   const bin2ConfigTheme = getBinColorTheme(bin2Brand, "blue");
-  const bin3ConfigTheme = getBinColorTheme(config.bins[2]?.brand_ids?.[0], "cyan");
 
   const bin1SliderTheme = getBinColorTheme(config.bins[0]?.brand_ids?.[0], "amber");
   const bin2SliderTheme = getBinColorTheme(config.bins[1]?.brand_ids?.[0], "blue");

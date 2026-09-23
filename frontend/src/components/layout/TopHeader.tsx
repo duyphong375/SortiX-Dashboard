@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
 import {
   Bell,
   Sun,
@@ -91,9 +90,6 @@ const TopHeaderComponent: React.FC<TopHeaderProps> = ({
 }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const { user } = useAuth();
-  const isOperatorUser = user?.role === "user";
-
   const [currentTime, setCurrentTime] = useState<string>("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");

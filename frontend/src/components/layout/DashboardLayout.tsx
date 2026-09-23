@@ -48,6 +48,7 @@ import { ShiftSummaryModal } from "@/components/ui/ShiftSummaryModal";
 import { MqttDisconnectedToast } from "@/components/ui/MqttDisconnectedToast";
 import { EmergencyConfirmModal } from "@/components/ui/EmergencyConfirmModal";
 import { DashboardIncidentLayer } from "./DashboardIncidentLayer";
+import { AiCopilot } from "@/components/AiCopilot";
 import { ApiSafetyClient } from "@/services/apiSafetyClient";
 import { fetchSyncData, myClientId } from "@/services/apiSyncClient";
 
@@ -187,7 +188,7 @@ export interface DashboardState {
   handleToggleSound: () => void;
 }
 
-const DashboardContext = React.createContext<DashboardState | null>(null);
+export const DashboardContext = React.createContext<DashboardState | null>(null);
 
 export const useDashboard = () => {
   const context = useContext(DashboardContext);
@@ -196,6 +197,8 @@ export const useDashboard = () => {
   }
   return context;
 };
+
+export const useDashboardSafe = () => useContext(DashboardContext);
 
 export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const router = useRouter();
@@ -1960,6 +1963,9 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         }}
         onCancelClearHistory={() => setClearHistoryDialogOpen(false)}
       />
+
+      {/* Floating AI Copilot Drawer */}
+      <AiCopilot />
     </DashboardContext.Provider>
   );
 };

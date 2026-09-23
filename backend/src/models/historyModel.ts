@@ -64,6 +64,14 @@ let inMemoryHistory = (historyGlobal.sortixHistoryStore ??= loadHistoryFromFile(
 
 export const HistoryModel = {
   getAll(): ClassificationRecord[] {
+    try {
+      if (fs.existsSync(STORAGE_FILE)) {
+        inMemoryHistory = loadHistoryFromFile();
+        historyGlobal.sortixHistoryStore = inMemoryHistory;
+      }
+    } catch {
+      // fallback to in-memory
+    }
     return inMemoryHistory;
   },
 

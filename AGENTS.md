@@ -18,9 +18,9 @@ Tài liệu này quy định các tiêu chuẩn kỹ thuật, ràng buộc kiế
 
 - **Mô hình Monorepo (npm workspaces)**:
   - `frontend/`: Ứng dụng Next.js 14 App Router (`frontend/src/app/`).
-  - `backend/`: Máy chủ độc lập Node.js/Express + TypeScript (`backend/src/`).
+  - `backend/`: Máy chủ độc lập TypeScript dùng module chuẩn `node:http` (`backend/src/`).
   - `shared/`: Thư viện dùng chung (`types/`, `schemas/`, `constants/`).
-  - `scripts/`: Kịch bản điều phối môi trường (`dev-all.cjs`).
+  - `scripts/`: Kịch bản dev, build, e2e, test, giải phóng cổng và nâng cấp workflow.
 - **Khởi chạy ứng dụng**:
   - Chạy đồng thời cả Frontend và Backend: `npm run dev:all`.
   - Chạy riêng Frontend: `npm run dev:frontend` (Port 3000).
@@ -32,6 +32,13 @@ Tài liệu này quy định các tiêu chuẩn kỹ thuật, ràng buộc kiế
   - Tại Frontend: Luôn sử dụng alias `@/` trỏ tới `frontend/src/` và `@shared/*` trỏ tới `shared/*`.
   - Tại Backend: Luôn import từ `@shared/*` hoặc relative path chuẩn mực.
   - Tuyệt đối không dùng các đường dẫn tương đối xuyên tầng lộn xộn (ví dụ: `../../../../shared/types`).
+- **Persistence hiện tại**:
+  - Runtime sử dụng `data/history.json`, `data/notifications.json`, `data/sync_state.json` và `data/users.json`.
+  - `ConfigModel` giữ cấu hình mặc định trong bộ nhớ; không tự tạo hoặc xóa `data/config.json` nếu source không yêu cầu.
+  - `backend/database/migrations` và `backend/database/seeds` là artifact tham chiếu; phải giữ nguyên khi refactor.
+- **API layers**:
+  - Next route handlers nằm dưới `frontend/src/app/api` và backend standalone cùng phục vụ một số route tương thích.
+  - Không hợp nhất, đổi tên hoặc xóa alias route chỉ vì thấy endpoint trùng tên.
 
 ---
 
@@ -122,11 +129,12 @@ Tài liệu này quy định các tiêu chuẩn kỹ thuật, ràng buộc kiế
     13. `tests/temperature_gauge_simulation_vs_real.test.cjs` (4 tests: Chuyển đổi giao diện Mô phỏng vs Thực tế)
     14. `tests/daily_report_sync.test.cjs` (6 tests: Đồng bộ số liệu live Báo Cáo 1 Ngày Làm Việc)
     15. `tests/simulation_mode_guard.test.cjs` (3 tests: Cô lập chế độ Mô phỏng & Thực tế)
+    16. `tests/cross_device_sync.test.cjs` (7 tests: Đồng bộ trạng thái giữa các thiết bị qua API/SSE)
 - **Lệnh thực thi kiểm thử trước khi bàn giao**:
   ```powershell
   npm test
   ```
-  Tất cả **108/108 bài kiểm thử phải đạt PASS 100%**.
+  Tất cả file test được nối trong script `npm test` phải đạt PASS. Không hard-code tổng số test vào tài liệu; các file test bổ sung có thể tồn tại trong `tests/` nhưng chưa được nối vào script root.
 
 ---
 
@@ -136,7 +144,7 @@ Tài liệu này quy định các tiêu chuẩn kỹ thuật, ràng buộc kiế
   - Mọi tính năng mới, sửa lỗi hay tinh chỉnh giao diện đều phải được thực hiện trên codebase chung Next.js 14 (`frontend/src/`).
   - Tuyệt đối không tạo mã nguồn frontend riêng biệt hay phân mảnh logic cho Mobile.
 - **Nghiêm Cấm Bật `output: 'export'`**:
-  - Không được thêm `output: 'export'` vào `next.config.mjs` vì sẽ vô hiệu hóa 18 dynamic API routes nội bộ (`/api/safety`, `/api/auth`, `/api/history`, v.v.) và SSE stream thời gian thực (`/api/events`).
+  - Không được thêm `output: 'export'` vào `next.config.mjs` vì sẽ vô hiệu hóa các API route handlers dynamic (`/api/safety`, `/api/auth`, `/api/history`, v.v.) và SSE stream thời gian thực (`/api/events`).
   - Ứng dụng di động luôn sử dụng Capacitor WebView kết nối tới `server.url` (máy chủ Next.js).
 - **Tương Thích Đa Màn Hình & Cảm Ứng Di Động**:
   - Mọi giao diện phải đáp ứng tốt cả màn hình Desktop lớn (>= 1024px) và màn hình điện thoại di động (< 640px).

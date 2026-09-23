@@ -4,6 +4,16 @@
 
 ---
 
+## Ghi chú implementation hiện tại
+
+Các sơ đồ và phân tích chi tiết trong tài liệu này được giữ lại để mô tả nghiệp vụ, luồng safety và ý định triển khai. Khi đối chiếu với source hiện tại, cần dùng các điểm sau:
+
+- Backend runtime là HTTP server dùng `node:http` trong `backend/src/server.ts`, không phải Express. `routes/`, `controllers/`, `middlewares/` và `services/` vẫn giữ cách phân lớp tương ứng.
+- Frontend có hai lớp phục vụ API: Next.js route handlers tại `frontend/src/app/api` và backend standalone tại cổng `5000`. Các route tương thích có thể xuất hiện ở cả hai lớp.
+- JSON là persistence đang chạy: `data/history.json`, `data/notifications.json`, `data/sync_state.json`, `data/users.json`. `ConfigModel` giữ config hiện tại trong memory. Các DDL trong `backend/database/migrations` và seed là artifact tham chiếu, không phải adapter database đang được gọi bởi runtime.
+- Capacitor dùng `webDir: "out"` và `server.url` từ `CAPACITOR_SERVER_URL`, với fallback được định nghĩa trong `frontend/capacitor.config.ts`. Không ghi cố định IP LAN vào tài liệu vận hành.
+- Script root hiện chạy 16 test file, trong đó có `cross_device_sync.test.cjs`; một số test file bổ sung trong `tests/` chưa được nối vào `npm test`.
+
 ## 📌 Mục Lục
 1. [Tổng Quan Kiến Trúc (High-Level Architecture)](#1-tổng-quan-kiến-trúc-high-level-architecture)
 2. [Phân Tích Chi Tiết Từng Tầng (Layer Breakdown)](#2-phân-tích-chi-tiết-từng-tầng-layer-breakdown)
@@ -35,7 +45,7 @@ Hệ thống **SortiX-Med** được thiết kế theo mô hình kiến trúc ph
 
 1. **Frontend Web (Giao diện Client)**: Ứng dụng Next.js 14 App Router, chịu trách nhiệm trực quan hóa đồ họa Canvas 60fps mô phỏng dụng cụ y tế di chuyển, âm thanh công nghiệp tổng hợp qua Web Audio API, đồng hồ nhiệt độ bán nguyệt 2 chế độ, các thanh trượt điều chỉnh dung lượng khay (5-50 SP) và tương tác người dùng.
 2. **Mobile Shell Layer (Ứng Dụng Di Động)**: Vỏ bọc Hybrid đa nền tảng sử dụng **Capacitor 8** để đóng gói thành ứng dụng **Android APK** native và hỗ trợ **iOS PWA Standalone** toàn màn hình từ cùng 1 codebase.
-3. **Backend API Server**: Máy chủ Express/Node.js độc lập xử lý xác thực, phân quyền RBAC, giám sát an toàn công nghiệp (E-Stop, Kẹt phôi, Khay đầy, Quá nhiệt, Thiết bị offline, Mất kết nối MQTT, Báo cáo 1 ngày làm việc), broadcast SSE và lưu trữ dữ liệu bền vững.
+3. **Backend API Server**: Máy chủ `node:http`/Node.js độc lập xử lý xác thực, phân quyền RBAC, giám sát an toàn công nghiệp (E-Stop, Kẹt phôi, Khay đầy, Quá nhiệt, Thiết bị offline, Mất kết nối MQTT, Báo cáo 1 ngày làm việc), broadcast SSE và lưu trữ dữ liệu bền vững.
 4. **Shared Layer (Tầng Dùng Chung)**: Định nghĩa kiểu dữ liệu (Types), Zod Schemas và hằng số hệ thống dùng chung giữa Frontend, Mobile và Backend.
 5. **IoT & Vision Gateway**: Cầu nối truyền thông hai chiều thời gian thực giữa vi điều khiển ESP32-C5, cụm cảm biến S1-S3, 2 cơ cấu Servo gạt phôi và MQTT Broker qua Wi-Fi 6.
 
@@ -70,7 +80,7 @@ Hệ thống **SortiX-Med** được thiết kế theo mô hình kiến trúc ph
 │  - Services: safetyService, sseService, ... │   │  - sorter/01/telemetry │
 │  - Models: notificationModel, userModel     │   │  - sorter/01/vision    │
 │  - Security: Bcrypt, OTP, RBAC Middleware   │   │  - sorter/01/control   │
-│  - Multi-DB Migrations (SQL / NoSQL)        │   │  - sorter/01/estop     │
+│  - Migration references (SQL / NoSQL)       │   │  - sorter/01/estop     │
 │  - Email (SMTP) & Telegram Bot Integration  │   │  - conveyor/sensor/jam │
 │  - MQTT Watchdog (5s Debounce, Backoff)     │   │  - conveyor/storage/*  │
 │  - Device Heartbeat Watchdog (6s Timeout)   │   │  - conveyor/heartbeat  │
@@ -82,7 +92,7 @@ Hệ thống **SortiX-Med** được thiết kế theo mô hình kiến trúc ph
 │          PERSISTENCE & DATA STORE           │   │(Sensors S1-S3, Servo)  │
 │  - data/users.json (User Accounts Store)    │   └────────────────────────┘
 │  - data/notifications.json (Safety Events)  │
-│  - SQLite / PostgreSQL / MySQL / MongoDB    │
+│  - JSON runtime store; DDL references       │
 └─────────────────────────────────────────────┘
 ```
 
@@ -135,7 +145,8 @@ Hệ thống **SortiX-Med** được thiết kế theo mô hình kiến trúc ph
 - **Models (`backend/src/models/`)**:
   - `notificationModel.ts`: Lưu trữ bền vững các sự cố an toàn vào file `data/notifications.json` qua cơ chế ghi nguyên tử Atomic Write.
   - `userModel.ts`: Thao tác dữ liệu người dùng bền vững trên file `data/users.json`, tích hợp sẵn Admin Seeder khởi tạo 4 tài khoản Ban Quản trị.
-  - `historyModel.ts` & `configModel.ts`: Quản lý bộ nhớ đệm an toàn (Bounded Buffer tối đa 1000 bản ghi), loại trừ nguy cơ tràn RAM.
+  - `historyModel.ts`: Quản lý bộ nhớ đệm lịch sử giới hạn tối đa 1000 bản ghi.
+  - `configModel.ts`: Giữ `DEFAULT_SORTER_CONFIG` và bản config hiện tại trong memory; không phải file database riêng.
 - **Middlewares (`backend/src/middlewares/`)**:
   - `authMiddleware.ts`: Kiểm tra Bearer Token, kiểm tra quyền hạn `requireAdmin`.
   - `validateMiddleware.ts`: Kiểm định đầu vào JSON qua Zod Schema trước khi chạm tới Controller.
@@ -169,10 +180,10 @@ Xây dựng trên nền tảng Next.js 14 App Router với hiệu năng tối ư
 ### 2.4. Mobile Shell Layer (Capacitor Android & iOS PWA)
 - **Mô hình 1-Codebase Hybrid Bridge**:
   - Đóng gói giao diện Next.js 14 thành ứng dụng Native Android qua **Capacitor 8**.
-  - Không sử dụng chế độ tĩnh `output: 'export'` tĩnh để bảo vệ toàn vẹn 18 dynamic API routes và SSE stream `/api/events`.
-  - Trang dự phòng ngoại tuyến `frontend/out/index.html` bảo đảm app không bị sập khi chưa có kết nối mạng.
+  - Không sử dụng chế độ tĩnh `output: 'export'` để bảo vệ các dynamic API route handlers và SSE stream `/api/events`.
+  - `webDir: "out"` là thư mục output mà Capacitor mong đợi khi sync; thư mục này được tạo bởi quy trình đóng gói và không phải source runtime cố định trong repository hiện tại.
 - **Cấu hình Quyền & Mạng (`AndroidManifest.xml`)**:
-  - Kích hoạt `android:usesCleartextTraffic="true"` cho phép giao tiếp HTTP nội bộ trong quá trình phát triển và kết nối vi điều khiển qua IP cục bộ (`http://192.168.1.169:3000`).
+  - Kích hoạt `android:usesCleartextTraffic="true"` cho phép giao tiếp HTTP nội bộ trong quá trình phát triển. URL cụ thể lấy từ `CAPACITOR_SERVER_URL` hoặc fallback trong `frontend/capacitor.config.ts`.
   - Cấp các quyền mạng cần thiết: `INTERNET`, `ACCESS_NETWORK_STATE`.
 - **Tối ưu Viewport & Giao Diện Cảm Ứng Di Động**:
   - Tích hợp chuẩn Next.js 14 `Viewport` trong `frontend/src/app/layout.tsx`:
@@ -212,7 +223,7 @@ sequenceDiagram
     participant ESP as Vi Điều Khiển ESP32-C5
     participant Broker as MQTT Broker
     participant Servo as Cơ Cấu Gạt Servo
-    participant Server as Express Backend
+    participant Server as node:http Backend
     participant UI as Dashboard Web/Mobile
 
     Belt->>ESP: Dụng cụ kích hoạt S1 (IO0)
@@ -245,7 +256,7 @@ sequenceDiagram
     actor Op as Người Vận Hành
     actor Admin as Quản Trị Viên (Admin)
     participant UI as Web/Mobile Client
-    participant Server as Express Backend
+    participant Server as node:http Backend
     participant SSE as SSE Stream (/api/events)
     participant DB as notifications.json
     participant Alerts as Telegram Bot & SMTP
@@ -318,7 +329,7 @@ flowchart TD
     end
 
     subgraph SYSTEM_EVENTS["Luồng Sự Kiện An Toàn & Đồng Bộ (Low-Frequency Events)"]
-        SERVER["Express Backend Engine"] -->|"SSE /api/events"| CLIENT_SSE["Trình duyệt Client (EventSource)"]
+        SERVER["node:http Backend Engine"] -->|"SSE /api/events"| CLIENT_SSE["Trình duyệt Client (EventSource)"]
         CLIENT_SSE --> EVENT_DISPATCH{"Bộ Phân Phối Sự Kiện"}
         EVENT_DISPATCH -->|emergency_stop| ESTOP_HANDLER["Bật còi hú & Khóa Banner"]
         EVENT_DISPATCH -->|safety_unlocked| UNLOCK_HANDLER["Tắt còi & Mở khóa"]
@@ -396,7 +407,7 @@ erDiagram
 
 ### 4.2. Chiến Lược Lưu Trữ 2 Tầng (Dual-Mode Persistence: JSON vs RDBMS/NoSQL)
 
-Hệ thống hỗ trợ 2 tầng lưu trữ song song:
+Thiết kế tài liệu mô tả 2 tầng, nhưng runtime hiện tại sử dụng JSON store; tầng database bên dưới là migration/seed tham chiếu cho triển khai tương lai và không được gọi bởi script runtime hiện tại:
 
 1. **Tầng 1 (Local JSON Store - Zero Setup)**:
    - Thư mục lưu trữ: `data/users.json`, `data/notifications.json`, `data/history.json`.
@@ -404,7 +415,7 @@ Hệ thống hỗ trợ 2 tầng lưu trữ song song:
    - Tự động nạp sẵn dữ liệu 4 tài khoản Admin thông qua Admin Seeder idempotent.
    - Không yêu cầu người dùng phải cài đặt PostgreSQL hay MySQL, cực kỳ thuận tiện cho việc bảo vệ đồ án và chấm điểm trực tiếp trên máy chấm thi.
 
-2. **Tầng 2 (Enterprise Database - Production Ready)**:
+2. **Tầng 2 (Enterprise Database - Migration Reference)**:
    - Toàn bộ cấu trúc thực thể đã có sẵn các file migration DDL trong `backend/database/migrations/`:
      - `001_create_users_table_postgres.sql`: PostgreSQL với `pgcrypto`, UUID, trigger cập nhật `updated_at`.
      - `001_create_users_table_mysql.sql`: MySQL 8.0 với `VARCHAR(36)` UUID và `ON UPDATE CURRENT_TIMESTAMP`.
@@ -490,7 +501,7 @@ function saveUsersToDisk(users: UserAccount[]): void {
                    REST API / SSE Streams
                                |
 +------------------------------v------------------------------+
-| TẦNG 2: MÁY CHỦ EXPRESS (SERVER IN-MEMORY CACHE)            |
+| TẦNG 2: MÁY CHỦ node:http (SERVER IN-MEMORY CACHE)          |
 | - usersStore[]: Danh sách tài khoản đã xác thực             |
 | - inMemoryHistory[]: Bounded Buffer tối đa 1.000 bản ghi    |
 | - notificationsStore[]: Bounded Buffer tối đa 1.000 sự cố   |
@@ -504,7 +515,7 @@ function saveUsersToDisk(users: UserAccount[]): void {
 | - data/users.json (Atomic Rename qua .tmp)                  |
 | - data/notifications.json (Atomic Rename qua .tmp)          |
 | - data/history.json (Atomic Rename qua .tmp)                |
-| - Hệ quản trị CSDL PostgreSQL / MySQL / SQLite / MongoDB    |
+| - Migration reference: PostgreSQL / MySQL / SQLite / MongoDB |
 +-------------------------------------------------------------+
 ```
 
@@ -527,7 +538,7 @@ function saveUsersToDisk(users: UserAccount[]): void {
 
 ## 6. Kiến Trúc Kiểm Thử & Cổng Chất Lượng (Quality Gates & Testing)
 
-Dự án áp dụng quy trình kiểm định chất lượng phần mềm nghiêm ngặt với 15 bộ test suites tự động bảo đảm **108/108 tests PASS (100%)**:
+Dự án áp dụng kiểm định tự động theo script `npm test`. Script hiện nối 16 test file; bảng dưới giữ mô tả chức năng của các suite và bổ sung kiểm thử đồng bộ đa thiết bị. Không dùng một tổng số test cố định trong tài liệu vì các test file bổ sung có thể tồn tại ngoài script root:
 
 ```
 tests/
@@ -545,5 +556,6 @@ tests/
 ├── simulation_mode_guard.test.cjs     # Cô lập chế độ Mô phỏng & Thực tế
 ├── temperature_gauge_simulation_vs_real.test.cjs # Đồng hồ nhiệt độ 2 chế độ
 ├── temperature_warning.test.cjs       # Cảnh báo quá nhiệt động cơ/CPU
-└── users.test.cjs                     # Bảo mật tài khoản, Bcrypt & RBAC
+├── users.test.cjs                     # Bảo mật tài khoản, Bcrypt & RBAC
+└── cross_device_sync.test.cjs         # Đồng bộ trạng thái giữa các client qua API/SSE
 ```

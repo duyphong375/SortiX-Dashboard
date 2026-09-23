@@ -8,6 +8,23 @@ let activeIncident: EmergencyStopPayload | null = null;
 let lastNotification: NotificationRecord | null = null;
 let lastUnlockedAt: number = 0;
 
+let latestTelemetry = {
+  device_id: "ESP32_MAIN_CONTROLLER",
+  sensor_type: "DS18B20",
+  current_temp: 42.5,
+  threshold_temp: 75.0,
+  unit: "°C",
+  is_overheat: false,
+  status: "NORMAL",
+  is_running: true,
+  motor_speed: 50,
+  estop_pressed: false,
+  jam_detected: false,
+  optical_sensor_02: "CLEAR",
+  safety_conclusion: "Hệ thống ĐỦ ĐIỀU KIỆN an toàn để tiếp tục vận hành.",
+  updated_at: new Date().toISOString(),
+};
+
 function eventTime(timestamp?: string): string {
   const value = timestamp ? Date.parse(timestamp) : NaN;
   return Number.isFinite(value) ? new Date(value).toISOString() : new Date().toISOString();
@@ -17,6 +34,14 @@ function eventTime(timestamp?: string): string {
 let onUnlockPublishHook: (() => void) | null = null;
 
 export const SafetyService = {
+  getTelemetry() {
+    return latestTelemetry;
+  },
+
+  updateTelemetry(data: Partial<typeof latestTelemetry>) {
+    latestTelemetry = { ...latestTelemetry, ...data, updated_at: new Date().toISOString() };
+  },
+
   getStatus(): SafetyStatusResponse {
     const unprocessedCount = NotificationModel.getUnprocessed().length;
     return {
@@ -208,6 +233,21 @@ export const SafetyService = {
     });
 
     lastNotification = record;
+
+    latestTelemetry = {
+      ...latestTelemetry,
+      device_id: deviceName,
+      sensor_type: "DS18B20",
+      current_temp: currentTemp,
+      threshold_temp: thresholdTemp,
+      unit,
+      is_overheat: currentTemp > thresholdTemp,
+      status: currentTemp > thresholdTemp ? "WARNING" : "NORMAL",
+      safety_conclusion: currentTemp > thresholdTemp
+        ? "CẢNH BÁO: Nhiệt độ vượt ngưỡng an toàn! Đề nghị dừng máy kiểm tra."
+        : "Hệ thống ĐỦ ĐIỀU KIỆN an toàn để tiếp tục vận hành.",
+      updated_at: payload.timestamp || new Date().toISOString(),
+    };
 
     console.warn(`[TEMP WARNING] 🔥 ${deviceLabel} QUÁ NHIỆT: ${currentTemp}${unit} > ${thresholdTemp}${unit}!`);
 

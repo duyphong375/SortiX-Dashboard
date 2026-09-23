@@ -27,14 +27,14 @@ Tất cả các thay đổi về kiến trúc, tính năng, sửa lỗi và nân
 ### 📱 Mobile & QR Code Enhancements (Nâng Cấp Di Động & Mã QR)
 - **Tạo Mới Mã QR Truy Cập Nhanh (`SortiX_Dashboard.png`)**:
   - Thiết kế mã QR chuẩn đồ họa phân giải cao, hiển thị nhận diện thương hiệu SortiX-Med.
-  - Quét mã bằng camera điện thoại Android để mở trực tiếp Web Dashboard trên mạng LAN (`http://192.168.1.169:3000`).
-  - Hỗ trợ tải trực tiếp file APK cài đặt tại `http://192.168.1.169:3000/SortiX-Dashboard.apk` (đồng bộ vào `frontend/public/SortiX-Dashboard.apk`).
+  - Quét mã bằng camera điện thoại Android để mở Web Dashboard trên URL LAN của máy chủ tại thời điểm triển khai.
+  - Hỗ trợ tải APK khi asset đã được đặt trong `frontend/public` của bản build tương ứng.
 - **Cập Nhật Cấu Hình Capacitor 8 (`frontend/capacitor.config.ts`)**:
-  - Cập nhật URL máy chủ mặc định trỏ tới `http://192.168.1.169:3000`.
+  - URL máy chủ hiện lấy từ `CAPACITOR_SERVER_URL`, với fallback được khai báo trong `frontend/capacitor.config.ts`.
 
 ### 🛡️ Quality Gate (Kiểm Thử & Đảm Bảo Chất Lượng)
-- Bảo toàn **108/108 Tests PASS (100%)** trên toàn bộ 15 Test Suites.
-- Biên dịch thành công 100% Next.js 14 Production Build (31/31 routes).
+- Bảo toàn các test được nối trong script root `npm test`; script hiện gồm 16 file test.
+- Biên dịch thành công Next.js 14 Production Build; danh sách route được Next.js sinh theo App Router hiện tại.
 
 ---
 
@@ -69,20 +69,20 @@ Tất cả các thay đổi về kiến trúc, tính năng, sửa lỗi và nân
 
 ### 🚀 Added (Thêm mới)
 - **Kịch Bản Điều Phối Monorepo (`scripts/dev-all.cjs`)**:
-  - Hỗ trợ lệnh `npm run dev:all` khởi chạy song song và tự động quản lý vòng đời của cả Frontend (Next.js 14 tại Port 3000) và Backend (Express tại Port 5000) chỉ bằng một câu lệnh duy nhất.
+  - Hỗ trợ lệnh `npm run dev:all` khởi chạy song song và tự động quản lý vòng đời của cả Frontend (Next.js 14 tại Port 3000) và Backend (`node:http` tại Port 5000) chỉ bằng một câu lệnh duy nhất.
 - **Tự Động Vá Path Alias Backend (`backend/scripts/patch-dist-aliases.cjs`)**:
   - Khắc phục triệt để lỗi không resolve được alias module `@shared/*` trong mã nguồn JavaScript sau khi biên dịch `tsc` bằng cơ chế rewrite module specifier thời gian thực.
 - **Xác Thực Token Phiên Ký Số (`backend/src/services/authToken.ts`)**:
   - Chuẩn hóa cơ chế ký số token xác thực phiên người dùng, kiểm tra chéo trạng thái hoạt động (`status: 'active'`) và vai trò phân quyền.
 - **API Heartbeat & Token Đồng Bộ**:
-  - Bổ sung các routes `/api/auth/heartbeat`, `/api/auth/token` và `/api/auth/logout` ở cả Frontend proxy và Native Express Backend.
+  - Bổ sung các routes `/api/auth/heartbeat`, `/api/auth/token` và `/api/auth/logout` ở frontend route handlers và backend standalone khi route tương ứng được triển khai.
 - **Báo Cáo Tích Hợp Cuối Cùng (`FINAL_INTEGRATION_REPORT.md`)**:
-  - Tổng kết toàn bộ kết quả kiểm tra chất lượng, chứng minh 108/108 tests pass, TypeScript 0 lỗi và sản phẩm sẵn sàng triển khai.
+  - Tổng kết kết quả kiểm tra chất lượng và typecheck theo script tại thời điểm phát hành.
 
 ### 🛡️ Security & Quality (Bảo mật & Chất lượng)
 - Chuẩn hóa toàn bộ biến môi trường qua `backend/src/config/env.ts` với khả năng tự động đọc file `.env` linh hoạt và an toàn.
 - Loại bỏ toàn bộ trường mật khẩu thô `plain_password` trong kho dữ liệu demo `data/users.json`, 100% tài khoản sử dụng mật khẩu băm Bcrypt.
-- Xác nhận kiểm thử hồi quy tự động: **108/108 Tests PASS (100% - 15 Test Suites)** không có lỗi tồn đọng.
+- Xác nhận kiểm thử hồi quy tự động theo các suite được nối trong `package.json` tại thời điểm phát hành.
 
 ---
 
@@ -184,4 +184,4 @@ Tất cả các thay đổi về kiến trúc, tính năng, sửa lỗi và nân
   - `backend/src/controllers/`: `configController`, `historyController`, `statsController`, `alertController`.
   - `backend/src/routes/`: `configRoutes`, `historyRoutes`, `statsRoutes`, `alertRoutes`.
   - `backend/src/models/`: `historyModel`, `configModel` (bộ đệm an toàn giới hạn tối đa 1000 bản ghi).
-  - `backend/src/server.ts`: Express Server độc lập chạy song song trên cổng 5000.
+  - `backend/src/server.ts`: `node:http` Server độc lập chạy song song trên cổng 5000.

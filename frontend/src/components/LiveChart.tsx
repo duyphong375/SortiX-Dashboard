@@ -25,7 +25,6 @@ interface LiveChartProps {
 
 export const LiveChart: React.FC<LiveChartProps> = ({
   data,
-  brandCounts,
   binCounts,
   conveyorSpeed = 65,
   isRunning = true,

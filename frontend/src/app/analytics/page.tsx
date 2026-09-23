@@ -12,7 +12,6 @@ import {
   Sparkles,
   BarChart3,
   PieChart as PieIcon,
-  Calendar,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -29,7 +28,6 @@ import {
 
 export default function AnalyticsPage() {
   const {
-    telemetry,
     records,
     binCounts,
     brandCounts,

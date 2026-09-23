@@ -3,9 +3,9 @@
   "isRunning": true,
   "speed": 50,
   "binCounts": {
-    "bin1": 7,
-    "bin2": 14,
-    "bin3": 30
+    "bin1": 0,
+    "bin2": 0,
+    "bin3": 0
   },
   "binCapacities": {
     "bin1": 38,
@@ -13,14 +13,10 @@
     "bin3": 50
   },
   "brandCounts": {
-    "brand_c": 100,
-    "brand_a": 3,
-    "brand_b": 2,
-    "brand_d": 1,
-    "med_syringe": 29,
-    "med_vial": 33,
-    "med_forceps": 18,
-    "med_scissors": 15
+    "brand_c": 0,
+    "brand_a": 0,
+    "brand_b": 0,
+    "brand_d": 0
   },
   "config": {
     "schema_version": 1,
@@ -45,5 +41,5 @@
     "apply_mode": "when_line_empty",
     "timestamp": "2026-09-19T04:06:49.279Z"
   },
-  "updatedAt": "2026-09-23T03:48:36.378Z"
+  "updatedAt": "2026-09-23T06:50:00.793Z"
 }

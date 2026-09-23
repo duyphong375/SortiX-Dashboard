@@ -1,6 +1,6 @@
 import mqtt, { MqttClient } from "mqtt";
 import { DEFAULT_MQTT_TOPICS } from "@shared/constants";
-import { EmergencyStopPayloadSchema, JamDetectedPayloadSchema, BinFullPayloadSchema, TemperatureWarningPayloadSchema, DeviceOfflinePayloadSchema, HeartbeatPayloadSchema, MqttDisconnectedPayloadSchema } from "@shared/schemas";
+import { EmergencyStopPayloadSchema, JamDetectedPayloadSchema, BinFullPayloadSchema, TemperatureWarningPayloadSchema, HeartbeatPayloadSchema, MqttDisconnectedPayloadSchema } from "@shared/schemas";
 import { SafetyService } from "./safetyService";
 import { ENV } from "../config/env";
 

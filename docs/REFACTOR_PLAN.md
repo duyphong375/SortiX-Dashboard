@@ -2,7 +2,7 @@
 
 > **Dự án**: SortiX-Med — Hệ Thống Tự Động Phân Loại Dụng Cụ Y Tế & Chuẩn Bị Khử Trùng Phòng Mổ (Đồ án PBL3 Biomedical & Industrial IoT)  
 > **Kiến trúc**: Monorepo Workspaces (Frontend, Backend, Shared, Data, Scripts, Tests)  
-> **Trạng thái**: ✅ **100% Hoàn Thành Các Giai Đoạn Cốt Lõi (108/108 Tests PASS - 15 Test Suites)**.
+> **Trạng thái**: Các giai đoạn cốt lõi trong kế hoạch lịch sử đã được đánh dấu hoàn thành. Script `npm test` hiện chạy 16 file; xem ma trận cập nhật ở mục 3 và báo cáo kiểm chứng hiện tại.
 
 ---
 
@@ -16,7 +16,7 @@
 
 ## 1. Mục Tiêu Tái Cấu Trúc Toàn Diện
 
-1. **Phân rã Monolithic Codebase**: Tách biệt dứt điểm giữa Frontend (Next.js 14 App Router), Backend (Node.js/Express + TypeScript) và Thư viện Dùng chung (`shared/`).
+1. **Phân rã Monolithic Codebase**: Tách biệt dứt điểm giữa Frontend (Next.js 14 App Router), Backend (Node.js `node:http` + TypeScript) và Thư viện Dùng chung (`shared/`).
 2. **Loại bỏ sự phụ thuộc quá mức vào LocalStorage**: Thiết lập kiến trúc dữ liệu phân tầng với API RESTful, file store bền vững (`data/users.json`, `data/notifications.json`), và bộ scripts migration sẵn sàng kết nối các hệ quản trị cơ sở dữ liệu lớn (SQLite, PostgreSQL, MySQL, MongoDB).
 3. **Nâng cấp Hệ Thống Bảo Mật & Xác Thực Doanh Nghiệp**:
    - Chuyển đổi từ tài khoản cứng sang cơ chế xác thực Bcrypt băm mật khẩu 10 salt rounds.
@@ -38,8 +38,8 @@
    - Báo cáo 1 ngày làm việc (`shift_summary`): Đồng bộ trực tiếp số lượng 3 khay, số bản ghi đạt/lỗi, số lần E-Stop, xuất CSV UTF-8 BOM chuẩn tiếng Việt.
    - Cô lập triệt để: Mọi nút test giả lập (E-Stop, Kẹt phôi, Khay đầy, Quá nhiệt, Offline ESP32, Test ngắt MQTT) chỉ hiển thị và hoạt động ở chế độ Mô Phỏng, hoàn toàn bị ẩn và chặn ở chế độ Thực Tế.
 5. **Bảo toàn và Mở rộng Kiểm Thử Tự Động (Quality Gate)**:
-   - Đảm bảo 100% các bộ test hồi quy luôn chạy tự động và đạt tỷ lệ Pass 100% (**108/108 tests PASS - 15 Test Suites**).
-   - Kiểm tra kiểu dữ liệu nghiêm ngặt qua TypeScript Strict Mode (0 errors, 0 warnings) và Next.js build (31/31 routes).
+   - Đảm bảo tất cả file test trong script root `npm test` đạt PASS; script hiện nối 16 file, ngoài ra còn file test chưa nối vào script.
+   - Kiểm tra TypeScript Strict Mode bằng `npx tsc --noEmit --pretty false` và Next.js build; lint hiện còn một warning `react-hooks/exhaustive-deps` tại `DashboardLayout.tsx`.
 
 ---
 
@@ -57,7 +57,7 @@
 - [x] **Task 2.3**: Xây dựng các Modal và Toast thông báo an toàn (`ForgotPasswordModal.tsx`, `ChangePasswordModal.tsx`, `ExportDialog.tsx`, `EmergencyConfirmModal.tsx`, `EmergencyUnlockToast.tsx`, `JamUnlockToast.tsx`, `BinFullToast.tsx`, `TemperatureWarningToast.tsx`, `DeviceOfflineToast.tsx`, `ShiftSummaryModal.tsx`, `ShiftSummaryToast.tsx`, `MqttDisconnectedToast.tsx`).
 
 ### ✅ Giai Đoạn 3: Xây Dựng Tầng Backend Độc Lập & Xác Thực Đa Lớp
-- [x] **Task 3.1**: Thiết lập máy chủ Express độc lập tại `backend/src/server.ts` (Port 5000).
+- [x] **Task 3.1**: Thiết lập máy chủ `node:http` độc lập tại `backend/src/server.ts` (Port 5000).
 - [x] **Task 3.2**: Xây dựng tầng Điều khiển & Nghiệp vụ (`userController`, `configController`, `historyController`, `statsController`, `alertController`, `safetyController`, `safetyService`, `mqttService`, `sseService`).
 - [x] **Task 3.3**: Quản lý dữ liệu bền vững và Seeder (`data/users.json`, `data/notifications.json`, `seed_admins.ts`, `seed_admins.sql`).
 - [x] **Task 3.4**: Chuẩn bị DDL Migrations cho đa hệ quản trị cơ sở dữ liệu (SQLite, PostgreSQL, MySQL, MongoDB).
@@ -82,10 +82,10 @@
 - [x] **Task 5.1**: Tích hợp build script backend tự động vá alias module `@shared/*` (`backend/scripts/patch-dist-aliases.cjs`).
 - [x] **Task 5.2**: Chuẩn hóa script chạy đồng thời `npm run dev:all` (`scripts/dev-all.cjs`).
 - [x] **Task 5.3**: Bổ sung xác thực session token an toàn qua `authToken.ts` và chuẩn hóa endpoint logout.
-- [x] **Task 5.4**: Xác thực toàn diện 15 bộ test suites với **108/108 Tests PASS (100%)**.
-- [x] **Task 5.5**: Typecheck 0 lỗi (`npx tsc --noEmit --pretty false`), Production build Next.js thành công 31/31 routes.
+- [x] **Task 5.4**: Xác thực toàn bộ 16 file test hiện được nối trong `npm test`.
+- [x] **Task 5.5**: Typecheck 0 lỗi (`npx tsc --noEmit --pretty false`) và production build Next.js hoàn tất; số lượng route phụ thuộc App Router hiện tại.
 - [x] **Task 5.6**: Đóng gói Mobile Native App bằng **Capacitor 8**, xuất file `SortiX-Dashboard.apk` (4.1MB) và tối ưu Viewport di động.
-- [x] **Task 5.7**: Tạo mã QR truy cập nhanh `SortiX_Dashboard.png` trên mạng LAN (`http://192.168.1.169:3000`) và hỗ trợ tải trực tiếp file APK.
+- [x] **Task 5.7**: Có asset QR `SortiX_Dashboard.png`; URL LAN cần cấu hình theo máy chủ hiện tại thay vì coi IP cũ là mặc định.
 
 ---
 
@@ -108,7 +108,8 @@
 | `tests/temperature_gauge_simulation_vs_real.test.cjs` | 4 | ✅ PASS | Chuyển đổi giao diện Mô phỏng vs Thực tế |
 | `tests/daily_report_sync.test.cjs` | 6 | ✅ PASS | Đồng bộ số liệu live Báo Cáo 1 Ngày Làm Việc |
 | `tests/simulation_mode_guard.test.cjs` | 3 | ✅ PASS | Cô lập tuyệt đối chế độ Mô phỏng và Thực tế |
-| **TỔNG CỘNG** | **108** | **100% PASS** | **15 Test Suites hoàn thành không lỗi** |
+| `tests/cross_device_sync.test.cjs` | 7 | ✅ PASS | Đồng bộ mode, running, speed, khay và SSE giữa nhiều client |
+| **TỔNG CỘNG trong script root** | **115** | **PASS** | **16 file test; chưa gồm các file test bổ sung ngoài script** |
 
 ---
 
@@ -119,7 +120,7 @@
    - Cung cấp tùy chọn chuyển đổi cấu hình `DB_TYPE=sqlite|postgres|mysql` trong `.env`.
    - Kết nối Prisma / Drizzle ORM tới cơ sở dữ liệu vật lý dựa trên các tệp DDL migrations đã chuẩn bị sẵn.
 2. **Đóng Gói Docker & Orchestration**:
-   - Xây dựng `Dockerfile` tối ưu hóa đa tầng (multi-stage build) cho Frontend Next.js và Backend Express.
+   - Xây dựng `Dockerfile` tối ưu hóa đa tầng (multi-stage build) cho Frontend Next.js và Backend `node:http`.
    - Viết `docker-compose.yml` tích hợp sẵn EMQX MQTT Broker, Backend API, Frontend Dashboard và PostgreSQL.
 3. **Thực Nghiệm Phần Cứng IoT ESP32-C5 & Stress Testing Trong Phòng Mổ**:
    - Kiểm thử áp lực truyền nhận 100 gói tin telemetry/giây trên băng chuyền vật lý thực tế.

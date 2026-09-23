@@ -62,6 +62,18 @@ export function LiveHealthAndBinWidget({
   const bin1Theme = getBinColorTheme(bin1Brands[0], "amber");
   const bin2Theme = getBinColorTheme(bin2Brands[0], "blue");
   const bin3Theme = getBinColorTheme(bin3Brands[0], "cyan");
+
+  const isFull1 = binCounts.bin1 >= cap1;
+  const isWarn1 = !isFull1 && (binCounts.bin1 / cap1) >= 0.8;
+  const rate1 = Math.min(100, Math.round((binCounts.bin1 / cap1) * 100));
+
+  const isFull2 = binCounts.bin2 >= cap2;
+  const isWarn2 = !isFull2 && (binCounts.bin2 / cap2) >= 0.8;
+  const rate2 = Math.min(100, Math.round((binCounts.bin2 / cap2) * 100));
+
+  const isFull3 = binCounts.bin3 >= cap3;
+  const isWarn3 = !isFull3 && (binCounts.bin3 / cap3) >= 0.8;
+  const rate3 = Math.min(100, Math.round((binCounts.bin3 / cap3) * 100));
   return (
     <div className="relate-card flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm dark:border-white/[0.07] dark:bg-[#161822]">
       <div>
@@ -218,14 +230,18 @@ export function LiveHealthAndBinWidget({
 
           {/* Khay 1 (Gạt 1) */}
           <div className={`rounded-xl border p-3 transition-all ${
-            binCounts.bin1 >= cap1
-              ? "border-amber-500/50 bg-amber-500/10 dark:border-amber-500/40 dark:bg-amber-950/20 animate-pulse"
+            isFull1
+              ? "border-rose-500/80 bg-rose-500/10 dark:border-rose-500/60 dark:bg-rose-950/25 ring-1 ring-rose-500/40 animate-pulse"
+              : isWarn1
+              ? "border-amber-500/80 bg-amber-500/10 dark:border-amber-500/50 dark:bg-amber-950/20 ring-1 ring-amber-500/30"
               : bin1Theme.widgetCardBorder
           }`}>
             <div className="flex items-center justify-between text-xs mb-1.5">
               <div className={`flex items-center gap-2 font-bold ${bin1Theme.widgetTitleText}`}>
-                {binCounts.bin1 >= cap1 ? (
-                  <Boxes className="h-4 w-4 text-amber-500 animate-bounce shrink-0" />
+                {isFull1 ? (
+                  <Boxes className="h-4 w-4 text-rose-500 animate-bounce shrink-0" />
+                ) : isWarn1 ? (
+                  <Boxes className="h-4 w-4 text-amber-500 shrink-0" />
                 ) : (
                   <span className={`h-2.5 w-2.5 rounded-full ${bin1Theme.widgetDotClass}`} />
                 )}
@@ -237,25 +253,30 @@ export function LiveHealthAndBinWidget({
                   / Khay 1)
                 </span>
               </div>
-              {binCounts.bin1 >= cap1 ? (
-                <span className="font-mono font-black text-amber-800 dark:text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
-                  100% ĐẦY ({binCounts.bin1}/{cap1} SP) - CẦN THAY
+              {isFull1 ? (
+                <span className="font-mono font-black text-rose-800 dark:text-rose-300 bg-rose-500/20 border border-rose-500/40 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
+                  🔴 100% ĐẦY ({binCounts.bin1}/{cap1} SP) - CẦN THAY
+                </span>
+              ) : isWarn1 ? (
+                <span className="font-mono font-bold text-amber-800 dark:text-amber-300 bg-amber-500/20 border border-amber-500/40 px-1.5 py-0.5 rounded text-[10px]">
+                  🟡 GẦN ĐẦY ({binCounts.bin1}/{cap1} SP - {rate1}%)
                 </span>
               ) : (
                 <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                  {binCounts.bin1}/{cap1} SP (
-                  {Math.min(100, Math.round((binCounts.bin1 / cap1) * 100))}%)
+                  🟢 {binCounts.bin1}/{cap1} SP ({rate1}%)
                 </span>
               )}
             </div>
             <div className="h-2.5 w-full rounded-full bg-slate-200/80 dark:bg-white/[0.08] overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
-                  binCounts.bin1 >= cap1
-                    ? "bg-amber-500 shadow-[0_0_10px_#f59e0b] animate-pulse"
+                  isFull1
+                    ? "bg-rose-500 shadow-[0_0_12px_#f43f5e] animate-pulse"
+                    : isWarn1
+                    ? "bg-amber-500 shadow-[0_0_10px_#f59e0b]"
                     : bin1Theme.widgetProgressBar
                 }`}
-                style={{ width: `${Math.min(100, (binCounts.bin1 / cap1) * 100)}%` }}
+                style={{ width: `${rate1}%` }}
               />
             </div>
 
@@ -318,14 +339,18 @@ export function LiveHealthAndBinWidget({
 
           {/* Khay 2 (Gạt 2) */}
           <div className={`rounded-xl border p-3 transition-all ${
-            binCounts.bin2 >= cap2
-              ? "border-amber-500/50 bg-amber-500/10 dark:border-amber-500/40 dark:bg-amber-950/20 animate-pulse"
+            isFull2
+              ? "border-rose-500/80 bg-rose-500/10 dark:border-rose-500/60 dark:bg-rose-950/25 ring-1 ring-rose-500/40 animate-pulse"
+              : isWarn2
+              ? "border-amber-500/80 bg-amber-500/10 dark:border-amber-500/50 dark:bg-amber-950/20 ring-1 ring-amber-500/30"
               : bin2Theme.widgetCardBorder
           }`}>
             <div className="flex items-center justify-between text-xs mb-1.5">
               <div className={`flex items-center gap-2 font-bold ${bin2Theme.widgetTitleText}`}>
-                {binCounts.bin2 >= cap2 ? (
-                  <Boxes className="h-4 w-4 text-amber-500 animate-bounce shrink-0" />
+                {isFull2 ? (
+                  <Boxes className="h-4 w-4 text-rose-500 animate-bounce shrink-0" />
+                ) : isWarn2 ? (
+                  <Boxes className="h-4 w-4 text-amber-500 shrink-0" />
                 ) : (
                   <span className={`h-2.5 w-2.5 rounded-full ${bin2Theme.widgetDotClass}`} />
                 )}
@@ -337,25 +362,30 @@ export function LiveHealthAndBinWidget({
                   / Khay 2)
                 </span>
               </div>
-              {binCounts.bin2 >= cap2 ? (
-                <span className="font-mono font-black text-amber-800 dark:text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
-                  100% ĐẦY ({binCounts.bin2}/{cap2} SP) - CẦN THAY
+              {isFull2 ? (
+                <span className="font-mono font-black text-rose-800 dark:text-rose-300 bg-rose-500/20 border border-rose-500/40 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
+                  🔴 100% ĐẦY ({binCounts.bin2}/{cap2} SP) - CẦN THAY
+                </span>
+              ) : isWarn2 ? (
+                <span className="font-mono font-bold text-amber-800 dark:text-amber-300 bg-amber-500/20 border border-amber-500/40 px-1.5 py-0.5 rounded text-[10px]">
+                  🟡 GẦN ĐẦY ({binCounts.bin2}/{cap2} SP - {rate2}%)
                 </span>
               ) : (
                 <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                  {binCounts.bin2}/{cap2} SP (
-                  {Math.min(100, Math.round((binCounts.bin2 / cap2) * 100))}%)
+                  🟢 {binCounts.bin2}/{cap2} SP ({rate2}%)
                 </span>
               )}
             </div>
             <div className="h-2.5 w-full rounded-full bg-slate-200/80 dark:bg-white/[0.08] overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
-                  binCounts.bin2 >= cap2
-                    ? "bg-amber-500 shadow-[0_0_10px_#f59e0b] animate-pulse"
+                  isFull2
+                    ? "bg-rose-500 shadow-[0_0_12px_#f43f5e] animate-pulse"
+                    : isWarn2
+                    ? "bg-amber-500 shadow-[0_0_10px_#f59e0b]"
                     : bin2Theme.widgetProgressBar
                 }`}
-                style={{ width: `${Math.min(100, (binCounts.bin2 / cap2) * 100)}%` }}
+                style={{ width: `${rate2}%` }}
               />
             </div>
 
@@ -418,38 +448,47 @@ export function LiveHealthAndBinWidget({
 
           {/* Khay 3 (Mặc định) */}
           <div className={`rounded-xl border p-3 transition-all ${
-            binCounts.bin3 >= cap3
-              ? "border-amber-500/50 bg-amber-500/10 dark:border-amber-500/40 dark:bg-amber-950/20 animate-pulse"
+            isFull3
+              ? "border-rose-500/80 bg-rose-500/10 dark:border-rose-500/60 dark:bg-rose-950/25 ring-1 ring-rose-500/40 animate-pulse"
+              : isWarn3
+              ? "border-amber-500/80 bg-amber-500/10 dark:border-amber-500/50 dark:bg-amber-950/20 ring-1 ring-amber-500/30"
               : bin3Theme.widgetCardBorder
           }`}>
             <div className="flex items-center justify-between text-xs mb-1.5">
               <div className={`flex items-center gap-2 font-bold ${bin3Theme.widgetTitleText}`}>
-                {binCounts.bin3 >= cap3 ? (
-                  <Boxes className="h-4 w-4 text-amber-500 animate-bounce shrink-0" />
+                {isFull3 ? (
+                  <Boxes className="h-4 w-4 text-rose-500 animate-bounce shrink-0" />
+                ) : isWarn3 ? (
+                  <Boxes className="h-4 w-4 text-amber-500 shrink-0" />
                 ) : (
                   <span className={`h-2.5 w-2.5 rounded-full ${bin3Theme.widgetDotClass}`} />
                 )}
                 <span>Khay vật tư & Ống nghiệm (Khay 3)</span>
               </div>
-              {binCounts.bin3 >= cap3 ? (
-                <span className="font-mono font-black text-amber-800 dark:text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
-                  100% ĐẦY ({binCounts.bin3}/{cap3} SP) - CẦN THAY
+              {isFull3 ? (
+                <span className="font-mono font-black text-rose-800 dark:text-rose-300 bg-rose-500/20 border border-rose-500/40 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
+                  🔴 100% ĐẦY ({binCounts.bin3}/{cap3} SP) - CẦN THAY
+                </span>
+              ) : isWarn3 ? (
+                <span className="font-mono font-bold text-amber-800 dark:text-amber-300 bg-amber-500/20 border border-amber-500/40 px-1.5 py-0.5 rounded text-[10px]">
+                  🟡 GẦN ĐẦY ({binCounts.bin3}/{cap3} SP - {rate3}%)
                 </span>
               ) : (
                 <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                  {binCounts.bin3}/{cap3} SP (
-                  {Math.min(100, Math.round((binCounts.bin3 / cap3) * 100))}%)
+                  🟢 {binCounts.bin3}/{cap3} SP ({rate3}%)
                 </span>
               )}
             </div>
             <div className="h-2.5 w-full rounded-full bg-slate-200/80 dark:bg-white/[0.08] overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
-                  binCounts.bin3 >= cap3
-                    ? "bg-amber-500 shadow-[0_0_10px_#f59e0b] animate-pulse"
+                  isFull3
+                    ? "bg-rose-500 shadow-[0_0_12px_#f43f5e] animate-pulse"
+                    : isWarn3
+                    ? "bg-amber-500 shadow-[0_0_10px_#f59e0b]"
                     : bin3Theme.widgetProgressBar
                 }`}
-                style={{ width: `${Math.min(100, (binCounts.bin3 / cap3) * 100)}%` }}
+                style={{ width: `${rate3}%` }}
               />
             </div>
 

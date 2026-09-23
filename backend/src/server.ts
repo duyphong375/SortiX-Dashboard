@@ -10,6 +10,7 @@ import { SafetyRoutes } from "./routes/safetyRoutes";
 import { SSEService, shutdownSSE } from "./services/sseService";
 import { initBackendMQTT, shutdownBackendMQTT } from "./services/mqttService";
 import { resolveUserFromRequest, checkRolePermission, requireAdmin } from "./middlewares/authMiddleware";
+import { formatErrorResponse } from "./middlewares/errorMiddleware";
 import { ENV } from "./config/env";
 import { HistoryQuerySchema } from "@shared/schemas";
 import { SyncService } from "./services/syncService";
@@ -74,6 +75,24 @@ const server = http.createServer(async (req, res) => {
     // Health Check
     if (pathname === "/api/health" && method === "GET") {
       sendJson(res, 200, { status: "ok", uptime: process.uptime() });
+      return;
+    }
+
+    // Telemetry Route (DS18B20 temperature & sensor status for AI Copilot / Diagnostics)
+    if (pathname === "/api/telemetry" && method === "GET") {
+      const result = SafetyRoutes.handleGetTelemetry();
+      const syncState = SyncService.getState();
+      const isSim = syncState.mode === "sim";
+      const enhancedBody = {
+        ...(typeof result.body === "object" && result.body !== null ? result.body : {}),
+        mode: syncState.mode,
+        isSimulation: isSim,
+        modeName: isSim ? "Mô phỏng (Simulation)" : "Thực tế (Real Hardware)",
+        modeDescription: isSim
+          ? "Hệ thống đang hoạt động ở chế độ MÔ PHỎNG (Simulation). Dữ liệu nhiệt độ và cảm biến là từ môi trường mô phỏng."
+          : "Hệ thống đang hoạt động ở chế độ THỰC TẾ (Real Hardware). Dữ liệu nhiệt độ đo trực tiếp từ cảm biến DS18B20 trên ESP32 thật.",
+      };
+      sendJson(res, result.status, enhancedBody);
       return;
     }
 
@@ -195,6 +214,40 @@ const server = http.createServer(async (req, res) => {
       const body = await parseJsonBody(req);
       const result = await AlertRoutes.handleTelegram(body);
       sendJson(res, result.status, result.body);
+      return;
+    }
+
+    // AI Copilot Chat Telegram Forward Endpoint
+    if (pathname === "/api/chat/telegram" && (method === "POST" || method === "GET")) {
+      let body: { text?: string; title?: string } = {};
+      if (method === "POST") {
+        body = (await parseJsonBody(req)) as { text?: string; title?: string };
+      } else {
+        body = {
+          text: parsedUrl.searchParams.get("text") || "",
+          title: parsedUrl.searchParams.get("title") || undefined,
+        };
+      }
+      const text = body?.text || "";
+      const token = ENV.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "8817192749:AAGj_mpc8ak7GgQy3-1TxhTJOslupGnSOjw";
+      const chatId = ENV.TELEGRAM_CHAT_ID || process.env.TELEGRAM_CHAT_ID || "5032117647";
+      if (!text.trim()) {
+        sendJson(res, 400, { success: false, message: "Nội dung tin nhắn không được để trống" });
+        return;
+      }
+      try {
+        const header = body?.title ? `[SORTIX-MED] ${body.title.toUpperCase()}` : `[BÁO CÁO SORTIX-MED AI COPILOT]`;
+        const formatted = `<b>🤖 ${header}</b>\n━━━━━━━━━━━━━━━━━━━━\n${text}\n━━━━━━━━━━━━━━━━━━━━\n⏰ <i>Gửi từ AI Copilot: ${new Date().toLocaleTimeString("vi-VN")}</i>`;
+        const tgRes = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: chatId, text: formatted, parse_mode: "HTML" }),
+        });
+        const tgData = await tgRes.json();
+        sendJson(res, 200, { success: true, message: "Đã gửi Telegram thành công", data: tgData });
+      } catch (err: unknown) {
+        sendJson(res, 500, { success: false, message: "Lỗi kết nối Telegram" });
+      }
       return;
     }
 
@@ -370,6 +423,73 @@ const server = http.createServer(async (req, res) => {
       const statusParam = parsedUrl.searchParams.get("status") || undefined;
       const result = SafetyRoutes.handleGetNotifications(statusParam);
       sendJson(res, result.status, result.body);
+      return;
+    }
+
+    // Bins Status Route (Cross-Device Real-time Tray Capacity & Counts for AI & Clients)
+    if (pathname === "/api/bins" && method === "GET") {
+      const state = SyncService.getState();
+      const binCounts = state.binCounts || { bin1: 0, bin2: 0, bin3: 0 };
+      const binCapacities = state.binCapacities || { bin1: 38, bin2: 50, bin3: 50 };
+      const totalInBins = (binCounts.bin1 || 0) + (binCounts.bin2 || 0) + (binCounts.bin3 || 0);
+      const isSim = state.mode === "sim";
+      const r1 = Number(((binCounts.bin1 / (binCapacities.bin1 || 1)) * 100).toFixed(1));
+      const r2 = Number(((binCounts.bin2 / (binCapacities.bin2 || 1)) * 100).toFixed(1));
+      const r3 = Number(((binCounts.bin3 / (binCapacities.bin3 || 1)) * 100).toFixed(1));
+
+      sendJson(res, 200, {
+        success: true,
+        mode: state.mode,
+        isSimulation: isSim,
+        modeName: isSim ? "Mô phỏng (Simulation)" : "Thực tế (Real Hardware)",
+        modeDescription: isSim
+          ? "Hệ thống đang hoạt động ở chế độ MÔ PHỎNG (Simulation). Dữ liệu 3 khay chứa là từ phần mềm mô phỏng."
+          : "Hệ thống đang hoạt động ở chế độ THỰC TẾ (Real Hardware). Dữ liệu 3 khay chứa là từ dây chuyền phân loại thực tế.",
+        binCounts,
+        binCapacities,
+        totalInBins,
+        current_counts: binCounts,
+        capacities: binCapacities,
+        fillRates: {
+          bin1: r1,
+          bin2: r2,
+          bin3: r3,
+        },
+        fillPercentages: {
+          bin1: `${r1}%`,
+          bin2: `${r2}%`,
+          bin3: `${r3}%`,
+        },
+        trayStatus: {
+          bin1: {
+            name: "Khay 1 (Dao mổ & Kéo phẫu thuật)",
+            count: binCounts.bin1,
+            capacity: binCapacities.bin1,
+            rate: r1,
+            colorCode: binCounts.bin1 >= binCapacities.bin1 ? "🔴 ĐỎ (ĐẦY 100%)" : r1 >= 80 ? "🟡 VÀNG CAM (CẢNH BÁO >80%)" : "🟢 XANH LÁ (BÌNH THƯỜNG)",
+            status: binCounts.bin1 >= binCapacities.bin1 ? "100% ĐẦY (CẦN THAY NGAY)" : r1 >= 80 ? "CẢNH BÁO (>80% ĐỊNH MỨC)" : "Bình thường / An toàn",
+          },
+          bin2: {
+            name: "Khay 2 (Kẹp panh cầm máu)",
+            count: binCounts.bin2,
+            capacity: binCapacities.bin2,
+            rate: r2,
+            colorCode: binCounts.bin2 >= binCapacities.bin2 ? "🔴 ĐỎ (ĐẦY 100%)" : r2 >= 80 ? "🟡 VÀNG CAM (CẢNH BÁO >80%)" : "🟢 XANH LÁ (BÌNH THƯỜNG)",
+            status: binCounts.bin2 >= binCapacities.bin2 ? "100% ĐẦY (CẦN THAY NGAY)" : r2 >= 80 ? "CẢNH BÁO (>80% ĐỊNH MỨC)" : "Bình thường / An toàn",
+          },
+          bin3: {
+            name: "Khay 3 (Dụng cụ đặc biệt / Mặc định)",
+            count: binCounts.bin3,
+            capacity: binCapacities.bin3,
+            rate: r3,
+            colorCode: binCounts.bin3 >= binCapacities.bin3 ? "🔴 ĐỎ (ĐẦY 100%)" : r3 >= 80 ? "🟡 VÀNG CAM (CẢNH BÁO >80%)" : "🟢 XANH LÁ (BÌNH THƯỜNG)",
+            status: binCounts.bin3 >= binCapacities.bin3 ? "100% ĐẦY (CẦN THAY NGAY)" : r3 >= 80 ? "CẢNH BÁO (>80% ĐỊNH MỨC)" : "Bình thường / An toàn",
+          },
+        },
+        isRunning: state.isRunning,
+        speed: state.speed,
+        updatedAt: state.updatedAt,
+      });
       return;
     }
 

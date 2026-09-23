@@ -4,6 +4,59 @@
 
 ---
 
+## Ghi chú về cấu trúc runtime hiện tại
+
+Phần mô tả chi tiết bên dưới được giữ lại để làm tài liệu nghiệp vụ và vận hành. Các điểm sau là nguồn sự thật cho cấu trúc code hiện tại:
+
+### Monorepo và entrypoint
+
+- Root dùng npm workspaces cho `frontend`, `backend` và `shared`.
+- `frontend` là Next.js 14 App Router, chạy cổng `3000`, gồm page routes và các route handlers tại `frontend/src/app/api`.
+- `backend` là HTTP server TypeScript dùng module chuẩn `node:http`, chạy cổng `5000`; không dùng Express. `backend/src/server.ts` điều phối route trực tiếp, còn controllers/routes/services/middlewares cung cấp các lớp nghiệp vụ.
+- `shared` chứa `types`, `schemas` và `constants` được dùng ở cả hai workspace.
+- Persistence runtime hiện có là `data/history.json`, `data/notifications.json`, `data/sync_state.json` và `data/users.json`; `ConfigModel` giữ cấu hình mặc định trong bộ nhớ. Các migration/seed trong `backend/database` được giữ làm tài liệu triển khai, không được script hiện tại tự động chạy.
+
+### Cây thư mục thực tế
+
+```text
+SortiX-Dashboard/
+├─ frontend/src/app/              # /, /alerts, /analytics, /config, /conveyor,
+│  ├─ devices, /history, /login, /users
+│  └─ api/                        # auth, config, history, events, safety, stats,
+│                                  # sync, alerts, chat/telegram, users
+├─ frontend/src/components/       # layout, overview, conveyor, ui, users, widgets
+├─ frontend/src/hooks/            # useSorterData và các hook dữ liệu
+├─ frontend/capacitor.config.ts   # webDir: out, server.url từ CAPACITOR_SERVER_URL
+├─ backend/src/                   # server, controllers, routes, middleware,
+│                                  # models, services, config, utils
+├─ backend/database/              # migrations và seeds tham chiếu
+├─ shared/{types,schemas,constants}/
+├─ data/                          # JSON runtime store
+├─ scripts/                       # dev-all, dev, e2e, free-port, test, upgrade workflow
+├─ tests/                         # test được nối vào script root và test bổ sung
+└─ docs/                          # architecture, api, REFACTOR_PLAN
+```
+
+### Lệnh chính hiện có
+
+```powershell
+npm run dev              # Frontend Next.js tại :3000
+npm run dev:backend      # build rồi start backend tại PORT (mặc định :5000)
+npm run dev:all          # điều phối frontend và backend
+npm run build            # build frontend
+npm run lint             # next lint
+npm run build --workspace=backend
+npx tsc --noEmit --pretty false
+npm test                 # 16 file test được nối trong package.json
+npm run test:e2e         # contract desktop/mobile/Capacitor
+npm run cap:sync
+npm run cap:open
+```
+
+`npm test` hiện nối 16 file: `history`, `api_schemas`, `users`, `estop_safety`, `jam_detection`, `simulation_mode_guard`, `jam_simulation_audio`, `bin_full`, `temperature_warning`, `device_offline`, `shift_summary`, `bin_sliders_sync`, `mqtt_disconnected`, `temperature_gauge_simulation_vs_real`, `daily_report_sync` và `cross_device_sync`. Các file `daily_production_cumulative`, `four_user_requests_upgrade`, `mute_siren_feature` và `new_day_report_tele_email` tồn tại nhưng chưa nằm trong script root.
+
+Các mục lịch sử bên dưới có thể mô tả trạng thái ở thời điểm phát hành cũ. Khi có khác biệt, phần ghi chú runtime này và source code hiện tại được ưu tiên.
+
 ## 📌 Mục Lục
 1. [Giới Thiệu Tổng Quan](#1-giới-thiệu-tổng-quan)
 2. [Kiến Trúc Hệ Thống (Monorepo & 1-Codebase Architecture)](#2-kiến-trúc-hệ-thống-monorepo--1-codebase-architecture)
@@ -72,7 +125,7 @@ Mã nguồn được tổ chức theo chuẩn **Monorepo (npm workspaces)** vớ
 
 ```
 SortiX-Dashboard/
-├── backend/                  # Standalone Backend Server (Node.js/Express + TypeScript)
+├── backend/                  # Standalone Backend Server (Node.js node:http + TypeScript)
 │   ├── database/             # File migrations (SQLite, PostgreSQL, MySQL, MongoDB) & Seeds
 │   │   ├── migrations/       # SQL scripts tạo bảng Users & Schema
 │   │   └── seeds/            # Khởi tạo 4 tài khoản Quản trị viên ban đầu
@@ -85,7 +138,7 @@ SortiX-Dashboard/
 │   │   ├── routes/           # RESTful API endpoints (/api/auth, /api/users, /api/safety, ...)
 │   │   ├── services/         # Logic nghiệp vụ (safetyService, sseService, alertNotificationService, mqttService, ...)
 │   │   ├── utils/            # Tiện ích chuyển đổi dữ liệu và định dạng thông báo
-│   │   └── server.ts         # Điểm khởi động HTTP Express Server (Port 5000)
+│   │   └── server.ts         # Điểm khởi động HTTP node:http Server (Port 5000)
 │   ├── package.json
 │   └── tsconfig.json
 ├── frontend/                 # Client UI Next.js 14 App Router & Mobile Shell
@@ -98,7 +151,7 @@ SortiX-Dashboard/
 │   ├── out/                  # Offline Shell (index.html dự phòng khi mất mạng)
 │   ├── public/               # Tài nguyên tĩnh, biểu tượng app, manifest
 │   ├── src/
-│   │   ├── app/              # 9 Trang App Router & 18 API routes nội bộ (/api/safety, /api/events, ...)
+│   │   ├── app/              # Page routes và API route handlers (/api/auth, /api/safety, /api/events, ...)
 │   │   │   ├── layout.tsx    # Cấu hình Viewport chống zoom, theme-color, HTML layout
 │   │   │   ├── page.tsx      # Trang Tổng Quan Dashboard
 │   │   │   ├── conveyor/     # Trang Giám Sát Băng Tải Canvas 60fps
@@ -130,10 +183,10 @@ SortiX-Dashboard/
 ├── data/                     # Dữ liệu cục bộ bền vững (users.json, notifications.json)
 ├── docs/                     # Tài liệu kỹ thuật chi tiết
 │   ├── architecture.md       # Thiết kế kiến trúc phân tầng, Mobile Shell & An toàn
-│   ├── api.md                # Đặc tả toàn bộ 18 RESTful API endpoints & SSE
+│   ├── api.md                # Đặc tả API routes, aliases safety và SSE
 │   └── REFACTOR_PLAN.md      # Kế hoạch & lộ trình nâng cấp hệ thống
 ├── scripts/                  # Root orchestration scripts (dev-all.cjs)
-├── tests/                    # Bộ kiểm thử tự động toàn diện (108/108 Tests PASS 100% - 15 Suites)
+├── tests/                    # Contract/integration tests; script root hiện chạy 16 file
 ├── FINAL_INTEGRATION_REPORT.md # Báo cáo tổng kết tích hợp hệ thống cuối cùng
 ├── CHANGELOG.md              # Nhật ký thay đổi hệ thống chi tiết qua các phiên bản
 ├── AGENTS.md                 # Quy chuẩn kỹ thuật, Mobile Rules & Bảo mật bắt buộc
@@ -165,8 +218,8 @@ flowchart TD
         ESP32 -->|"Publish: conveyor/storage/bin_status"| BROKER
     end
 
-    subgraph SERVER_LAYER["3. Tầng Máy Chủ Backend (Express Port 5000)"]
-        BROKER -->|"Subscribe / Ingest"| BACKEND["Express API Server"]
+    subgraph SERVER_LAYER["3. Tầng Máy Chủ Backend (node:http Port 5000)"]
+        BROKER -->|"Subscribe / Ingest"| BACKEND["node:http API Server"]
         BACKEND -->|"Watchdog 6s"| HEARTBEAT_MONITOR["Heartbeat & Health Monitor"]
         BACKEND -->|"Ghi nhận sự cố"| SAFETY_SVC["Safety & Alert Engine"]
         SAFETY_SVC -->|"Ghi Atomic Write"| DB_STORE[("Persistence Data Store\ndata/users.json\ndata/notifications.json")]
@@ -244,7 +297,7 @@ sequenceDiagram
     autonumber
     actor Operator as Người Vận Hành / Cảm Biến
     participant Client as Web / Mobile Dashboard
-    participant Backend as Express Backend (Port 5000)
+    participant Backend as node:http Backend (Port 5000)
     participant DB as Persistence Store (notifications.json)
     participant Alerts as Telegram Bot & SMTP
     participant Hardware as Băng Tải & Động Cơ
@@ -484,7 +537,7 @@ flowchart TD
         DISK_USERS[("data/users.json\n(Atomic Write)")]
         DISK_NOTIF[("data/notifications.json\n(Atomic Write)")]
         DISK_HIST[("data/history.json\n(Atomic Write)")]
-        SQL_DB[("SQL / NoSQL Database\n(PostgreSQL, MySQL, MongoDB)")]
+        SQL_DB[("Migration reference\n(SQL / NoSQL)")]
     end
 
     REACT_CTX <-->|REST API / SSE| TIER_2
@@ -511,7 +564,7 @@ Các tệp DDL được lưu trữ trong `backend/database/migrations/`:
 
 - **Frontend Web & Mobile**: Next.js 14 (App Router), React 18, TypeScript, TailwindCSS, Lucide React, Recharts.
 - **Mobile Container**: **Capacitor 8** (`@capacitor/core`, `@capacitor/android`, `@capacitor/cli`), Android SDK 34+, Android Studio Ladybug/Koala.
-- **Backend API Server**: Node.js, Express.js, TypeScript, Bcryptjs, Nodemailer, Telegram Bot API.
+- **Backend API Server**: Node.js `node:http`, TypeScript, Bcryptjs, Nodemailer, Telegram Bot API.
 - **Dữ liệu & Xác thực**: Zod, JSON Store bền vững với Atomic Write (`data/users.json`, `data/notifications.json`), Sẵn sàng kết nối SQLite / PostgreSQL / MySQL / MongoDB.
 - **Truyền thông IoT**: MQTT over WebSocket (MQTT.js), Giao thức kết nối vi điều khiển ESP32-C5 qua Wi-Fi 6, Server-Sent Events (SSE).
 - **Đồ họa & Âm thanh**: HTML5 Canvas API (Physics Loop 60fps), Web Audio API (Bộ tổng hợp âm công nghiệp không phụ thuộc tài nguyên ngoài).
@@ -565,11 +618,11 @@ copy backend\.env.example backend\.env
 | :--- | :--- | :--- |
 | `npm run dev:all` | **Khởi chạy đồng thời cả Frontend & Backend** | Frontend: `3000`, Backend: `5000` |
 | `npm run dev` hoặc `npm run dev:frontend` | Khởi chạy riêng giao diện người dùng Next.js | `http://localhost:3000` |
-| `npm run dev:backend` | Khởi chạy riêng máy chủ Express API | `http://localhost:5000` |
+| `npm run dev:backend` | Build và khởi chạy riêng máy chủ `node:http` API | `http://localhost:5000` |
 | `npm run cap:sync` | Đồng bộ mã nguồn Frontend vào Android Studio | — |
 | `npm run cap:open` | Mở dự án Android trong Android Studio để build APK | — |
 | `npm run build` | Biên dịch toàn bộ dự án cho môi trường sản xuất | — |
-| `npm test` | Chạy bộ kiểm thử tự động toàn diện (108 tests PASS 100%) | — |
+| `npm test` | Chạy 16 file test được nối trong root `package.json` | — |
 
 Truy cập Dashboard trên máy tính tại: **[http://localhost:3000](http://localhost:3000)**.
 
@@ -577,7 +630,7 @@ Truy cập Dashboard trên máy tính tại: **[http://localhost:3000](http://lo
 
 ## 8. Đóng Gói Ứng Dụng Di Động (Mobile App: Android APK & iOS PWA)
 
-Dự án áp dụng mô hình **Hybrid WebView Bridge** qua Capacitor 8. Cách tiếp cận này giữ nguyên 100% kiến trúc Next.js App Router (18 dynamic Route Handlers và SSE `/api/events` không bị hỏng như khi dùng lệnh `output: 'export'`).
+Dự án áp dụng mô hình **Hybrid WebView Bridge** qua Capacitor 8. Cách tiếp cận này giữ nguyên kiến trúc Next.js App Router, các route handlers dynamic và SSE `/api/events` không bị hỏng như khi dùng lệnh `output: 'export'`.
 
 ### 8.1. Cấu trúc Android App
 File cấu hình Capacitor đặt tại [frontend/capacitor.config.ts](frontend/capacitor.config.ts):
@@ -589,7 +642,7 @@ const config: CapacitorConfig = {
   appName: 'SortiX Dashboard',
   webDir: 'out',
   server: {
-    url: process.env.CAPACITOR_SERVER_URL || 'http://192.168.1.169:3000',
+    url: process.env.CAPACITOR_SERVER_URL || 'http://192.168.1.4:3000',
     cleartext: true,
     androidScheme: 'https',
   },
@@ -620,7 +673,7 @@ export default config;
    Đồng thời đã được đồng bộ vào thư mục tĩnh `frontend/public/SortiX-Dashboard.apk` để tải trực tiếp từ máy chủ web.
 
 ### 8.3. Cài đặt trên iPhone / iPad (iOS PWA Không Cần Mac)
-1. Mở trình duyệt **Safari** trên iPhone, nhập: `http://192.168.1.169:3000` (hoặc URL domain Cloud).
+1. Mở trình duyệt **Safari** trên iPhone, nhập URL LAN của máy chủ, ví dụ `http://192.168.1.4:3000` (hoặc URL domain Cloud).
 2. Bấm vào nút **Chia sẻ** (biểu tượng hình vuông có mũi tên hướng lên ở thanh dưới Safari).
 3. Cuộn xuống chọn **"Thêm vào MH chính"** (Add to Home Screen) > bấm **Thêm**.
 4. Biểu tượng ứng dụng **SortiX-Med** sẽ xuất hiện trên màn hình chính, chạy toàn màn hình (Standalone Mode).
@@ -630,8 +683,8 @@ export default config;
 - **Cách thức hoạt động**:
   1. Điện thoại Android kết nối cùng mạng Wi-Fi với máy tính host (`192.168.1.x`).
   2. Dùng Camera điện thoại hoặc ứng dụng quét mã QR bất kỳ quét tệp `SortiX_Dashboard.png`.
-  3. Trình duyệt tự động mở ngay **SortiX-Med Dashboard** tại địa chỉ `http://192.168.1.169:3000` với đầy đủ giao diện thời gian thực, điều khiển 60fps và nhận dạng dụng cụ.
-  4. Người dùng cũng có thể tải trực tiếp file APK cài đặt tại đường dẫn: `http://192.168.1.169:3000/SortiX-Dashboard.apk`.
+  3. Trình duyệt tự động mở ngay **SortiX-Med Dashboard** tại URL LAN đã cấu hình với đầy đủ giao diện thời gian thực, điều khiển 60fps và nhận dạng dụng cụ.
+  4. File APK chỉ tải được nếu asset tương ứng tồn tại trong `frontend/public`; không mặc định suy ra một URL cố định.
 
 ---
 
@@ -704,13 +757,13 @@ Hệ thống cho phép Quản trị viên (Admin) chuyển đổi linh hoạt ch
 
 ## 13. Kiểm Thử & Đảm Bảo Chất Lượng (QA)
 
-Dự án sở hữu bộ kiểm thử tự động toàn diện với **108/108 Tests PASS (100%)** qua **15 Test Suites**:
+Dự án có bộ kiểm thử contract/integration cho history, schema, users, safety, MQTT, báo cáo và đồng bộ đa thiết bị. Script `npm test` hiện chạy 16 file test được liệt kê trong `package.json`; số lượng test không được hard-code vào tài liệu vì có các file bổ sung chưa nối vào script root:
 
 ```powershell
 npm test
 ```
 
-### Chi tiết 15 bộ test suites:
+### Các test file được mô tả trong tài liệu:
 - **`tests/history.test.cjs` (9 tests)**: Kiểm tra lưu trữ, phân trang, migrate dữ liệu LocalStorage và cô lập dữ liệu rác.
 - **`tests/api_schemas.test.cjs` (3 tests)**: Kiểm tra tính toàn vẹn của SorterConfigSchema, ClassificationRecordSchema và HistoryQuerySchema.
 - **`tests/users.test.cjs` (14 tests)**: Kiểm tra bảo mật tài khoản, Admin Seeder, ràng buộc mật khẩu, cơ chế chống leo thang đặc quyền, RBAC, Mock OTP và bảo vệ xóa tài khoản Admin.
@@ -726,6 +779,9 @@ npm test
 - **`tests/temperature_gauge_simulation_vs_real.test.cjs` (4 tests)**: Kiểm tra đồng hồ nhiệt độ chuyển đổi đúng giữa thanh trượt ảo (Mô phỏng) và bảng telemetry cảm biến (Thực tế).
 - **`tests/daily_report_sync.test.cjs` (6 tests)**: Kiểm tra nhãn chuẩn hóa "BÁO CÁO 1 NGÀY LÀM VIỆC" và luồng đồng bộ trực tiếp số liệu từ khay chứa và lịch sử phân loại.
 - **`tests/simulation_mode_guard.test.cjs` (3 tests)**: Kiểm tra phân định và cô lập triệt để giữa chế độ Mô Phỏng và Thực Tế, chặn các hành vi test giả lập khi chạy máy thật.
+- **`tests/cross_device_sync.test.cjs` (7 tests)**: Kiểm tra đồng bộ mode, running, speed, bin counts, history và sự kiện SSE giữa các client.
+
+Các file `daily_production_cumulative.test.cjs`, `four_user_requests_upgrade.test.cjs`, `mute_siren_feature.test.cjs` và `new_day_report_tele_email.test.cjs` vẫn tồn tại trong thư mục `tests/` nhưng chưa được nối vào lệnh `npm test` hiện tại.
 
 Kiểm tra kiểu dữ liệu TypeScript:
 ```powershell

@@ -4,6 +4,16 @@ import { NotificationModel } from "../models/notificationModel";
 import { publishEstopSimulation, publishJamSimulation, publishBinFullSimulation, publishTemperatureWarningSimulation, publishDeviceOfflineSimulation } from "../services/mqttService";
 
 export const SafetyController = {
+  getTelemetry() {
+    return {
+      status: 200,
+      body: {
+        success: true,
+        ...SafetyService.getTelemetry(),
+      },
+    };
+  },
+
   getStatus() {
     return {
       status: 200,

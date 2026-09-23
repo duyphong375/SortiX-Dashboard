@@ -116,6 +116,18 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
   const cap2 = binCapacities.bin2 || 50;
   const cap3 = binCapacities.bin3 || 50;
 
+  const isFull1 = binCounts.bin1 >= cap1;
+  const isWarn1 = !isFull1 && (binCounts.bin1 / cap1) >= 0.8;
+  const rate1 = Math.min(100, Math.round((binCounts.bin1 / cap1) * 100));
+
+  const isFull2 = binCounts.bin2 >= cap2;
+  const isWarn2 = !isFull2 && (binCounts.bin2 / cap2) >= 0.8;
+  const rate2 = Math.min(100, Math.round((binCounts.bin2 / cap2) * 100));
+
+  const isFull3 = binCounts.bin3 >= cap3;
+  const isWarn3 = !isFull3 && (binCounts.bin3 / cap3) >= 0.8;
+  const rate3 = Math.min(100, Math.round((binCounts.bin3 / cap3) * 100));
+
   // Render hình dạng 2D chân thực của từng loại phôi mẫu (Digital Twin)
   const renderPhysicalItem = (item: VisualItem) => (
     <VisualItemRenderer key={item.id} item={item} />
@@ -349,30 +361,34 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           {/* MÁNG KHAY 1 (PISTON 1 - 45%) */}
           <div 
             className={`relate-card relative overflow-hidden rounded-2xl border p-3.5 shadow-sm transition-all flex flex-col justify-between gap-3 group ${
-              binCounts.bin1 >= cap1 
-                ? "border-amber-500 bg-amber-500/15 animate-pulse ring-2 ring-amber-500/60 shadow-[0_0_16px_rgba(245,158,11,0.4)]" 
+              isFull1 
+                ? "border-rose-500 bg-rose-500/15 animate-pulse ring-2 ring-rose-500/60 shadow-[0_0_16px_rgba(244,63,94,0.4)]" 
+                : isWarn1
+                ? "border-amber-500 bg-amber-500/10 ring-1 ring-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.25)]"
                 : bin1Theme.cardNormalBorder
             }`}
           >
             <div>
               <div className="flex items-center justify-between gap-2">
                 <span className={`text-xs font-black tracking-wider flex items-center gap-1.5 truncate ${bin1Theme.titleText}`}>
-                  {binCounts.bin1 >= cap1 ? (
-                    <Boxes className="h-4 w-4 text-amber-500 animate-bounce shrink-0" />
+                  {isFull1 ? (
+                    <Boxes className="h-4 w-4 text-rose-500 animate-bounce shrink-0" />
+                  ) : isWarn1 ? (
+                    <Boxes className="h-4 w-4 text-amber-500 shrink-0" />
                   ) : (
                     <span className={`h-2 w-2 rounded-full shrink-0 ${bin1Theme.dotClass}`} />
                   )}
                   <span className="truncate">KHAY 1 (PISTON 1)</span>
                 </span>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  {binCounts.bin1 >= cap1 ? (
+                  {isFull1 ? (
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         onConfirmBinReplaced ? onConfirmBinReplaced(1) : onClearBin?.(1);
                       }}
-                      className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black rounded-lg transition-all border border-amber-400 bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md active:scale-95 animate-pulse"
+                      className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black rounded-lg transition-all border border-rose-400 bg-rose-500 hover:bg-rose-400 text-white shadow-md active:scale-95 animate-pulse"
                       title="Xác nhận đã thay thế khay rỗng mới và reset số đếm về 0"
                     >
                       <PackageCheck className="h-3.5 w-3.5 shrink-0" />
@@ -414,8 +430,10 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                   Tổng SP trong khay:
                 </span>
                 <div className={`text-3xl font-black font-mono shrink-0 ${
-                  binCounts.bin1 >= cap1 
-                    ? "text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.8)] animate-pulse" 
+                  isFull1 
+                    ? "text-rose-500 drop-shadow-[0_0_10px_rgba(244,63,94,0.8)] animate-pulse" 
+                    : isWarn1
+                    ? "text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]"
                     : bin1Theme.countNormalText
                 }`}>
                   {binCounts.bin1} <span className="text-xs font-normal text-slate-500">SP</span>
@@ -427,15 +445,15 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
             <div>
               <div className="flex items-center gap-1">
                 {Array.from({ length: 10 }).map((_, idx) => {
-                  const cap1 = binCapacities.bin1 || 50;
                   const isFilled = idx < Math.ceil((binCounts.bin1 / cap1) * 10);
-                  const isFull = binCounts.bin1 >= cap1;
                   return (
                     <div
                       key={idx}
                       className={`h-2 flex-1 rounded-xs transition-all duration-300 ${
-                        isFull
-                          ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,1)] animate-pulse"
+                        isFull1
+                          ? "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,1)] animate-pulse"
+                          : isWarn1 && isFilled
+                          ? "bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.8)]"
                           : isFilled
                           ? bin1Theme.ledActive
                           : "bg-slate-200 dark:bg-slate-800/90 border border-slate-300/40 dark:border-white/5"
@@ -447,12 +465,18 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
 
               <div className="mt-1.5 flex items-center justify-between text-[10px] font-medium text-slate-500 dark:text-slate-400 gap-2">
                 <span className="truncate">Góc dốc 25° • Trạm 45%</span>
-                {binCounts.bin1 >= (binCapacities.bin1 || 50) ? (
-                  <span className="font-mono font-black text-amber-800 dark:text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
-                    100% ĐẦY ({binCounts.bin1}/{binCapacities.bin1 || 50} SP) - CẦN THAY
+                {isFull1 ? (
+                  <span className="font-mono font-black text-rose-300 bg-rose-950/80 border border-rose-500/50 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
+                    🔴 100% ĐẦY ({binCounts.bin1}/{cap1} SP) - CẦN THAY
+                  </span>
+                ) : isWarn1 ? (
+                  <span className="font-mono font-bold text-amber-300 bg-amber-950/80 border border-amber-500/50 px-1.5 py-0.5 rounded text-[10px]">
+                    🟡 Gần đầy ({binCounts.bin1}/{cap1} SP - {rate1}%)
                   </span>
                 ) : (
-                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{binCounts.bin1}/{binCapacities.bin1 || 50} SP (Định mức)</span>
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                    🟢 {binCounts.bin1}/{cap1} SP ({rate1}%)
+                  </span>
                 )}
               </div>
 
@@ -520,30 +544,34 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           {/* MÁNG KHAY 2 (PISTON 2 - 72%) */}
           <div 
             className={`relate-card relative overflow-hidden rounded-2xl border p-3.5 shadow-sm transition-all flex flex-col justify-between gap-3 group ${
-              binCounts.bin2 >= cap2 
-                ? "border-amber-500 bg-amber-500/15 animate-pulse ring-2 ring-amber-500/60 shadow-[0_0_16px_rgba(245,158,11,0.4)]" 
+              isFull2 
+                ? "border-rose-500 bg-rose-500/15 animate-pulse ring-2 ring-rose-500/60 shadow-[0_0_16px_rgba(244,63,94,0.4)]" 
+                : isWarn2
+                ? "border-amber-500 bg-amber-500/10 ring-1 ring-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.25)]"
                 : bin2Theme.cardNormalBorder
             }`}
           >
             <div>
               <div className="flex items-center justify-between gap-2">
                 <span className={`text-xs font-black tracking-wider flex items-center gap-1.5 truncate ${bin2Theme.titleText}`}>
-                  {binCounts.bin2 >= cap2 ? (
-                    <Boxes className="h-4 w-4 text-amber-500 animate-bounce shrink-0" />
+                  {isFull2 ? (
+                    <Boxes className="h-4 w-4 text-rose-500 animate-bounce shrink-0" />
+                  ) : isWarn2 ? (
+                    <Boxes className="h-4 w-4 text-amber-500 shrink-0" />
                   ) : (
                     <span className={`h-2 w-2 rounded-full shrink-0 ${bin2Theme.dotClass}`} />
                   )}
                   <span className="truncate">KHAY 2 (PISTON 2)</span>
                 </span>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  {binCounts.bin2 >= cap2 ? (
+                  {isFull2 ? (
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         onConfirmBinReplaced ? onConfirmBinReplaced(2) : onClearBin?.(2);
                       }}
-                      className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black rounded-lg transition-all border border-amber-400 bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md active:scale-95 animate-pulse"
+                      className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black rounded-lg transition-all border border-rose-400 bg-rose-500 hover:bg-rose-400 text-white shadow-md active:scale-95 animate-pulse"
                       title="Xác nhận đã thay thế khay rỗng mới và reset số đếm về 0"
                     >
                       <PackageCheck className="h-3.5 w-3.5 shrink-0" />
@@ -585,8 +613,10 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                   Tổng SP trong khay:
                 </span>
                 <div className={`text-3xl font-black font-mono shrink-0 ${
-                  binCounts.bin2 >= cap2 
-                    ? "text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.8)] animate-pulse" 
+                  isFull2 
+                    ? "text-rose-500 drop-shadow-[0_0_10px_rgba(244,63,94,0.8)] animate-pulse" 
+                    : isWarn2
+                    ? "text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]"
                     : bin2Theme.countNormalText
                 }`}>
                   {binCounts.bin2} <span className="text-xs font-normal text-slate-500">SP</span>
@@ -598,15 +628,15 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
             <div>
               <div className="flex items-center gap-1">
                 {Array.from({ length: 10 }).map((_, idx) => {
-                  const cap2 = binCapacities.bin2 || 50;
                   const isFilled = idx < Math.ceil((binCounts.bin2 / cap2) * 10);
-                  const isFull = binCounts.bin2 >= cap2;
                   return (
                     <div
                       key={idx}
                       className={`h-2 flex-1 rounded-xs transition-all duration-300 ${
-                        isFull
-                          ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,1)] animate-pulse"
+                        isFull2
+                          ? "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,1)] animate-pulse"
+                          : isWarn2 && isFilled
+                          ? "bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.8)]"
                           : isFilled
                           ? bin2Theme.ledActive
                           : "bg-slate-200 dark:bg-slate-800/90 border border-slate-300/40 dark:border-white/5"
@@ -618,12 +648,18 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
 
               <div className="mt-1.5 flex items-center justify-between text-[10px] font-medium text-slate-500 dark:text-slate-400 gap-2">
                 <span className="truncate">Góc dốc 25° • Trạm 72%</span>
-                {binCounts.bin2 >= (binCapacities.bin2 || 50) ? (
-                  <span className="font-mono font-black text-amber-800 dark:text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
-                    100% ĐẦY ({binCounts.bin2}/{binCapacities.bin2 || 50} SP) - CẦN THAY
+                {isFull2 ? (
+                  <span className="font-mono font-black text-rose-300 bg-rose-950/80 border border-rose-500/50 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
+                    🔴 100% ĐẦY ({binCounts.bin2}/{cap2} SP) - CẦN THAY
+                  </span>
+                ) : isWarn2 ? (
+                  <span className="font-mono font-bold text-amber-300 bg-amber-950/80 border border-amber-500/50 px-1.5 py-0.5 rounded text-[10px]">
+                    🟡 Gần đầy ({binCounts.bin2}/{cap2} SP - {rate2}%)
                   </span>
                 ) : (
-                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{binCounts.bin2}/{binCapacities.bin2 || 50} SP (Định mức)</span>
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                    🟢 {binCounts.bin2}/{cap2} SP ({rate2}%)
+                  </span>
                 )}
               </div>
 
@@ -691,30 +727,34 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
           {/* MÁNG KHAY 3 (ĐI THẲNG - 96%) */}
           <div 
             className={`relate-card relative overflow-hidden rounded-2xl border p-3.5 shadow-sm transition-all flex flex-col justify-between gap-3 group ${
-              binCounts.bin3 >= cap3 
-                ? "border-amber-500 bg-amber-500/15 animate-pulse ring-2 ring-amber-500/60 shadow-[0_0_16px_rgba(245,158,11,0.4)]" 
+              isFull3 
+                ? "border-rose-500 bg-rose-500/15 animate-pulse ring-2 ring-rose-500/60 shadow-[0_0_16px_rgba(244,63,94,0.4)]" 
+                : isWarn3
+                ? "border-amber-500 bg-amber-500/10 ring-1 ring-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.25)]"
                 : bin3Theme.cardNormalBorder
             }`}
           >
             <div>
               <div className="flex items-center justify-between gap-2">
                 <span className={`text-xs font-black tracking-wider flex items-center gap-1.5 truncate ${bin3Theme.titleText}`}>
-                  {binCounts.bin3 >= cap3 ? (
-                    <Boxes className="h-4 w-4 text-amber-500 animate-bounce shrink-0" />
+                  {isFull3 ? (
+                    <Boxes className="h-4 w-4 text-rose-500 animate-bounce shrink-0" />
+                  ) : isWarn3 ? (
+                    <Boxes className="h-4 w-4 text-amber-500 shrink-0" />
                   ) : (
                     <span className={`h-2 w-2 rounded-full shrink-0 ${bin3Theme.dotClass}`} />
                   )}
                   <span className="truncate">KHAY 3 (MẶC ĐỊNH)</span>
                 </span>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  {binCounts.bin3 >= cap3 ? (
+                  {isFull3 ? (
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         onConfirmBinReplaced ? onConfirmBinReplaced(3) : onClearBin?.(3);
                       }}
-                      className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black rounded-lg transition-all border border-amber-400 bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md active:scale-95 animate-pulse"
+                      className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black rounded-lg transition-all border border-rose-400 bg-rose-500 hover:bg-rose-400 text-white shadow-md active:scale-95 animate-pulse"
                       title="Xác nhận đã thay thế khay rỗng mới và reset số đếm về 0"
                     >
                       <PackageCheck className="h-3.5 w-3.5 shrink-0" />
@@ -756,8 +796,10 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
                   Tổng SP trong khay:
                 </span>
                 <div className={`text-3xl font-black font-mono shrink-0 ${
-                  binCounts.bin3 >= cap3 
-                    ? "text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.8)] animate-pulse" 
+                  isFull3 
+                    ? "text-rose-500 drop-shadow-[0_0_10px_rgba(244,63,94,0.8)] animate-pulse" 
+                    : isWarn3
+                    ? "text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]"
                     : bin3Theme.countNormalText
                 }`}>
                   {binCounts.bin3} <span className="text-xs font-normal text-slate-500">SP</span>
@@ -769,15 +811,15 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
             <div>
               <div className="flex items-center gap-1">
                 {Array.from({ length: 10 }).map((_, idx) => {
-                  const cap3 = binCapacities.bin3 || 50;
                   const isFilled = idx < Math.ceil((binCounts.bin3 / cap3) * 10);
-                  const isFull = binCounts.bin3 >= cap3;
                   return (
                     <div
                       key={idx}
                       className={`h-2 flex-1 rounded-xs transition-all duration-300 ${
-                        isFull
-                          ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,1)] animate-pulse"
+                        isFull3
+                          ? "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,1)] animate-pulse"
+                          : isWarn3 && isFilled
+                          ? "bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.8)]"
                           : isFilled
                           ? bin3Theme.ledActive
                           : "bg-slate-200 dark:bg-slate-800/90 border border-slate-300/40 dark:border-white/5"
@@ -789,12 +831,18 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
 
               <div className="mt-1.5 flex items-center justify-between text-[10px] font-medium text-slate-500 dark:text-slate-400 gap-2">
                 <span className="truncate">Thoát tự do 1000mm • 96%</span>
-                {binCounts.bin3 >= (binCapacities.bin3 || 50) ? (
-                  <span className="font-mono font-black text-amber-800 dark:text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
-                    100% ĐẦY ({binCounts.bin3}/{binCapacities.bin3 || 50} SP) - CẦN THAY
+                {isFull3 ? (
+                  <span className="font-mono font-black text-rose-300 bg-rose-950/80 border border-rose-500/50 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
+                    🔴 100% ĐẦY ({binCounts.bin3}/{cap3} SP) - CẦN THAY
+                  </span>
+                ) : isWarn3 ? (
+                  <span className="font-mono font-bold text-amber-300 bg-amber-950/80 border border-amber-500/50 px-1.5 py-0.5 rounded text-[10px]">
+                    🟡 Gần đầy ({binCounts.bin3}/{cap3} SP - {rate3}%)
                   </span>
                 ) : (
-                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{binCounts.bin3}/{binCapacities.bin3 || 50} SP (Định mức)</span>
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                    🟢 {binCounts.bin3}/{cap3} SP ({rate3}%)
+                  </span>
                 )}
               </div>
 

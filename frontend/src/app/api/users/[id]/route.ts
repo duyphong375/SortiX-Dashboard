@@ -4,7 +4,7 @@ import { NextUsersStore, toSafeUser } from "../store";
 import { getAdminUser } from "../../auth/session";
 
 export async function GET(
-  request: Request,
+  _request: Request,
   props: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {

@@ -2,7 +2,7 @@
 
 > **Dự án**: SortiX-Med — Hệ Thống Tự Động Phân Loại Dụng Cụ Y Tế & Chuẩn Bị Khử Trùng Phòng Mổ (Biomedical & Industrial IoT)  
 > **Ngày kiểm tra**: 23/09/2026  
-> **Trạng thái**: ✅ **HOÀN TOÀN ĐẠT CHUẨN (PRODUCTION READY)**
+> **Trạng thái**: Đạt các gate build/typecheck/test đã chạy; chưa khẳng định production ready vì chưa kiểm thử browser pixel-by-pixel, MQTT/SMTP/Telegram credential thật và E2E đầy đủ trong sandbox.
 
 ---
 
@@ -23,10 +23,10 @@
 | Kiểm tra | Kết quả | Bằng chứng kiểm định |
 | :--- | :---: | :--- |
 | **TypeScript Typecheck** | ✅ **0 errors** | `npx tsc --noEmit --pretty false` hoàn thành sạch sẽ |
-| **Test Suite Toàn Diện** | ✅ **108/108 PASS** | 15 test suites chạy thành công, không có test fail |
-| **Frontend Production Build** | ✅ **Thành công** | `npm run build` trong `frontend`, 31/31 routes sinh mã thành công |
+| **Test Suite Toàn Diện** | ✅ **PASS** | `npm test` chạy 16 file được nối trong `package.json`, không có test fail |
+| **Frontend Production Build** | ✅ **Thành công** | `npm run build` hoàn tất; Next.js hiện liệt kê route theo App Router và các route API dynamic |
 | **Backend Build & Alias** | ✅ **Thành công** | Biên dịch TypeScript và tự động vá path alias `@shared/*` qua script |
-| **Git & Version Control** | ✅ **Đồng bộ** | Đã commit và đẩy thành công lên branch `main` của GitHub repository |
+| **Git & Version Control** | ⏸️ **Chưa thực hiện** | Không commit, push hoặc deploy theo phạm vi công việc hiện tại |
 
 ---
 
@@ -35,11 +35,11 @@
 | # | Danh mục | Mô tả vấn đề | Giải pháp khắc phục | Trạng thái |
 | :---: | :--- | :--- | :--- | :---: |
 | 1 | **Backend Build** | Alias `@shared/*` không được Node.js resolve sau khi `tsc` biên dịch | Bổ sung build script `backend/scripts/patch-dist-aliases.cjs` tự động vá đường dẫn | ✅ Đã sửa |
-| 2 | **API Auth** | Thiếu endpoint logout ở native Express backend | Bổ sung route `/api/auth/logout` và đồng bộ xóa session cookie | ✅ Đã sửa |
+| 2 | **API Auth** | Thiếu endpoint logout ở backend standalone | Đã có nhánh xử lý `/api/auth/logout` trong `backend/src/server.ts` | ✅ Đã sửa |
 | 3 | **API Base URL** | Client gọi không nhất quán giữa `NEXT_PUBLIC_API_URL` và `NEXT_PUBLIC_BACKEND_URL` | Chuẩn hóa toàn bộ API clients sử dụng chung biến cấu hình môi trường | ✅ Đã sửa |
 | 4 | **SSE Stream** | EventSource luôn trỏ về Next.js origin dù backend chạy cổng riêng | Bổ sung tham số cấu hình linh hoạt cho kết nối SSE Stream | ✅ Đã sửa |
 | 5 | **MQTT Typing** | Payload simulation truyền vào service chưa qua kiểm định Zod | Xác thực toàn bộ payload qua Zod schema có thuộc tính `.passthrough()` | ✅ Đã sửa |
-| 6 | **Graceful Shutdown** | Backend Express thiếu cơ chế đóng cổng kết nối an toàn khi tắt | Bổ sung bộ lắng nghe `SIGINT`/`SIGTERM` đóng HTTP server và ngắt MQTT client | ✅ Đã sửa |
+| 6 | **Graceful Shutdown** | Backend standalone thiếu cơ chế đóng cổng kết nối an toàn khi tắt | Bổ sung bộ lắng nghe `SIGINT`/`SIGTERM` đóng HTTP server và ngắt MQTT client | ✅ Đã sửa |
 | 7 | **Bảo Mật Mật Khẩu** | File `data/users.json` còn lưu trường `plain_password` | Xóa bỏ hoàn toàn mật khẩu thô, 100% tài khoản mã hóa Bcrypt 10 salt rounds | ✅ Đã sửa |
 | 8 | **Chữ Ký Session** | Session token chưa được ký số đồng nhất | Tích hợp module `authToken.ts` tạo token ký số an toàn và xác thực role | ✅ Đã sửa |
 | 9 | **Dung Lượng Khay** | Sức chứa khay bị fix cứng 50 SP | Triển khai Dynamic Bin Capacities 5 - 50 SP đồng bộ trên Canvas, Widget, Config | ✅ Đã sửa |
@@ -47,7 +47,7 @@
 | 11 | **Mobile Android App** | Cần đóng gói Mobile App cho di động mà không được làm hỏng Web Next.js | Tích hợp Capacitor 8 Hybrid Bridge, xuất file APK 4.1MB, bảo vệ 100% web routes | ✅ Đã sửa |
 | 12 | **Điều Hướng Mobile** | Nút chuyển đổi Chế độ Mô phỏng bị ẩn trên màn hình di động hẹp (<640px) | Bổ sung nút viên nang trên TopHeader và khối chuyển đổi lớn trong Sidebar Drawer | ✅ Đã sửa |
 | 13 | **Chủ Đề Y Sinh (SortiX-Med)** | Chuyển đổi toàn diện sang nhận diện 4 nhóm dụng cụ y tế phòng mổ | Chuẩn hóa `CATALOG_BRANDS`, đổi tên 3 khay y tế, áp dụng quy tắc Fail-safe (<60% vào Khay 3) | ✅ Đã sửa |
-| 14 | **Mã QR Code Truy Cập Nhanh** | Cần mã QR quét bằng camera Android để mở nhanh Web App hoặc tải APK | Tạo tệp đồ họa QR chất lượng cao `SortiX_Dashboard.png` trỏ `http://192.168.1.169:3000` | ✅ Đã sửa |
+| 14 | **Mã QR Code Truy Cập Nhanh** | Cần mã QR quét bằng camera Android để mở nhanh Web App hoặc tải APK | Có asset `SortiX_Dashboard.png`; URL phải lấy theo server LAN/`CAPACITOR_SERVER_URL` của môi trường chạy | ✅ Đã sửa |
 
 ---
 
@@ -96,8 +96,15 @@
 
 - **Canvas 60fps**: Vòng lặp `requestAnimationFrame` được giải phóng sạch sẽ khi unmount, ngăn ngừa rò rỉ bộ nhớ.
 - **Web Audio API**: AudioContext được khởi tạo lazy và đóng các AudioNodes theo đúng chuẩn trình duyệt.
-- **Loại bỏ dependencies không sử dụng**: Đã dọn dẹp các thư viện dư thừa và tối ưu hóa `package-lock.json`.
+- **Loại bỏ code không sử dụng**: Chỉ dọn các import, biến và destructuring không dùng khi có bằng chứng; không nâng cấp dependency hoặc sửa lockfile trong nhóm này.
 - **Dọn dẹp logs**: Đã loại bỏ các `console.log` thử nghiệm, chỉ duy trì hệ thống log chuẩn hóa có tiền tố phân loại (`[MQTT]`, `[SAFETY]`, `[SSE]`, `[AUTH]`).
+
+### Giới hạn kiểm chứng
+
+- `npm run lint` PASS nhưng còn warning dependency `sorterData` tại `frontend/src/components/layout/DashboardLayout.tsx:382`.
+- `npm run build` hoàn tất nhưng log prerender hiện có lỗi parse URL `http://localhost:undefined` trong nhánh `revalidateTag`; lỗi không làm build fail.
+- `npm run test:e2e` chỉ đạt PARTIAL PASS vì sandbox chặn child process (`spawn EPERM`); chưa phải browser E2E đầy đủ.
+- Chưa kiểm tra pixel-by-pixel trên browser/device thật và chưa kết nối MQTT, SMTP hoặc Telegram bằng credential thật.
 
 ---
 
@@ -112,7 +119,7 @@
 ## 8. Xác Nhận Nghiệm Thu (Final Sign-off)
 
 - ✅ **TypeScript**: 0 errors
-- ✅ **Test Suites**: 108/108 PASS (100%)
+- ✅ **Test**: Các file được nối trong `npm test` PASS
 - ✅ **Build**: Success
 - ✅ **UI/UX**: Giữ nguyên tính toàn vẹn và thẩm mỹ công nghiệp
-- ✅ **Mã nguồn**: Đã đẩy lên GitHub repository thành công
+- ⏸️ **Mã nguồn**: Không commit hoặc push trong lần kiểm tra này
