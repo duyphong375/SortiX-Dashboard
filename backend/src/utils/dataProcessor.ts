@@ -62,10 +62,18 @@ export function cleanTelemetryPayload(raw: unknown, prev: TelemetryData): Teleme
 
 export function normalizeBrandId(rawBrand: string): string {
   const lower = String(rawBrand || "").toLowerCase().trim();
-  if (lower.includes("coca") || lower === "brand_c") return "brand_c";
-  if (lower.includes("pepsi") || lower === "brand_a") return "brand_a";
-  if (lower.includes("red") || lower.includes("bull") || lower === "brand_b") return "brand_b";
-  if (lower.includes("aqua") || lower === "brand_d") return "brand_d";
+  if (lower.includes("syringe") || lower.includes("kim") || lower.includes("dao") || lower.includes("scalpel") || lower === "med_syringe" || lower === "brand_c" || lower.includes("coca")) {
+    return "med_syringe";
+  }
+  if (lower.includes("forceps") || lower.includes("panh") || lower.includes("pean") || lower.includes("kep") || lower === "med_forceps" || lower === "brand_a" || lower.includes("pepsi")) {
+    return "med_forceps";
+  }
+  if (lower.includes("scissors") || lower.includes("keo") || lower === "med_scissors" || lower === "brand_b" || lower.includes("red") || lower.includes("bull")) {
+    return "med_scissors";
+  }
+  if (lower.includes("vial") || lower.includes("tube") || lower.includes("nghiem") || lower.includes("thuoc") || lower === "med_vial" || lower === "brand_d" || lower.includes("aqua")) {
+    return "med_vial";
+  }
   return lower;
 }
 
@@ -100,7 +108,12 @@ export function cleanVisionPayload(raw: unknown): VisionDetection | null {
   return null;
 }
 
-export function determineTargetBin(brandId: string, config: SorterConfig): number {
+export function determineTargetBin(brandId: string, config: SorterConfig, confidence?: number): number {
+  // Fail-safe AI: Độ tin cậy thấp (< 60%) tự động chuyển về Khay 3 để kiểm tra thủ công, tránh gạt nhầm vào khay tiệt trùng
+  if (confidence !== undefined && confidence < 0.6) {
+    return config?.default_bin || 3;
+  }
+
   if (!config || !Array.isArray(config.bins)) return 3;
 
   for (const binRule of config.bins) {

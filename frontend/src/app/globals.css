@@ -243,7 +243,7 @@ html.light {
 }
 
 /* ========================================================
-   VẬT MẪU 2D CHÂN THỰC TRÊN BĂNG TẢI (COCA, PEPSI, RED BULL, AQUA)
+   VẬT MẪU 2D DIGITAL TWIN TRÊN BĂNG TẢI DỤNG CỤ Y TẾ SORTIX-MED
    ======================================================== */
 .product-sample-3d {
   position: absolute;
@@ -252,6 +252,26 @@ html.light {
   will-change: left, top, transform, opacity;
   user-select: none;
   pointer-events: none;
+}
+
+/* Bơm kim tiêm / Dao mổ */
+.sample-syringe {
+  filter: drop-shadow(0 6px 12px rgba(234, 179, 8, 0.35));
+}
+
+/* Kẹp phẫu thuật (Pean) */
+.sample-forceps {
+  filter: drop-shadow(0 6px 12px rgba(2, 132, 199, 0.35));
+}
+
+/* Kéo phẫu thuật */
+.sample-scissors {
+  filter: drop-shadow(0 6px 12px rgba(99, 102, 241, 0.35));
+}
+
+/* Lọ thuốc / Ống nghiệm */
+.sample-vial {
+  filter: drop-shadow(0 6px 12px rgba(16, 185, 129, 0.35));
 }
 
 /* Lon Coca-Cola: Đỏ ruby ánh kim */

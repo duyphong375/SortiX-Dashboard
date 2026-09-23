@@ -44,44 +44,44 @@ export function QuickFeedBar({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        {/* Coca-Cola */}
+        {/* Bơm kim tiêm */}
         <button
-          onClick={() => onSpawnPackage("brand_c")}
+          onClick={() => onSpawnPackage("med_syringe")}
           disabled={isDisabled}
-          className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-1.5 text-xs font-bold text-red-700 transition-all hover:bg-red-100 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
-          title="Thả Lon Coca-Cola"
+          className="flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-1.5 text-xs font-bold text-amber-800 transition-all hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300 dark:hover:bg-amber-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
+          title="Nạp Bơm kim tiêm / Dao mổ"
         >
-          <span>Lon Coca-Cola{hasBinConfig ? ` (${getBrandTargetBinName("brand_c")})` : ""}</span>
+          <span>Bơm kim tiêm / Dao mổ{hasBinConfig ? ` (${getBrandTargetBinName("med_syringe")})` : ""}</span>
         </button>
 
-        {/* Pepsi */}
+        {/* Kẹp phẫu thuật (Pean) */}
         <button
-          onClick={() => onSpawnPackage("brand_a")}
+          onClick={() => onSpawnPackage("med_forceps")}
           disabled={isDisabled}
           className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-1.5 text-xs font-bold text-blue-700 transition-all hover:bg-blue-100 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-400 dark:hover:bg-blue-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
-          title="Thả Lon Pepsi"
+          title="Nạp Kẹp phẫu thuật Pean"
         >
-          <span>Lon Pepsi{hasBinConfig ? ` (${getBrandTargetBinName("brand_a")})` : ""}</span>
+          <span>Kẹp Pean{hasBinConfig ? ` (${getBrandTargetBinName("med_forceps")})` : ""}</span>
         </button>
 
-        {/* Red Bull */}
+        {/* Kéo phẫu thuật */}
         <button
-          onClick={() => onSpawnPackage("brand_b")}
+          onClick={() => onSpawnPackage("med_scissors")}
           disabled={isDisabled}
-          className="flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-1.5 text-xs font-bold text-amber-800 transition-all hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-400 dark:hover:bg-amber-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
-          title="Thả Lon Red Bull"
+          className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 py-1.5 text-xs font-bold text-indigo-700 transition-all hover:bg-indigo-100 dark:border-indigo-500/40 dark:bg-indigo-500/15 dark:text-indigo-300 dark:hover:bg-indigo-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
+          title="Nạp Kéo mổ phẫu thuật"
         >
-          <span>Lon Red Bull{hasBinConfig ? ` (${getBrandTargetBinName("brand_b")})` : ""}</span>
+          <span>Kéo phẫu thuật{hasBinConfig ? ` (${getBrandTargetBinName("med_scissors")})` : ""}</span>
         </button>
 
-        {/* Aquafina */}
+        {/* Lọ thuốc / Ống nghiệm */}
         <button
-          onClick={() => onSpawnPackage("brand_d")}
+          onClick={() => onSpawnPackage("med_vial")}
           disabled={isDisabled}
-          className="flex items-center gap-1.5 rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-1.5 text-xs font-bold text-cyan-700 transition-all hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/15 dark:text-cyan-400 dark:hover:bg-cyan-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
-          title="Thả Chai Aquafina"
+          className="flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-bold text-emerald-700 transition-all hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-400 dark:hover:bg-emerald-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
+          title="Nạp Lọ thuốc / Ống nghiệm"
         >
-          <span>Chai Aquafina{hasBinConfig ? ` (${getBrandTargetBinName("brand_d")})` : ""}</span>
+          <span>Lọ thuốc / Ống nghiệm{hasBinConfig ? ` (${getBrandTargetBinName("med_vial")})` : ""}</span>
         </button>
 
         {/* Random Phôi */}

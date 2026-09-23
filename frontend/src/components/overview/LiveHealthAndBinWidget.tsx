@@ -59,9 +59,9 @@ export function LiveHealthAndBinWidget({
   const cap2 = binCapacities.bin2 || 50;
   const cap3 = binCapacities.bin3 || 50;
 
-  const bin1Theme = getBinColorTheme(bin1Brands[0], "rose");
+  const bin1Theme = getBinColorTheme(bin1Brands[0], "amber");
   const bin2Theme = getBinColorTheme(bin2Brands[0], "blue");
-  const bin3Theme = getBinColorTheme(bin3Brands[0], "amber");
+  const bin3Theme = getBinColorTheme(bin3Brands[0], "cyan");
   return (
     <div className="relate-card flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm dark:border-white/[0.07] dark:bg-[#161822]">
       <div>
@@ -230,11 +230,11 @@ export function LiveHealthAndBinWidget({
                   <span className={`h-2.5 w-2.5 rounded-full ${bin1Theme.widgetDotClass}`} />
                 )}
                 <span>
-                  Khay 1 (
+                  Thùng vật sắc nhọn (
                   {bin1Brands.length > 0
                     ? bin1Brands.map((b: string) => CATALOG_BRANDS[b]?.name || b).join(", ")
                     : "Trống"}{" "}
-                  / Gạt 1)
+                  / Khay 1)
                 </span>
               </div>
               {binCounts.bin1 >= cap1 ? (
@@ -330,11 +330,11 @@ export function LiveHealthAndBinWidget({
                   <span className={`h-2.5 w-2.5 rounded-full ${bin2Theme.widgetDotClass}`} />
                 )}
                 <span>
-                  Khay 2 (
+                  Khay tiệt trùng Autoclave (
                   {bin2Brands.length > 0
                     ? bin2Brands.map((b: string) => CATALOG_BRANDS[b]?.name || b).join(", ")
                     : "Trống"}{" "}
-                  / Gạt 2)
+                  / Khay 2)
                 </span>
               </div>
               {binCounts.bin2 >= cap2 ? (
@@ -429,7 +429,7 @@ export function LiveHealthAndBinWidget({
                 ) : (
                   <span className={`h-2.5 w-2.5 rounded-full ${bin3Theme.widgetDotClass}`} />
                 )}
-                <span>Khay 3 (Mặc định)</span>
+                <span>Khay vật tư & Ống nghiệm (Khay 3)</span>
               </div>
               {binCounts.bin3 >= cap3 ? (
                 <span className="font-mono font-black text-amber-800 dark:text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded text-[10px] animate-pulse">

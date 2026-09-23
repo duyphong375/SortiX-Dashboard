@@ -105,26 +105,26 @@ export const ConfigAndDiagnostics: React.FC<ConfigAndDiagnosticsProps> = ({
   const cap3 = binCapacities?.bin3 || 50;
 
   const [bin1Brand, setBin1Brand] = useState<string>(
-    config.bins[0]?.brand_ids?.[0] || "brand_c"
+    config.bins[0]?.brand_ids?.[0] || "med_syringe"
   );
   const [bin2Brand, setBin2Brand] = useState<string>(
-    config.bins[1]?.brand_ids?.[0] || "brand_a"
+    config.bins[1]?.brand_ids?.[0] || "med_forceps"
   );
 
   // Cấu hình đến từ SSE phải cập nhật ngay khay màu đang hiển thị,
   // kể cả khi người dùng đang mở trang cấu hình trên thiết bị khác.
   useEffect(() => {
-    setBin1Brand(config.bins[0]?.brand_ids?.[0] || "brand_c");
-    setBin2Brand(config.bins[1]?.brand_ids?.[0] || "brand_a");
+    setBin1Brand(config.bins[0]?.brand_ids?.[0] || "med_syringe");
+    setBin2Brand(config.bins[1]?.brand_ids?.[0] || "med_forceps");
   }, [config]);
 
-  const bin1ConfigTheme = getBinColorTheme(bin1Brand, "rose");
+  const bin1ConfigTheme = getBinColorTheme(bin1Brand, "amber");
   const bin2ConfigTheme = getBinColorTheme(bin2Brand, "blue");
-  const bin3ConfigTheme = getBinColorTheme(config.bins[2]?.brand_ids?.[0], "amber");
+  const bin3ConfigTheme = getBinColorTheme(config.bins[2]?.brand_ids?.[0], "cyan");
 
-  const bin1SliderTheme = getBinColorTheme(config.bins[0]?.brand_ids?.[0], "rose");
+  const bin1SliderTheme = getBinColorTheme(config.bins[0]?.brand_ids?.[0], "amber");
   const bin2SliderTheme = getBinColorTheme(config.bins[1]?.brand_ids?.[0], "blue");
-  const bin3SliderTheme = getBinColorTheme(config.bins[2]?.brand_ids?.[0], "amber");
+  const bin3SliderTheme = getBinColorTheme(config.bins[2]?.brand_ids?.[0], "cyan");
 
   const [isApplying, setIsApplying] = useState(false);
   const [statusMsg, setStatusMsg] = useState(applyStatusText || "");
@@ -175,8 +175,8 @@ export const ConfigAndDiagnostics: React.FC<ConfigAndDiagnosticsProps> = ({
   };
 
   const executeResetDefault = () => {
-    setBin1Brand("brand_c");
-    setBin2Brand("brand_a");
+    setBin1Brand("med_syringe");
+    setBin2Brand("med_forceps");
     setStatusMsg("Đã khôi phục cấu hình v1 mặc định thành công!");
     onResetDefaultConfig?.();
     toast.success("Đã khôi phục cấu hình v1 mặc định thành công!");
@@ -782,7 +782,7 @@ export const ConfigAndDiagnostics: React.FC<ConfigAndDiagnosticsProps> = ({
                   <div className="space-y-1">
                     <div className="flex items-center justify-between text-[11px]">
                       <span className={`font-semibold ${bin1SliderTheme.brandText}`}>
-                        Khay 1 ({config.bins[0]?.brand_ids?.[0] ? (CATALOG_BRANDS[config.bins[0].brand_ids[0]]?.name || config.bins[0].brand_ids[0]) : "Coca"}):
+                        Khay 1 ({config.bins[0]?.brand_ids?.[0] ? (CATALOG_BRANDS[config.bins[0].brand_ids[0]]?.name || config.bins[0].brand_ids[0]) : "Bơm kim tiêm / Dao mổ"}):
                       </span>
                       <BinCapacityInput
                         value={cap1}
@@ -810,7 +810,7 @@ export const ConfigAndDiagnostics: React.FC<ConfigAndDiagnosticsProps> = ({
                   <div className="space-y-1">
                     <div className="flex items-center justify-between text-[11px]">
                       <span className={`font-semibold ${bin2SliderTheme.brandText}`}>
-                        Khay 2 ({config.bins[1]?.brand_ids?.[0] ? (CATALOG_BRANDS[config.bins[1].brand_ids[0]]?.name || config.bins[1].brand_ids[0]) : "Pepsi"}):
+                        Khay 2 ({config.bins[1]?.brand_ids?.[0] ? (CATALOG_BRANDS[config.bins[1].brand_ids[0]]?.name || config.bins[1].brand_ids[0]) : "Kẹp phẫu thuật (Pean)"}):
                       </span>
                       <BinCapacityInput
                         value={cap2}
@@ -838,7 +838,7 @@ export const ConfigAndDiagnostics: React.FC<ConfigAndDiagnosticsProps> = ({
                   <div className="space-y-1">
                     <div className="flex items-center justify-between text-[11px]">
                       <span className={`font-semibold ${bin3SliderTheme.brandText}`}>
-                        Khay 3 (Mặc định / Khác):
+                        Khay 3 ({config.bins[2]?.brand_ids?.[0] ? (CATALOG_BRANDS[config.bins[2].brand_ids[0]]?.name || config.bins[2].brand_ids[0]) : "Vật tư y tế & Ống nghiệm"}):
                       </span>
                       <BinCapacityInput
                         value={cap3}

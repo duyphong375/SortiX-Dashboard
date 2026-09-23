@@ -142,14 +142,15 @@ export const SortixLogo: React.FC<SortixLogoProps> = ({
               <span className="relative inline-block text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-sky-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.4)]">
                 X
               </span>
+              <span className="text-cyan-500 font-extrabold ml-0.5">-Med</span>
             </h2>
             <span className="inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-cyan-500/15 to-blue-500/15 border border-cyan-500/30 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-cyan-500 dark:text-cyan-300 shadow-xs">
               <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
-              AI PRO
+              MED AI PRO
             </span>
           </div>
           <p className="truncate text-[10px] font-medium tracking-wide text-slate-500 dark:text-slate-400">
-            Hệ thống phân loại thông minh
+            Phân loại dụng cụ y tế phòng mổ
           </p>
         </div>
       )}

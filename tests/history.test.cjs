@@ -41,7 +41,7 @@ test("fresh simulation and reload start with no records or bin counts", () => {
   assert.deepEqual(history.loadClassificationHistory(true), []);
   assert.deepEqual(history.loadBinCountsLocal(true), emptyCounts);
   assert.deepEqual(history.loadBrandCountsLocal(true), {
-    brand_c: 0, brand_a: 0, brand_b: 0, brand_d: 0,
+    med_syringe: 0, med_forceps: 0, med_scissors: 0, med_vial: 0,
   });
   assert.deepEqual(createHistory(storage).history.loadClassificationHistory(true), []);
 });

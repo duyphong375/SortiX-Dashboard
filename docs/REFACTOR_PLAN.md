@@ -1,6 +1,6 @@
-# KẾ HOẠCH TÁI CẤU TRÚC VÀ LỘ TRÌNH PHÁT TRIỂN (REFACTORING PLAN)
+# KẾ HOẠCH TÁI CẤU TRÚC VÀ LỘ TRÌNH PHÁT TRIỂN SORTIX-MED (REFACTORING PLAN)
 
-> **Dự án**: SortiX Dashboard (Đồ án PBL3)  
+> **Dự án**: SortiX-Med — Hệ Thống Tự Động Phân Loại Dụng Cụ Y Tế & Chuẩn Bị Khử Trùng Phòng Mổ (Đồ án PBL3 Biomedical & Industrial IoT)  
 > **Kiến trúc**: Monorepo Workspaces (Frontend, Backend, Shared, Data, Scripts, Tests)  
 > **Trạng thái**: ✅ **100% Hoàn Thành Các Giai Đoạn Cốt Lõi (108/108 Tests PASS - 15 Test Suites)**.
 
@@ -23,9 +23,12 @@
    - Phân quyền RBAC chặt chẽ (Admin vs User), ngăn chặn Privilege Escalation.
    - Cơ chế cấp phát và kiểm chứng Mock OTP đặt lại mật khẩu với thời hạn 5 phút.
    - Ràng buộc an toàn: Không cho phép Admin tự xóa chính mình; Bắt buộc luôn duy trì tối thiểu 1 Admin.
-4. **Hệ Thống An Toàn Công Nghiệp & Cô Lập Kiểm Thử (Industrial Safety & Simulation Isolation)**:
+4. **Hệ Thống An Toàn Y Sinh, Công Nghiệp & Cô Lập Kiểm Thử**:
+   - Nhận diện 4 nhóm dụng cụ y tế phòng mổ: Bơm kim tiêm / Dao mổ (`med_syringe`), Kẹp phẫu thuật Pean (`med_forceps`), Kéo phẫu thuật (`med_scissors`), Lọ thuốc / Ống nghiệm (`med_vial`).
+   - Phân luồng 3 khay chứa y tế: Khay 1 (Thùng vật sắc nhọn lây nhiễm - Servo 1 IO23), Khay 2 (Khay hấp tiệt trùng Autoclave - Servo 2 IO24), Khay 3 (Khay vật tư y tế & Phục hồi / Máng trượt trọng lực cuối băng tải).
+   - Cơ chế an toàn sinh học Fail-safe: Tự động đưa về Khay 3 khi độ tin cậy nhận diện `< 60%`.
    - Dừng khẩn cấp E-Stop: Còi báo liên tục, banner toàn màn hình, mở khóa yêu cầu quyền Admin kèm lý do an toàn, chống loop echo 5s.
-   - Cảnh báo Kẹt phôi (`jam_detected`): Cảm biến quang học #02 che khuất liên tục > 5s, MQTT `conveyor/sensor/jam`, chuyển hướng bằng piston khí nén, dọn khay chủ động bất kỳ lúc nào.
+   - Cảnh báo Kẹt phôi (`jam_detected`): Cảm biến quang học #02 che khuất liên tục > 5s, MQTT `conveyor/sensor/jam`, cơ cấu gạt servo, dọn khay chủ động bất kỳ lúc nào.
    - Cảnh báo Khay đầy (`bin_full`): Đạt ngưỡng dung lượng định mức từng khay (5 - 50 SP), topic MQTT `conveyor/storage/bin_status`, còi báo, nút dọn/thay khay reset bộ đếm và tự chạy lại.
    - Thanh trượt tùy chỉnh độ rộng / sức chứa khay (5 - 50 SP): Đồng bộ tức thời trên Canvas máng trượt, LiveHealthAndBinWidget, ConfigAndDiagnostics và LocalStorage.
    - Đồng hồ đo nhiệt độ bán nguyệt 2 chế độ: Thanh trượt ảo 30°C - 95°C trong Mô phỏng; Bảng telemetry cảm biến ESP32 DS18B20 trong Thực tế.
@@ -36,7 +39,7 @@
    - Cô lập triệt để: Mọi nút test giả lập (E-Stop, Kẹt phôi, Khay đầy, Quá nhiệt, Offline ESP32, Test ngắt MQTT) chỉ hiển thị và hoạt động ở chế độ Mô Phỏng, hoàn toàn bị ẩn và chặn ở chế độ Thực Tế.
 5. **Bảo toàn và Mở rộng Kiểm Thử Tự Động (Quality Gate)**:
    - Đảm bảo 100% các bộ test hồi quy luôn chạy tự động và đạt tỷ lệ Pass 100% (**108/108 tests PASS - 15 Test Suites**).
-   - Kiểm tra kiểu dữ liệu nghiêm ngặt qua TypeScript Strict Mode (0 errors, 0 warnings) và ESLint (0 errors).
+   - Kiểm tra kiểu dữ liệu nghiêm ngặt qua TypeScript Strict Mode (0 errors, 0 warnings) và Next.js build (31/31 routes).
 
 ---
 
@@ -62,7 +65,7 @@
 ### ✅ Giai Đoạn 4: Hệ Thống An Toàn Công Nghiệp, SSE & Cô Lập Mô Phỏng
 - [x] **Task 4.1**: Thiết lập `safetyService.ts`, `safetyController.ts`, `safetyRoutes.ts`, `apiSafetyClient.ts`.
 - [x] **Task 4.2**: Xây dựng tính năng Dừng Khẩn Cấp (E-Stop): ngắt băng chuyền, còi hú liên tục, banner đỏ toàn màn hình, mở khóa an toàn Admin Only và chống loop echo 5s.
-- [x] **Task 4.3**: Xây dựng tính năng Cảnh Báo Kẹt Phôi (`jam_detected`): topic MQTT `conveyor/sensor/jam`, Toast cảnh báo đỏ, cơ cấu piston đẩy thay servo gạt, nút dọn khay chủ động bất kỳ lúc nào.
+- [x] **Task 4.3**: Xây dựng tính năng Cảnh Báo Kẹt Phôi (`jam_detected`): topic MQTT `conveyor/sensor/jam`, Toast cảnh báo đỏ, cơ cấu servo gạt, nút dọn khay chủ động bất kỳ lúc nào.
 - [x] **Task 4.4**: Thiết lập luồng Stream thời gian thực Server-Sent Events (`backend/src/services/sseService.ts` & `/api/events`).
 - [x] **Task 4.5**: Tạo kho dữ liệu thông báo bền vững `data/notifications.json` và `notificationModel.ts`.
 - [x] **Task 4.6**: Gắn nhãn định danh chế độ trong Email & Telegram cảnh báo (`🧪 Chế độ Giả Lập` / `🔴 Phần cứng Thực Tế`).
@@ -75,12 +78,14 @@
 - [x] **Task 4.13**: Xây dựng cảnh báo Mất kết nối MQTT Broker (`mqtt_disconnected`): Watchdog mất kết nối quá 5 giây, huy hiệu Header đổi đỏ chớp nháy, cơ chế auto-reconnect backoff 3s, 5s, 10s.
 - [x] **Task 4.14**: Xây dựng Đồng Hồ Nhiệt Độ Bán Nguyệt 2 Chế Độ (`TemperatureGaugeWidget.tsx`): Mô phỏng với thanh trượt ảo 30°C - 95°C; Thực tế với bảng telemetry cảm biến DS18B20 thật.
 
-### ✅ Giai Đoạn 5: Tích Hợp Toàn Diện, Chuẩn Hóa Monorepo & Kiểm Thử QA
+### ✅ Giai Đoạn 5: Tích Hợp Toàn Diện, Mobile Capacitor & Kiểm Thử QA
 - [x] **Task 5.1**: Tích hợp build script backend tự động vá alias module `@shared/*` (`backend/scripts/patch-dist-aliases.cjs`).
 - [x] **Task 5.2**: Chuẩn hóa script chạy đồng thời `npm run dev:all` (`scripts/dev-all.cjs`).
 - [x] **Task 5.3**: Bổ sung xác thực session token an toàn qua `authToken.ts` và chuẩn hóa endpoint logout.
 - [x] **Task 5.4**: Xác thực toàn diện 15 bộ test suites với **108/108 Tests PASS (100%)**.
-- [x] **Task 5.5**: Typecheck 0 lỗi (`npx tsc --noEmit --pretty false`), Production build Next.js thành công 29/29 routes.
+- [x] **Task 5.5**: Typecheck 0 lỗi (`npx tsc --noEmit --pretty false`), Production build Next.js thành công 31/31 routes.
+- [x] **Task 5.6**: Đóng gói Mobile Native App bằng **Capacitor 8**, xuất file `SortiX-Dashboard.apk` (4.1MB) và tối ưu Viewport di động.
+- [x] **Task 5.7**: Tạo mã QR truy cập nhanh `SortiX_Dashboard.png` trên mạng LAN (`http://192.168.1.169:3000`) và hỗ trợ tải trực tiếp file APK.
 
 ---
 
@@ -109,13 +114,13 @@
 
 ## 4. Lộ Trình Triển Khai Mở Rộng Tiếp Theo
 
-### 📌 Giai Đoạn 6: Đóng Gói Docker & Triển Khai Môi Trường Sản Xuất
+### 📌 Giai Đoạn 6: Đóng Gói Docker & Triển Khai Thực Nghiệm Bệnh Viện
 1. **Tích hợp Database Driver Chính Thức**:
    - Cung cấp tùy chọn chuyển đổi cấu hình `DB_TYPE=sqlite|postgres|mysql` trong `.env`.
    - Kết nối Prisma / Drizzle ORM tới cơ sở dữ liệu vật lý dựa trên các tệp DDL migrations đã chuẩn bị sẵn.
 2. **Đóng Gói Docker & Orchestration**:
    - Xây dựng `Dockerfile` tối ưu hóa đa tầng (multi-stage build) cho Frontend Next.js và Backend Express.
    - Viết `docker-compose.yml` tích hợp sẵn EMQX MQTT Broker, Backend API, Frontend Dashboard và PostgreSQL.
-3. **Thực Nghiệm Phần Cứng IoT ESP32-C5 & Stress Testing**:
+3. **Thực Nghiệm Phần Cứng IoT ESP32-C5 & Stress Testing Trong Phòng Mổ**:
    - Kiểm thử áp lực truyền nhận 100 gói tin telemetry/giây trên băng chuyền vật lý thực tế.
-   - Đo lường độ trễ mạng Wi-Fi 6 trong môi trường nhà xưởng công nghiệp.
+   - Đo lường độ trễ mạng Wi-Fi 6 trong môi trường phòng phẫu thuật bệnh viện.

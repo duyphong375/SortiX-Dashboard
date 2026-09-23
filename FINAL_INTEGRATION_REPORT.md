@@ -1,7 +1,7 @@
-# BÁO CÁO TỔNG KẾT TÍCH HỢP HỆ THỐNG (FINAL INTEGRATION REPORT)
+# BÁO CÁO TỔNG KẾT TÍCH HỢP HỆ THỐNG SORTIX-MED (FINAL INTEGRATION REPORT)
 
-> **Dự án**: SortiX Dashboard — Hệ Thống Giám Sát & Phân Loại Sản Phẩm Thông Minh (IoT Sorter)  
-> **Ngày kiểm tra**: 19/09/2026  
+> **Dự án**: SortiX-Med — Hệ Thống Tự Động Phân Loại Dụng Cụ Y Tế & Chuẩn Bị Khử Trùng Phòng Mổ (Biomedical & Industrial IoT)  
+> **Ngày kiểm tra**: 23/09/2026  
 > **Trạng thái**: ✅ **HOÀN TOÀN ĐẠT CHUẨN (PRODUCTION READY)**
 
 ---
@@ -24,7 +24,7 @@
 | :--- | :---: | :--- |
 | **TypeScript Typecheck** | ✅ **0 errors** | `npx tsc --noEmit --pretty false` hoàn thành sạch sẽ |
 | **Test Suite Toàn Diện** | ✅ **108/108 PASS** | 15 test suites chạy thành công, không có test fail |
-| **Frontend Production Build** | ✅ **Thành công** | `npm run build` trong `frontend`, 29/29 static pages sinh mã thành công |
+| **Frontend Production Build** | ✅ **Thành công** | `npm run build` trong `frontend`, 31/31 routes sinh mã thành công |
 | **Backend Build & Alias** | ✅ **Thành công** | Biên dịch TypeScript và tự động vá path alias `@shared/*` qua script |
 | **Git & Version Control** | ✅ **Đồng bộ** | Đã commit và đẩy thành công lên branch `main` của GitHub repository |
 
@@ -46,6 +46,8 @@
 | 10 | **Nhiệt Độ Bán Nguyệt** | Đồng hồ nhiệt độ hiển thị thanh trượt ở cả chế độ máy thật | Tách biệt hoàn toàn: Slider ảo ở Mô phỏng, Bảng telemetry DS18B20 ở Thực tế | ✅ Đã sửa |
 | 11 | **Mobile Android App** | Cần đóng gói Mobile App cho di động mà không được làm hỏng Web Next.js | Tích hợp Capacitor 8 Hybrid Bridge, xuất file APK 4.1MB, bảo vệ 100% web routes | ✅ Đã sửa |
 | 12 | **Điều Hướng Mobile** | Nút chuyển đổi Chế độ Mô phỏng bị ẩn trên màn hình di động hẹp (<640px) | Bổ sung nút viên nang trên TopHeader và khối chuyển đổi lớn trong Sidebar Drawer | ✅ Đã sửa |
+| 13 | **Chủ Đề Y Sinh (SortiX-Med)** | Chuyển đổi toàn diện sang nhận diện 4 nhóm dụng cụ y tế phòng mổ | Chuẩn hóa `CATALOG_BRANDS`, đổi tên 3 khay y tế, áp dụng quy tắc Fail-safe (<60% vào Khay 3) | ✅ Đã sửa |
+| 14 | **Mã QR Code Truy Cập Nhanh** | Cần mã QR quét bằng camera Android để mở nhanh Web App hoặc tải APK | Tạo tệp đồ họa QR chất lượng cao `SortiX_Dashboard.png` trỏ `http://192.168.1.169:3000` | ✅ Đã sửa |
 
 ---
 

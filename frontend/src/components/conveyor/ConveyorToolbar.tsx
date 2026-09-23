@@ -90,8 +90,8 @@ export const ConveyorToolbar: React.FC<ConveyorToolbarProps> = ({
                   : !isRunning
                   ? "Tạm dừng"
                   : itemsCount > 0
-                  ? `Đang chạy (${itemsCount} phôi)`
-                  : "Chờ phôi"}
+                  ? `Đang chạy (${itemsCount} dụng cụ)`
+                  : "Chờ dụng cụ"}
               </span>
             </div>
             <p className="text-xs font-normal text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1 sm:line-clamp-none">
@@ -100,8 +100,8 @@ export const ConveyorToolbar: React.FC<ConveyorToolbarProps> = ({
                 : !isRunning
                 ? "Hệ thống đang tạm dừng • Nhấn Khởi động để tiếp tục"
                 : itemsCount > 0
-                ? `Băng tải đang vận chuyển ${itemsCount} phôi qua trạm quét và cơ cấu gạt`
-                : "Băng tải đang chờ phôi mẫu • Sẵn sàng tiếp nhận sản phẩm"}
+                ? `Băng tải đang vận chuyển ${itemsCount} dụng cụ qua trạm quét AI và cơ cấu gạt`
+                : "Băng tải đang chờ dụng cụ • Sẵn sàng tiếp nhận đồ sau mổ"}
             </p>
           </div>
         </div>
@@ -170,14 +170,14 @@ export const ConveyorToolbar: React.FC<ConveyorToolbarProps> = ({
         <div className="flex items-center gap-2.5 rounded-xl border border-emerald-300 bg-emerald-50/90 px-3.5 py-2 text-xs text-emerald-900 shadow-xs dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-200">
           <ShieldAlert className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 animate-pulse" />
           <span className="leading-relaxed">
-            <strong className="font-bold text-emerald-950 dark:text-emerald-100">Chế độ thực tế:</strong> Đang nhận dữ liệu từ cảm biến và camera ESP32. Nút thả phôi ảo được khóa để bảo đảm tính chuẩn xác của phần cứng.
+            <strong className="font-bold text-emerald-950 dark:text-emerald-100">Chế độ thực tế:</strong> Đang nhận dữ liệu từ cảm biến và camera ESP32. Nút thả dụng cụ ảo được khóa để bảo đảm tính chuẩn xác của phần cứng.
           </span>
         </div>
       ) : (
         <div className="flex items-center gap-2.5 rounded-xl border border-purple-300 bg-purple-50/90 px-3.5 py-2 text-xs text-purple-900 shadow-xs dark:border-purple-500/30 dark:bg-purple-950/40 dark:text-purple-200">
           <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400 shrink-0" />
           <span className="leading-relaxed">
-            <strong className="font-bold text-purple-950 dark:text-purple-100">Chế độ mô phỏng:</strong> Thả phôi mẫu trực tiếp lên băng tải để kiểm thử phân loại và cơ cấu gạt.
+            <strong className="font-bold text-purple-950 dark:text-purple-100">Chế độ mô phỏng y tế:</strong> Nạp dụng cụ mẫu trực tiếp lên băng tải để kiểm thử phân loại và cơ cấu servo gạt phôi.
           </span>
         </div>
       )}
@@ -194,69 +194,69 @@ export const ConveyorToolbar: React.FC<ConveyorToolbarProps> = ({
             ) : (
               <>
                 <Box className="h-4 w-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
-                <span>Thả vật mẫu (Mô phỏng):</span>
+                <span>Nạp dụng cụ y tế (Mô phỏng):</span>
               </>
             )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => onSpawnPackage?.("brand_c")}
+              onClick={() => onSpawnPackage?.("med_syringe")}
               disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
-              className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 transition-all hover:bg-red-100 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
-              title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : `Thả Lon Coca-Cola (${getBrandTargetBinName("brand_c")})`}
+              className="flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 transition-all hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300 dark:hover:bg-amber-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
+              title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : `Nạp Bơm kim tiêm (${getBrandTargetBinName("med_syringe")})`}
             >
-              <span>Lon Coca-Cola</span>
+              <span>Nạp Bơm kim tiêm</span>
               <span className="text-[10px] font-mono font-normal opacity-75">
-                ({getBrandTargetBinName("brand_c")})
+                ({getBrandTargetBinName("med_syringe")})
               </span>
             </button>
 
             <button
-              onClick={() => onSpawnPackage?.("brand_a")}
+              onClick={() => onSpawnPackage?.("med_forceps")}
               disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
-              className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition-all hover:bg-blue-100 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-400 dark:hover:bg-blue-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
-              title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : `Thả Lon Pepsi (${getBrandTargetBinName("brand_a")})`}
+              className="flex items-center gap-1.5 rounded-xl border border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-bold text-sky-800 transition-all hover:bg-sky-100 dark:border-sky-500/40 dark:bg-sky-500/15 dark:text-sky-300 dark:hover:bg-sky-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
+              title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : `Nạp Kẹp Pean (${getBrandTargetBinName("med_forceps")})`}
             >
-              <span>Lon Pepsi</span>
+              <span>Nạp Kẹp Pean</span>
               <span className="text-[10px] font-mono font-normal opacity-75">
-                ({getBrandTargetBinName("brand_a")})
+                ({getBrandTargetBinName("med_forceps")})
               </span>
             </button>
 
             <button
-              onClick={() => onSpawnPackage?.("brand_b")}
+              onClick={() => onSpawnPackage?.("med_scissors")}
               disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
-              className="flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 transition-all hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-400 dark:hover:bg-amber-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
-              title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : `Thả Lon Red Bull (${getBrandTargetBinName("brand_b")})`}
+              className="flex items-center gap-1.5 rounded-xl border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-800 transition-all hover:bg-indigo-100 dark:border-indigo-500/40 dark:bg-indigo-500/15 dark:text-indigo-300 dark:hover:bg-indigo-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
+              title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : `Nạp Kéo mổ (${getBrandTargetBinName("med_scissors")})`}
             >
-              <span>Lon Red Bull</span>
+              <span>Nạp Kéo mổ</span>
               <span className="text-[10px] font-mono font-normal opacity-75">
-                ({getBrandTargetBinName("brand_b")})
+                ({getBrandTargetBinName("med_scissors")})
               </span>
             </button>
 
             <button
-              onClick={() => onSpawnPackage?.("brand_d")}
+              onClick={() => onSpawnPackage?.("med_vial")}
               disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
-              className="flex items-center gap-1.5 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-bold text-cyan-700 transition-all hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/15 dark:text-cyan-400 dark:hover:bg-cyan-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
-              title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : `Thả Chai Aquafina (${getBrandTargetBinName("brand_d")})`}
+              className="flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 transition-all hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
+              title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : `Nạp Ống nghiệm (${getBrandTargetBinName("med_vial")})`}
             >
-              <span>Chai Aquafina</span>
+              <span>Nạp Ống nghiệm</span>
               <span className="text-[10px] font-mono font-normal opacity-75">
-                ({getBrandTargetBinName("brand_d")})
+                ({getBrandTargetBinName("med_vial")})
               </span>
             </button>
 
-            {/* Nút thả phôi ngẫu nhiên */}
+            {/* Nút nạp ngẫu nhiên */}
             <button
               onClick={() => onSpawnPackage?.()}
               disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
               className="flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-1.5 text-xs font-bold text-purple-700 transition-all hover:bg-purple-100 dark:border-purple-500/40 dark:bg-purple-500/15 dark:text-purple-400 dark:hover:bg-purple-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
-              title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : "Thả ngẫu nhiên một phôi"}
+              title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : "Nạp ngẫu nhiên một dụng cụ y tế"}
             >
               <Sparkles className="h-3.5 w-3.5 text-purple-500" />
-              <span>Phôi ngẫu nhiên</span>
+              <span>Nạp ngẫu nhiên</span>
             </button>
 
             {isSimulation && (

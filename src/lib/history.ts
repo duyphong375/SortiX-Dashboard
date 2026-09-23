@@ -46,10 +46,10 @@ export const DEFAULT_INITIAL_CONFIG: SorterConfig = {
   device_id: "sorter_01",
   catalog_version: "catalog_01",
   bins: [
-    { bin_id: 1, brand_ids: ["brand_c"] }, // Khay 1: Coca-Cola
-    { bin_id: 2, brand_ids: ["brand_a"] }, // Khay 2: Pepsi
+    { bin_id: 1, brand_ids: ["med_syringe"] }, // Khay 1: Bơm kim tiêm / Dao mổ
+    { bin_id: 2, brand_ids: ["med_forceps", "med_scissors"] }, // Khay 2: Kẹp phẫu thuật & Kéo phẫu thuật
   ],
-  default_bin: 3, // Khay 3: Mặc định (Red Bull, Aquafina, hoặc nhãn khác đi thẳng)
+  default_bin: 3, // Khay 3: Mặc định (Vật tư y tế, Lọ thuốc / Ống nghiệm hoặc vật phẩm khác)
   apply_mode: "when_line_empty",
   timestamp: new Date().toISOString(),
 };
@@ -249,17 +249,24 @@ export function updateBinCountsLocal(actualBin: number, isSim: boolean = true): 
  */
 export function loadBrandCountsLocal(isSim: boolean = true): Record<string, number> {
   const brCounts: Record<string, number> = {
-    brand_c: 0,
-    brand_a: 0,
-    brand_b: 0,
-    brand_d: 0,
+    med_syringe: 0,
+    med_forceps: 0,
+    med_scissors: 0,
+    med_vial: 0,
+  };
+  const aliasMap: Record<string, string> = {
+    brand_c: "med_syringe",
+    brand_a: "med_forceps",
+    brand_b: "med_scissors",
+    brand_d: "med_vial",
   };
   const records = loadClassificationHistory(isSim);
   records.forEach((r) => {
-    if (brCounts[r.brand_id] !== undefined) {
-      brCounts[r.brand_id]++;
+    const brandKey = aliasMap[r.brand_id] || r.brand_id;
+    if (brCounts[brandKey] !== undefined) {
+      brCounts[brandKey]++;
     } else {
-      brCounts[r.brand_id] = 1;
+      brCounts[brandKey] = 1;
     }
   });
   return brCounts;

@@ -23,9 +23,9 @@ export const SYSTEM_SAFETY_STATES = {
 } as const;
 
 export const DEFAULT_BINS = [
-  { id: 1, name: "Khay 1 (Servo 1)", defaultBrand: "Coca-Cola" },
-  { id: 2, name: "Khay 2 (Servo 2)", defaultBrand: "Pepsi" },
-  { id: 3, name: "Khay 3 (Mặc định)", defaultBrand: "Hàng khác / Lỗi" },
+  { id: 1, name: "Thùng vật sắc nhọn lây nhiễm (Sharps Waste)", defaultBrand: "Bơm kim tiêm / Dao mổ" },
+  { id: 2, name: "Khay hấp tiệt trùng Autoclave (Surgical Instruments)", defaultBrand: "Kẹp phẫu thuật & Kéo mổ" },
+  { id: 3, name: "Khay vật tư y tế & Ống nghiệm (General Medical Supplies)", defaultBrand: "Lọ thuốc & Ống nghiệm" },
 ] as const;
 
 export const CLASSIFICATION_STATUSES = {

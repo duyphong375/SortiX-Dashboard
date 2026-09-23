@@ -1,33 +1,47 @@
-# SortiX Dashboard — Hệ Thống Giám Sát & Phân Loại Sản Phẩm Thông Minh (IoT Sorter)
+# SortiX-Med — Hệ Thống Tự Động Phân Loại Dụng Cụ Y Tế & Chuẩn Bị Khử Trùng Phòng Mổ (Biomedical & Industrial IoT)
 
-> **Đồ án PBL3 / Capstone Project**: Hệ thống điều khiển, giám sát và phân loại sản phẩm theo thời gian thực trên băng chuyền công nghiệp tích hợp vi điều khiển IoT (ESP32-C5), thị giác máy tính (Vision AI), bảng điều khiển quản trị phân tầng và ứng dụng di động đa nền tảng (Android APK & iOS PWA) từ một cơ sở mã nguồn duy nhất (1-Codebase Hybrid Architecture).
+> **Đồ án PBL3 / Capstone Project**: Hệ thống điều khiển, giám sát và tự động phân loại dụng cụ y tế sau phẫu thuật (Bơm kim tiêm / Dao mổ, Kẹp phẫu thuật Pean, Kéo phẫu thuật, Lọ thuốc / Ống nghiệm) theo thời gian thực trên băng tải thông minh nhằm chuẩn bị cho quy trình khử trùng Autoclave phòng mổ. Tích hợp vi điều khiển IoT (**ESP32-C5**), camera thị giác máy tính (**YOLOv8 AI**), bảng điều khiển quản trị phân tầng và ứng dụng di động đa nền tảng (Android APK & iOS PWA) từ một cơ sở mã nguồn duy nhất (1-Codebase Hybrid Architecture).
 
 ---
 
 ## 📌 Mục Lục
 1. [Giới Thiệu Tổng Quan](#1-giới-thiệu-tổng-quan)
 2. [Kiến Trúc Hệ Thống (Monorepo & 1-Codebase Architecture)](#2-kiến-trúc-hệ-thống-monorepo--1-codebase-architecture)
-3. [Công Nghệ Sử Dụng](#3-công-nghệ-sử-dụng)
-4. [Tài Khoản Mặc Định & Phân Quyền (RBAC)](#4-tài-khoản-mặc-định--phân-quyền-rbac)
-5. [Cài Đặt & Khởi Chạy Nhanh](#5-cài-đặt--khởi-chạy-nhanh)
-6. [Đóng Gói Ứng Dụng Di Động (Mobile App: Android APK & iOS PWA)](#6-đóng-gói-ứng-dụng-di-động-mobile-app-android-apk--ios-pwa)
-7. [Chế Độ Vận Hành: Mô Phỏng vs. Máy Thật](#7-chế-độ-vận-hành-mô-phỏng-vs-máy-thật)
-8. [Các Trang Chức Năng Chính](#8-các-trang-chức-năng-chính)
-9. [Hệ Thống An Toàn, Giám Sát & Cảnh Báo](#9-hệ-thống-an-toàn-giám-sát--cảnh-báo)
-10. [Hệ Thống Xác Thực & Bảo Mật](#10-hệ-thống-xác-thực--bảo-mật)
-11. [Kiểm Thử & Đảm Bảo Chất Lượng (QA)](#11-kiểm-thử--đảm-bảo-chất-lượng-qa)
-12. [Biến Môi Trường (Environment Variables)](#12-biến-môi-trường-environment-variables)
-13. [Xử Lý Sự Cố Thường Gặp (Troubleshooting)](#13-xử-lý-sự-cố-thường-gặp-troubleshooting)
-14. [Nhóm Tác Giả & Đóng Góp](#14-nhóm-tác-giả--đóng-góp)
+3. [Luồng Hoạt Động & Quy Trình Vận Hành (System Workflows)](#3-luồng-hoạt-động--quy-trình-vận-hành-system-workflows)
+   - 3.1. [Sơ Đồ Luồng Hoạt Động Tổng Thể (End-to-End Workflow)](#31-sơ-đồ-luồng-hoạt-động-tổng-thể-end-to-end-workflow)
+   - 3.2. [Luồng Phân Loại Dụng Cụ Y Tế Máy Thật (Live Hardware Sorting Flow)](#32-luồng-phân-loại-sản-phẩm-máy-thật-live-hardware-sorting-flow)
+   - 3.3. [Luồng Phân Loại Ở Chế Độ Mô Phỏng (Simulation Physics Flow)](#33-luồng-phân-loại-ở-chế-độ-mô-phỏng-simulation-physics-flow)
+   - 3.4. [Luồng An Toàn Công Nghiệp & Xử Lý Sự Cố (Safety & Incident Flow)](#34-luồng-an-toàn-công-nghiệp--xử-lý-sự-cố-safety--incident-flow)
+   - 3.5. [Luồng Báo Cáo 1 Ngày Làm Việc (Shift Summary Workflow)](#35-luồng-báo-cáo-1-ngày-làm-việc-shift-summary-workflow)
+   - 3.6. [Luồng Cấu Hình Quy Tắc Phân Loại (Configuration Sync Flow)](#36-luồng-cấu-hình-quy-tắc-phân-loại-configuration-sync-flow)
+   - 3.7. [Luồng Xác Thực Người Dùng & Phân Quyền RBAC (Auth & Access Control)](#37-luồng-xác-thực-người-dùng--phân-quyền-rbac-auth--access-control)
+4. [Cơ Chế Hoạt Động Của Cơ Sở Dữ Liệu (Database Architecture)](#4-cơ-chế-hoạt-động-của-cơ-sở-dữ-liệu-database-architecture)
+   - 4.1. [Chiến Lược Lưu Trữ 2 Tầng (Dual-Mode Persistence Strategy)](#41-chiến-lược-lưu-trữ-2-tầng-dual-mode-persistence-strategy)
+   - 4.2. [Cơ Chế Ghi File Nguyên Tử (Atomic File Write Mechanism)](#42-cơ-chế-ghi-file-nguyên-tử-atomic-file-write-mechanism)
+   - 4.3. [Chi Tiết Các Bảng & Thực Thể Dữ Liệu (Entities & Schemas)](#43-chi-tiết-các-bảng--thực-thể-dữ-liệu-entities--schemas)
+   - 4.4. [Cơ Chế Đồng Bộ Dữ Liệu 3 Lớp (3-Tier Data Synchronization)](#44-cơ-chế-đồng-bộ-dữ-liệu-3-lớp-3-tier-data-synchronization)
+   - 4.5. [Bộ Migrations Đa CSDL Sẵn Sàng Triển Khai (Multi-DB Migrations)](#45-bộ-migrations-đa-csdl-sẵn-sàng-triển-khai-multi-db-migrations)
+5. [Công Nghệ Sử Dụng](#5-công-nghệ-sử-dụng)
+6. [Tài Khoản Mặc Định & Phân Quyền (RBAC)](#6-tài-khoản-mặc-định--phân-quyền-rbac)
+7. [Cài Đặt & Khởi Chạy Nhanh](#7-cài-đặt--khởi-chạy-nhanh)
+8. [Đóng Gói Ứng Dụng Di Động (Mobile App: Android APK & iOS PWA)](#8-đóng-gói-ứng-dụng-di-động-mobile-app-android-apk--ios-pwa)
+9. [Chế Độ Vận Hành: Mô Phỏng vs. Máy Thật](#9-chế-độ-vận-hành-mô-phỏng-vs-máy-thật)
+10. [Các Trang Chức Năng Chính](#10-các-trang-chức-năng-chính)
+11. [Hệ Thống An Toàn, Giám Sát & Cảnh Báo](#11-hệ-thống-an-toàn-giám-sát--cảnh-báo)
+12. [Hệ Thống Xác Thực & Bảo Mật](#12-hệ-thống-xác-thực--bảo-mật)
+13. [Kiểm Thử & Đảm Bảo Chất Lượng (QA)](#13-kiểm-thử--đảm-bảo-chất-lượng-qa)
+14. [Biến Môi Trường (Environment Variables)](#14-biến-môi-trường-environment-variables)
+15. [Xử Lý Sự Cố Thường Gặp (Troubleshooting)](#15-xử-lý-sự-cố-thường-gặp-troubleshooting)
+16. [Nhóm Tác Giả & Đóng Góp](#16-nhóm-tác-giả--đóng-góp)
 
 ---
 
 ## 1. Giới Thiệu Tổng Quan
 
-**SortiX Dashboard** là nền tảng quản trị và vận hành toàn diện cho dây chuyền phân loại sản phẩm tự động. Hệ thống kết nối đồng bộ giữa vi điều khiển IoT (**ESP32-C5**), camera nhận diện thương hiệu/nhãn chai lọ, cụm cảm biến hồng ngoại & quang học, cơ cấu phân loại piston khí nén 3 khay và giao diện Dashboard giám sát 60fps trên cả Máy tính Web, Điện thoại Android (Native APK) và iPhone (PWA Standalone).
+**SortiX-Med** là hệ thống IoT Y tế chuyên dụng phục vụ công tác thu gom, tự động nhận diện và phân loại dụng cụ phẫu thuật phòng mổ. Hệ thống giải quyết bài toán chống lây nhiễm chéo các tác nhân nguy hiểm (HIV, HBV, HCV...) và phòng chống tai nạn nghề nghiệp do vật sắc nhọn đâm phải cho đội ngũ y bác sĩ và kỹ thuật viên y tế.
 
 ### 🌟 Tính năng nổi bật:
-- 🚀 **Trực quan hóa vật lý 60fps (HTML5 Canvas)**: Mô phỏng hành vi di chuyển của phôi chai/lon trên băng tải, qua cảm biến phát hiện và kích hoạt piston đẩy vào đúng khay theo thời gian thực.
+- 🚀 **Trực quan hóa vật lý 60fps (HTML5 Canvas & 2D Digital Twin)**: Mô phỏng chi tiết 4 nhóm dụng cụ y tế (Bơm tiêm/Dao mổ, Kẹp phẫu thuật Pean, Kéo mổ, Ống nghiệm) di chuyển trên băng tải, qua cảm biến quang và phân luồng chính xác vào 3 khay chứa y tế chuyên dụng.
 - 📱 **Hỗ Trợ Di Động Đa Nền Tảng (1-Codebase Hybrid Mobile App)**:
   - **Android**: Đóng gói thành file `.apk` cài đặt trực tiếp thông qua **Capacitor 8**, tích hợp splash screen, cấu hình `usesCleartextTraffic` và webview hiệu năng cao.
   - **iOS (iPhone/iPad)**: Chế độ PWA Standalone toàn màn hình (qua Safari "Thêm vào MH chính"), tối ưu viewport chuẩn `viewportFit: "cover"`, chống zoom ngoài ý muốn (`maximumScale: 1, userScalable: false`).
@@ -129,18 +143,382 @@ SortiX-Dashboard/
 
 ---
 
-## 3. Công Nghệ Sử Dụng
+## 3. Luồng Hoạt Động & Quy Trình Vận Hành (System Workflows)
+
+Phần này mô tả chi tiết cách thức toàn bộ hệ thống phối hợp từ phần cứng IoT, thị giác máy tính, MQTT Broker, máy chủ API cho đến giao diện người dùng.
+
+### 3.1. Sơ Đồ Luồng Hoạt Động Tổng Thể (End-to-End Workflow)
+
+```mermaid
+flowchart TD
+    subgraph HARDWARE_LAYER["1. Tầng Phần Cứng & Thu Thập Dữ Liệu"]
+        CAM["Camera AI / Edge Vision"] -->|Nhận diện nhãn phôi| DETECT["Kết quả Detection (brand, confidence)"]
+        SENSORS["Cụm Cảm Biến S1-S3 + Encoder + DS18B20"] -->|Đo tốc độ, nhiệt độ, kẹt phôi| ESP32["Vi điều khiển ESP32-C5"]
+        DETECT -->|Serial / Wi-Fi 6| ESP32
+    end
+
+    subgraph IOT_COMMUNICATION["2. Tầng Truyền Thông IoT (MQTT Broker)"]
+        ESP32 -->|Publish: sorter/01/vision| BROKER["MQTT Broker (EMQX / Mosquitto)"]
+        ESP32 -->|Publish: sorter/01/telemetry| BROKER
+        ESP32 -->|Publish: conveyor/heartbeat (2s)| BROKER
+        ESP32 -->|Publish: conveyor/sensor/jam| BROKER
+        ESP32 -->|Publish: conveyor/storage/bin_status| BROKER
+    end
+
+    subgraph SERVER_LAYER["3. Tầng Máy Chủ Backend (Express Port 5000)"]
+        BROKER -->|Subscribe / Ingest| BACKEND["Express API Server"]
+        BACKEND -->|Watchdog 6s| HEARTBEAT_MONITOR["Heartbeat & Health Monitor"]
+        BACKEND -->|Ghi nhận sự cố| SAFETY_SVC["Safety & Alert Engine"]
+        SAFETY_SVC -->|Ghi Atomic Write| DB_STORE[("Persistence Data Store\ndata/users.json\ndata/notifications.json")]
+        SAFETY_SVC -->|Gửi cảnh báo khẩn| ALERT_CHANNELS["Telegram Bot & SMTP Email"]
+        SAFETY_SVC -->|Broadcast Realtime| SSE_STREAM["SSE Stream (/api/events)"]
+    end
+
+    subgraph CLIENT_LAYER["4. Tầng Giao Diện Khách (Web & Mobile App)"]
+        BROKER -.->|WebSocket WSS (Telemetry cao tần)| CLIENTS["Next.js Dashboard & Mobile APK / PWA"]
+        SSE_STREAM -->|Nhận sự cố khẩn cấp| CLIENTS
+        CLIENTS -->|Vẽ Canvas 60fps & Piston| CANVAS["Canvas 60fps Visualizer"]
+        CLIENTS -->|Phát âm thanh còi / nén khí| AUDIO["Web Audio Synthesizer"]
+        CLIENTS -->|REST API Calls (Admin config, unlock)| BACKEND
+    end
+```
+
+---
+
+### 3.2. Luồng Phân Loại Dụng Cụ Y Tế Máy Thật (Live Hardware Sorting Flow)
+
+1. **Dụng cụ đi vào băng tải**: Động cơ băng tải quay với vận tốc được giám sát qua cảm biến Encoder (`conveyor_speed`). Dụng cụ y tế sau phẫu thuật lần lượt đi qua Cảm biến S1 (IO0 - Phát hiện vật vào và kích hoạt cụm camera).
+2. **Camera AI YOLOv8 nhận diện dụng cụ y tế**:
+   - Camera công nghiệp tại trạm nhận diện chụp ảnh khi dụng cụ đi qua vùng ROI của Cảm biến S1.
+   - Mô hình Vision AI YOLOv8 phân loại 4 nhóm dụng cụ y tế và xuất độ tin cậy `confidence` (0.00 – 1.00):
+     - `med_syringe`: Bơm kim tiêm / Dao mổ (Vàng y tế `#EAB308`)
+     - `med_forceps`: Kẹp phẫu thuật Pean (Xanh dương y tế `#0284C7`)
+     - `med_scissors`: Kéo phẫu thuật (Xanh tím tiệt trùng `#6366F1`)
+     - `med_vial`: Lọ thuốc / Ống nghiệm (Xanh ngọc Emerald `#10B981`)
+   - Kết quả được đóng gói vào payload `VisionDetection` và gửi lên MQTT topic `sorter/01/vision`.
+3. **Tra cứu quy tắc phân loại & Cơ chế An toàn Fail-safe**:
+   - ESP32-C5 so khớp `brand` với bảng quy tắc cấu hình `rules` hiện tại:
+     - `med_syringe` -> **Khay 1: Thùng vật sắc nhọn lây nhiễm (Sharps Waste)** (Servo 1 - PWM IO23 gạt vào khay)
+     - `med_forceps` / `med_scissors` -> **Khay 2: Khay hấp tiệt trùng Autoclave (Surgical Instruments)** (Servo 2 - PWM IO24 gạt vào khay)
+     - `med_vial` -> **Khay 3: Khay vật tư y tế & Phục hồi** (Chạy thẳng cuối băng tải qua máng trượt trọng lực, không kích hoạt servo)
+     - **Nguyên tắc An toàn Sinh học (Fail-safe)**: Mọi vật phẩm không nhận diện được hoặc độ tin cậy `confidence < 60%` (0.60) sẽ tự động chạy thẳng vào **Khay 3** để nhân viên y tế kiểm tra lại, tuyệt đối không gạt nhầm vào Khay 2 tiệt trùng.
+4. **Kích hoạt cơ cấu Servo gạt**:
+   - Cảm biến vị trí S2 (IO1) hoặc S3 (IO6) kích hoạt đúng thời điểm dụng cụ đi ngang qua máng khay mục tiêu.
+   - Vi điều khiển xuất xung PWM điều khiển góc quay Servo tương ứng đẩy dụng cụ vào đúng khay.
+5. **Cập nhật dữ liệu & Lịch sử**:
+   - Số đếm khay tăng thêm 1 sản phẩm.
+   - Bản ghi phân loại `ClassificationRecord` được gửi về backend qua API `POST /api/history` và lưu vào bộ nhớ đệm an toàn.
+   - Dashboard hiển thị tức thời hoạt ảnh và âm thanh phản hồi.
+
+---
+
+### 3.3. Luồng Phân Loại Ở Chế Độ Mô Phỏng (Simulation Physics Flow)
+
+1. **Khởi tạo dụng cụ ảo**:
+   - Người vận hành bấm nút nạp nhanh trên thanh `QuickFeedBar`:
+     - 💉 Bơm tiêm / Dao mổ (`med_syringe`)
+     - 🗜️ Kẹp phẫu thuật Pean (`med_forceps`)
+     - ✂️ Kéo phẫu thuật (`med_scissors`)
+     - 🧪 Lọ thuốc / Ống nghiệm (`med_vial`)
+     - Hoặc bấm "Nạp ngẫu nhiên" để sinh phôi ngẫu nhiên.
+   - Đối tượng dụng cụ được khởi tạo với tọa độ `x = 0`, vận tốc `vx`, khối lượng, kích thước và màu sắc y tế tương ứng.
+2. **Vòng lặp vật lý Canvas 60fps (`useConveyorPhysics.ts`)**:
+   - Vòng lặp `requestAnimationFrame` tính toán tọa độ di chuyển theo thời gian thực ($x_{new} = x_{old} + vx \times \Delta t$).
+   - Khi dụng cụ đi qua tọa độ trạm kiểm tra (Cảm biến S1), hệ thống mô phỏng quét cảm biến quang học và hiển thị hiệu ứng quét laser AI.
+3. **Mô phỏng cơ cấu gạt chuyển hướng**:
+   - Dựa trên quy tắc phân loại, khi dụng cụ đến tọa độ Khay 1 ($x \approx 280px$) hoặc Khay 2 ($x \approx 480px$), cơ cấu gạt ảo kích hoạt góc quay.
+   - Dụng cụ nhận gia tốc theo trục $y$, đổi hướng và trượt vào lòng khay tương ứng.
+   - Nếu là Khay 3 (`med_vial` hoặc độ tin cậy < 60%), dụng cụ tiếp tục chạy thẳng đến cuối băng tải và rơi vào Khay 3.
+4. **Tổng hợp số liệu & Hiệu ứng**:
+   - Bộ đếm khay trên widget `BinTrays` nhảy số, phát âm thanh công nghiệp qua Web Audio API (`playSortChime()`).
+   - Kiểm tra ngưỡng sức chứa định mức của khay (5 - 50 SP). Nếu đạt mức tối đa, tự động kích hoạt cảnh báo đầy khay ảo.
+
+---
+
+### 3.4. Luồng An Toàn Công Nghiệp & Xử Lý Sự Cố (Safety & Incident Flow)
+
+Hệ thống SortiX triển khai cơ chế an toàn phân tầng nghiêm ngặt nhằm bảo vệ thiết bị và người vận hành:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Operator as Người Vận Hành / Cảm Biến
+    participant Client as Web / Mobile Dashboard
+    participant Backend as Express Backend (Port 5000)
+    participant DB as Persistence Store (notifications.json)
+    participant Alerts as Telegram Bot & SMTP
+    participant Hardware as Băng Tải & Động Cơ
+
+    Note over Operator,Hardware: KỊCH BẢN 1: DỪNG KHẨN CẤP (E-STOP)
+    Operator->>Hardware: Nhấn nút E-Stop vật lý (IO10) HOẶC bấm nút E-Stop trên UI
+    Hardware->>Hardware: Ngắt relay nguồn động cơ lập tức (isRunning = false)
+    Hardware->>Backend: Gửi sự cố (POST /api/safety/estop)
+    Backend->>DB: Ghi bản ghi sự cố (is_locked = true, severity = critical)
+    Backend->>Alerts: Bắn cảnh báo Telegram & Email có cờ chế độ
+    Backend->>Client: Broadcast SSE: event "emergency_stop"
+    Client->>Client: Bật còi hú liên tục & Hiển thị Banner khóa toàn màn hình
+
+    Note over Operator,Hardware: KỊCH BẢN 2: MỞ KHÓA AN TOÀN (SAFE UNLOCK)
+    Operator->>Client: Quản trị viên nhập lý do hiện trường & mật khẩu Admin
+    Client->>Backend: Gửi yêu cầu mở khóa (POST /api/safety/unlock)
+    Backend->>Backend: Kiểm tra quyền Admin (RBAC) & kích hoạt ân hạn 5s chống lặp
+    Backend->>DB: Cập nhật sự cố (is_locked = false, resolved_at, resolved_by)
+    Backend->>Client: Broadcast SSE: event "safety_unlocked"
+    Client->>Client: Tắt còi hú, ẩn Banner khóa, sẵn sàng khởi động lại
+
+    Note over Operator,Hardware: KỊCH BẢN 3: KẸT PHÔI (JAM) vs ĐẦY KHAY (BIN FULL)
+    alt Kẹt phôi: Cảm biến quang #02 che khuất liên tục > 5 giây
+        Hardware->>Backend: MQTT conveyor/sensor/jam -> POST /api/safety/jam
+        Backend->>Client: Broadcast SSE: event "jam_detected"
+        Client->>Client: Dừng băng tải, đổi màu phôi đỏ, phát còi kẹt phôi
+    else Đầy khay: Số lượng sản phẩm >= Sức chứa định mức (5-50 SP)
+        Hardware->>Backend: MQTT conveyor/storage/bin_status -> POST /api/safety/bin-full
+        Backend->>Client: Broadcast SSE: event "bin_full"
+        Client->>Client: Hiện Toast cảnh báo vàng cam, còi báo đầy khay, nút "Xác nhận đã thay khay mới"
+    end
+```
+
+- **Mất kết nối Vi điều khiển (`device_offline`)**:
+  - ESP32-C5 gửi gói tin nhịp tim mỗi 2 giây lên topic `conveyor/heartbeat`.
+  - Bộ đếm thời gian (Watchdog) phía backend kiểm tra: nếu quá **6 giây** không nhận được nhịp tim, hệ thống tự động phát cảnh báo thiết bị ngoại tuyến (`device_offline`).
+- **Mất kết nối MQTT Broker (`mqtt_disconnected`)**:
+  - Trình duyệt và App di động duy trì kết nối WebSocket tới MQTT Broker.
+  - Áp dụng cơ chế **Debounce 5 giây** để loại bỏ tình trạng nhấp nháy mạng ngắn hạn. Nếu mất kết nối thực sự quá 5 giây, hệ thống chuyển huy hiệu TopHeader sang `MQTT: DISCONNECTED (Đỏ chớp nháy)`, phát âm thanh cảnh báo và kích hoạt quy trình tự động kết nối lại theo chu kỳ tăng dần (**3s -> 5s -> 10s**).
+
+---
+
+### 3.5. Luồng Báo Cáo 1 Ngày Làm Việc (Shift Summary Workflow)
+
+```mermaid
+flowchart LR
+    A["Đồng Hồ Hệ Thống (17:00 Hàng Ngày)\nHOẶC Bấm Nút 'Báo Cáo Ngày'"] --> B["Thu Thập & Tổng Hợp Dữ Liệu"]
+    B --> C["Số lượng 3 khay chứa (Bin 1, 2, 3)"]
+    B --> D["Tổng sản phẩm đạt & lỗi (Accuracy %)"]
+    B --> E["Số lần dừng khẩn cấp E-Stop"]
+    B --> F["Thời gian vận hành liên tục (Uptime)"]
+    
+    C & D & E & F --> G["Hiển Thị Modal Báo Cáo Chi Tiết"]
+    G --> H1["Xuất Tệp CSV (Mã Hóa UTF-8 BOM Chuẩn Tiếng Việt Cho Excel)"]
+    G --> H2["In Mẫu Báo Cáo / Xuất PDF Trực Tiếp"]
+    G --> H3["Gửi Bản Tóm Tắt Tự Động Qua Telegram"]
+```
+
+---
+
+### 3.6. Luồng Cấu Hình Quy Tắc Phân Loại (Configuration Sync Flow)
+
+1. **Người dùng điều chỉnh cấu hình**: Quản trị viên truy cập trang `/config`, gán nhóm dụng cụ y tế vào khay đích (ví dụ: `med_syringe` -> Khay 1: Sắc nhọn; `med_forceps` & `med_scissors` -> Khay 2: Tiệt trùng; Khay mặc định: Khay 3: Vật tư/Mặc định) và tùy chỉnh độ rộng/sức chứa khay (5 – 50 SP).
+2. **Kiểm định dữ liệu đầu vào**: Frontend đóng gói payload và gửi `POST /api/config`. Middleware Zod tại backend kiểm tra tính hợp lệ qua `SorterConfigSchema.passthrough()`.
+3. **Tăng Version & Xuất bản**: Backend tăng số hiệu `config_version` tự động, lưu vào bộ nhớ cấu hình và xuất bản thông điệp MQTT lên topic `sorter/01/config`.
+4. **Áp dụng tại phần cứng**: Vi điều khiển ESP32-C5 nhận thông điệp qua MQTT, nạp cấu hình mới vào bộ nhớ RAM/EEPROM theo chế độ `apply_mode` ("áp dụng ngay lập tức" hoặc "đợi khi băng tải trống").
+
+---
+
+### 3.7. Luồng Xác Thực Người Dùng & Phân Quyền RBAC (Auth & Access Control)
+
+```mermaid
+flowchart TD
+    START(["Người Dùng Truy Cập"]) --> CHECK_AUTH{"Đã Đăng Nhập?"}
+    
+    CHECK_AUTH -- Chưa --> LOGIN_PAGE["Trang Đăng Nhập /login"]
+    LOGIN_PAGE --> OPTION{"Hành Động"}
+    
+    OPTION -- Đăng Ký Mới --> REG["POST /api/auth/register"]
+    REG --> FORCE_USER["ÉP CỨNG VAI TRÒ: role = 'user'\n(Chống Leo Thang Đặc Quyền)"]
+    FORCE_USER --> SAVE_USER["Băm Mật Khẩu Bcrypt (10 rounds)\nLưu vào data/users.json"]
+    
+    OPTION -- Đăng Nhập --> AUTH_CHECK["POST /api/auth/login"]
+    AUTH_CHECK --> BCRYPT_COMPARE{"So Khớp Bcrypt Hash"}
+    BCRYPT_COMPARE -- Sai --> ERR_LOGIN["Báo lỗi 401 (Không tiết lộ chi tiết)"]
+    BCRYPT_COMPARE -- Đúng --> ISSUE_TOKEN["Ký Session Token (Bearer Token)\nTrả về thông tin SafeUser"]
+    
+    OPTION -- Quên Mật Khẩu --> REQ_OTP["POST /api/auth/forgot-password"]
+    REQ_OTP --> ADMIN_CHECK{"Tài Khoản Admin?"}
+    ADMIN_CHECK -- Đúng --> BLOCK_ADMIN["CHẶN: Admin không được reset từ bên ngoài!"]
+    ADMIN_CHECK -- Sai --> GEN_OTP["Sinh mã Mock OTP 6 chữ số\nThời gian sống 300 giây (5 phút)"]
+    GEN_OTP --> RESET_PWD["POST /api/auth/reset-password\n(Xác thực OTP & cập nhật mật khẩu mới)"]
+
+    CHECK_AUTH -- Đã Đăng Nhập --> ROLE_GATE{"Kiểm Tra Vai Trò (RBAC)"}
+    ROLE_GATE -- role = 'admin' --> ADMIN_PERMS["Toàn Quyền:\n- Chuyển đổi Mô phỏng / Thực tế\n- Mở khóa an toàn E-Stop\n- Thay đổi quy tắc phân loại /config\n- Xóa lịch sử phân loại\n- Quản trị thành viên /users"]
+    ROLE_GATE -- role = 'user' --> USER_PERMS["Quyền Giới Hạn:\n- Khóa cứng ở chế độ Thực Tế\n- Xem giám sát băng tải 60fps\n- Xem KPI, thống kê, lịch sử\n- Bị chặn 403 Forbidden nếu gọi API Admin"]
+```
+
+---
+
+## 4. Cơ Chế Hoạt Động Của Cơ Sở Dữ Liệu (Database Architecture)
+
+Hệ thống dữ liệu của SortiX được thiết kế theo tiêu chuẩn độ tin cậy cao, hỗ trợ cả môi trường phát triển (Zero-Setup) lẫn môi trường công nghiệp sản xuất (Enterprise Database).
+
+### 4.1. Chiến Lược Lưu Trữ 2 Tầng (Dual-Mode Persistence Strategy)
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        TẦNG DỮ LIỆU SORTIX                             │
+├──────────────────────────────────┬─────────────────────────────────────┤
+│   TẦNG 1: LOCAL JSON STORE       │     TẦNG 2: ENTERPRISE DATABASE     │
+│   (Mặc định — Zero Setup)        │     (Sẵn sàng cho Sản Xuất)         │
+├──────────────────────────────────┼─────────────────────────────────────┤
+│ • users.json                     │ • PostgreSQL (Khuyến nghị cao)      │
+│ • notifications.json             │ • MySQL / MariaDB                   │
+│ • history.json                   │ • SQLite (Hệ thống nhúng)           │
+│                                  │ • MongoDB (NoSQL Document)          │
+│ • Cơ chế Ghi File Nguyên Tử      │ • Đầy đủ DDL Migration & Indexing   │
+│   (Atomic Rename qua .tmp)       │ • Ràng buộc CHECK, FK & Trigger     │
+└──────────────────────────────────┴─────────────────────────────────────┘
+```
+
+1. **Tầng 1 (Local JSON File Store)**:
+   - Được kích hoạt tự động mà không cần cài đặt thêm bất kỳ phần mềm cơ sở dữ liệu nào.
+   - Thư mục lưu trữ: `data/users.json`, `data/notifications.json`, `data/history.json`.
+   - Phù hợp hoàn hảo cho việc chấm đồ án, chạy thử nghiệm trên máy tính cá nhân hoặc chạy trực tiếp trên các máy tính biên (Raspberry Pi / Industrial PC).
+2. **Tầng 2 (Enterprise Relational & NoSQL Database)**:
+   - Toàn bộ lược đồ đã được chuyển đổi thành các tập lệnh DDL hoàn chỉnh trong `backend/database/migrations/`.
+   - Khi triển khai môi trường doanh nghiệp thực tế, chỉ cần kích hoạt kết nối cơ sở dữ liệu mà không cần viết lại câu lệnh SQL.
+
+---
+
+### 4.2. Cơ Chế Ghi File Nguyên Tử (Atomic File Write Mechanism)
+
+Để loại bỏ hoàn toàn nguy cơ **hỏng tệp JSON (Corrupted File)** hoặc **tranh chấp đọc/ghi đồng thời (Race Conditions)** khi hệ thống ghi nhận hàng trăm sự cố mỗi giây, toàn bộ các mô hình `userModel.ts`, `notificationModel.ts` và `historyModel.ts` đều áp dụng thuật toán ghi nguyên tử:
+
+```mermaid
+flowchart LR
+    A["Dữ liệu mới trong RAM"] --> B["Tạo file tạm thời:\n.filename.pid.timestamp.random.tmp"]
+    B --> C["Ghi toàn bộ chuỗi JSON vào file tạm"]
+    C --> D["fs.renameSync(tmpFile, targetFile)\n(Thao tác nguyên tử cấp độ OS Kernel)"]
+    D --> E["File đích cập nhật an toàn 100%\nKhông có trạng thái ghi dở dang"]
+```
+
+> **Nguyên lý bảo vệ**: Trong hệ điều hành (cả Windows và POSIX Linux), thao tác `rename` tệp tin trên cùng một phân vùng ổ đĩa là thao tác nguyên tử (Atomic Operation). Nếu máy tính bị mất điện hoặc tiến trình Node.js bị dừng đột ngột giữa chừng, tệp tin gốc vẫn giữ nguyên trạng thái hợp lệ mà không bao giờ bị cắt cụt (Truncated).
+
+---
+
+### 4.3. Chi Tiết Các Bảng & Thực Thể Dữ Liệu (Entities & Schemas)
+
+#### Bảng `users` (Quản lý tài khoản & Xác thực)
+Lưu trữ thông tin định danh, phân quyền và trạng thái bảo mật của thành viên:
+
+| Tên trường | Kiểu dữ liệu | Ràng buộc | Mục đích & Ý nghĩa |
+| :--- | :--- | :--- | :--- |
+| `id` | `VARCHAR(64)` / `UUID` | Primary Key | Mã định danh duy nhất (ví dụ: `admin-001`, `usr-1789...`) |
+| `username` | `VARCHAR(50)` | UNIQUE, NOT NULL | Tên đăng nhập (3 - 50 ký tự, chữ, số, gạch dưới) |
+| `full_name` | `VARCHAR(100)` | NOT NULL | Họ và tên hiển thị của người dùng (tối thiểu 2 ký tự) |
+| `email` | `VARCHAR(255)` | UNIQUE, NOT NULL | Địa chỉ email liên lạc và nhận cảnh báo |
+| `password_hash`| `VARCHAR(255)` | NOT NULL | Mật khẩu đã băm bằng **Bcrypt (10 salt rounds)** |
+| `role` | `ENUM('admin', 'user')`| NOT NULL, Default: `'user'` | Phân quyền vai trò người dùng |
+| `status` | `ENUM('active', 'locked')`| NOT NULL, Default: `'active'` | Trạng thái tài khoản (đang hoạt động hoặc bị khóa) |
+| `reset_otp` | `VARCHAR(6)` | NULL | Mã Mock OTP 6 số phục vụ đặt lại mật khẩu |
+| `reset_otp_expires_at` | `TIMESTAMPTZ` | NULL | Thời điểm hết hạn của mã OTP (5 phút sau khi tạo) |
+| `created_at` | `TIMESTAMPTZ` | NOT NULL, Default: `NOW()` | Thời gian tạo tài khoản |
+| `updated_at` | `TIMESTAMPTZ` | NOT NULL, Default: `NOW()` | Thời gian cập nhật thông tin lần cuối |
+
+#### Bảng `notifications` (Nhật ký sự cố & Cảnh báo an toàn)
+Lưu trữ toàn bộ các biến cố vận hành từ cảm biến và người dùng:
+
+| Tên trường | Kiểu dữ liệu | Ràng buộc | Mục đích & Ý nghĩa |
+| :--- | :--- | :--- | :--- |
+| `id` | `VARCHAR(64)` | Primary Key | Mã thông báo (`notif_1789...`) |
+| `event` | `VARCHAR(50)` | NOT NULL | Mã sự kiện (`emergency_stop`, `jam_detected`, `bin_full`, `temperature_warning`, `device_offline`, `mqtt_disconnected`, `shift_summary`) |
+| `station_id` | `VARCHAR(50)` | NOT NULL | Mã trạm / vị trí phát sinh sự cố (ví dụ: `STATION_01`, `Zone_A`) |
+| `mode` | `ENUM('real', 'simulation')` | NOT NULL | Định danh chế độ phát sinh (`real`: Phần cứng thật, `simulation`: Giả lập) |
+| `severity` | `ENUM('info', 'warning', 'critical')` | NOT NULL | Mức độ nghiêm trọng của sự cố |
+| `description` | `TEXT` | NOT NULL | Nội dung chi tiết diễn giải sự cố |
+| `status` | `ENUM('unprocessed', 'acknowledged', 'resolved')` | NOT NULL | Trạng thái xử lý sự cố |
+| `timestamp` | `TIMESTAMPTZ` | NOT NULL | Thời điểm xảy ra sự cố |
+| `resolved_at`| `TIMESTAMPTZ` | NULL | Thời điểm Quản trị viên xử lý hoặc mở khóa |
+| `resolved_by`| `VARCHAR(50)` | NULL | Tên người dùng Quản trị viên đã xử lý sự cố |
+
+> **Cơ chế Bounded Buffer cho Notifications**: File `data/notifications.json` chỉ duy trì **1.000 sự cố gần nhất**. Khi số lượng vượt quá 1.000, các bản ghi cũ nhất sẽ tự động được loại bỏ để bảo toàn dung lượng đĩa và tối ưu hóa tốc độ tải trang.
+
+#### Bảng `history` (Lịch sử phân loại dụng cụ y tế)
+Lưu trữ từng dụng cụ y tế sau khi đi qua cơ cấu phân loại:
+
+| Tên trường | Kiểu dữ liệu | Ràng buộc | Mục đích & Ý nghĩa |
+| :--- | :--- | :--- | :--- |
+| `id` | `VARCHAR(64)` | Primary Key | Mã bản ghi (`rec-1789...`) |
+| `product_id` | `VARCHAR(50)` | NOT NULL | Mã định danh dụng cụ (ví dụ: `MED-0042`) |
+| `brand` | `VARCHAR(50)` | NOT NULL | Mã nhận diện nhóm dụng cụ y tế (`med_syringe`, `med_forceps`, `med_scissors`, `med_vial`) |
+| `target_bin` | `INT` | NOT NULL (1, 2, 3) | Khay đích theo cấu hình quy tắc (Khay 1: Sắc nhọn; Khay 2: Tiệt trùng; Khay 3: Vật tư/Mặc định) |
+| `actual_bin` | `INT` | NOT NULL (1, 2, 3) | Khay thực tế mà dụng cụ rơi vào |
+| `status` | `ENUM('success', 'misplaced', 'rejected')` | NOT NULL | Kết quả phân loại (`success` nếu `actual == target`) |
+| `confidence` | `FLOAT` | NOT NULL (0.0 - 1.0) | Độ tin cậy nhận diện từ mô hình YOLOv8 |
+| `timestamp` | `TIMESTAMPTZ` | NOT NULL | Thời điểm dụng cụ rơi vào khay |
+
+> **Cơ chế Bounded Buffer cho History**: Backend duy trì bộ đệm tối đa **1.000 bản ghi lịch sử**. Cơ chế này loại trừ hoàn toàn nguy cơ tràn RAM (Out of Memory - OOM) trên Node.js khi băng chuyền vận hành liên tục qua nhiều ca làm việc.
+
+#### Bảng `config` (Cấu hình quy tắc & Tham số vận hành)
+| Tên trường | Kiểu dữ liệu | Ý nghĩa |
+| :--- | :--- | :--- |
+| `schema_version` | `INT` | Phiên bản schema tương thích firmware (mặc định: 1) |
+| `config_version` | `INT` | Số hiệu phiên bản cấu hình (tự tăng mỗi lần Admin lưu thay đổi) |
+| `device_id` | `VARCHAR(50)` | Mã định danh máy phân loại (`sorter_01`) |
+| `catalog_version`| `VARCHAR(50)` | Phiên bản danh mục dụng cụ (`catalog_01`) |
+| `bins` | `JSON` | Danh sách quy tắc gán dụng cụ vào từng khay (Khay 1: `med_syringe`; Khay 2: `med_forceps`, `med_scissors`; Khay 3: `med_vial`) |
+| `default_bin` | `INT` | Khay mặc định chứa dụng cụ không nhận diện được / confidence < 60% (Khay 3) |
+| `bin_capacities`| `JSON` | Sức chứa định mức từng khay (ví dụ: `bin_1: 50, bin_2: 40, bin_3: 50`) |
+| `conveyor_speed`| `FLOAT` | Tốc độ động cơ băng tải (m/s) |
+| `apply_mode` | `VARCHAR(30)` | Chế độ áp dụng (`when_line_empty` hoặc `immediate`) |
+
+---
+
+### 4.4. Cơ Chế Đồng Bộ Dữ Liệu 3 Lớp (3-Tier Data Synchronization)
+
+Để đảm bảo hiệu năng 60fps trên giao diện mà không gây tắc nghẽn I/O ổ đĩa, dữ liệu được điều phối qua 3 tầng:
+
+```mermaid
+flowchart TD
+    subgraph TIER_1["Tầng 1: Client LocalStorage & State"]
+        LS1["sortix_bin_capacities\n(Lưu sức chứa 5-50 SP)"]
+        LS2["sortix_history\n(Cache lịch sử phân loại client)"]
+        REACT_CTX["React Contexts & Physics State\n(Tọa độ Canvas 60fps, KPI Realtime)"]
+    end
+
+    subgraph TIER_2["Tầng 2: Server In-Memory Cache (RAM)"]
+        MEM_USERS["usersStore[]\n(Nạp sẵn khi khởi động)"]
+        MEM_NOTIF["notificationsStore[]\n(Mảng sự cố, sắp xếp theo thời gian)"]
+        MEM_HIST["inMemoryHistory[]\n(Bounded Buffer 1000 items)"]
+        MEM_CONF["currentConfig\n(Bản sao cấu hình hiện tại)"]
+    end
+
+    subgraph TIER_3["Tầng 3: Persistent Storage (Disk / DB)"]
+        DISK_USERS[("data/users.json\n(Atomic Write)")]
+        DISK_NOTIF[("data/notifications.json\n(Atomic Write)")]
+        DISK_HIST[("data/history.json\n(Atomic Write)")]
+        SQL_DB[("SQL / NoSQL Database\n(PostgreSQL, MySQL, MongoDB)")]
+    end
+
+    REACT_CTX <-->|REST API / SSE| TIER_2
+    LS1 <-->|Đồng bộ tức thời| REACT_CTX
+    TIER_2 <-->|Atomic Sync / Migrations| TIER_3
+```
+
+- Khi người dùng thay đổi thanh trượt dung lượng khay (5 - 50 SP), giá trị được cập nhật ngay lập tức vào **React Context**, lưu vào **LocalStorage** của trình duyệt, đồng thời gửi API lên **Backend** để cập nhật cấu hình thiết bị.
+- Khi có sự cố mới (E-Stop, Kẹt phôi, Quá nhiệt), backend cập nhật mảng trong **RAM**, kích hoạt **Atomic Write** xuống tệp tin, và phát sóng **SSE** tới tất cả các client đang mở.
+
+---
+
+### 4.5. Bộ Migrations Đa CSDL Sẵn Sàng Triển Khai (Multi-DB Migrations)
+
+Các tệp DDL được lưu trữ trong `backend/database/migrations/`:
+- **`001_create_users_table_postgres.sql`**: Sử dụng `gen_random_uuid()`, ENUM types (`user_role`, `user_status`), Check Constraints (`chk_users_username_format`, `chk_users_email_format`), và PostgreSQL Trigger `set_users_updated_at()` tự động cập nhật trường `updated_at`.
+- **`001_create_users_table_mysql.sql`**: Tương thích MySQL 8.0/MariaDB với định dạng `VARCHAR(36)` UUID, `ENUM('admin', 'user')`, và `ON UPDATE CURRENT_TIMESTAMP`.
+- **`001_create_users_table_sqlite.sql`**: Tối ưu cho hệ điều hành nhúng chạy SQLite 3, có sẵn trigger mô phỏng `updated_at` tự động.
+- **`001_create_users_mongodb.js`**: Định nghĩa MongoDB Schema Validator với các biểu thức chính quy (Regex) và chỉ mục duy nhất (`unique indexes`).
+
+---
+
+## 5. Công Nghệ Sử Dụng
 
 - **Frontend Web & Mobile**: Next.js 14 (App Router), React 18, TypeScript, TailwindCSS, Lucide React, Recharts.
 - **Mobile Container**: **Capacitor 8** (`@capacitor/core`, `@capacitor/android`, `@capacitor/cli`), Android SDK 34+, Android Studio Ladybug/Koala.
 - **Backend API Server**: Node.js, Express.js, TypeScript, Bcryptjs, Nodemailer, Telegram Bot API.
-- **Dữ liệu & Xác thực**: Zod, JSON Store bền vững (`data/users.json`, `data/notifications.json`), Sẵn sàng kết nối SQLite / PostgreSQL / MySQL / MongoDB.
+- **Dữ liệu & Xác thực**: Zod, JSON Store bền vững với Atomic Write (`data/users.json`, `data/notifications.json`), Sẵn sàng kết nối SQLite / PostgreSQL / MySQL / MongoDB.
 - **Truyền thông IoT**: MQTT over WebSocket (MQTT.js), Giao thức kết nối vi điều khiển ESP32-C5 qua Wi-Fi 6, Server-Sent Events (SSE).
 - **Đồ họa & Âm thanh**: HTML5 Canvas API (Physics Loop 60fps), Web Audio API (Bộ tổng hợp âm công nghiệp không phụ thuộc tài nguyên ngoài).
 
 ---
 
-## 4. Tài Khoản Mặc Định & Phân Quyền (RBAC)
+## 6. Tài Khoản Mặc Định & Phân Quyền (RBAC)
 
 Hệ thống được khởi tạo sẵn **4 tài khoản Quản trị viên (Admin)** đại diện cho các thành viên phát triển đề tài PBL3 và tài khoản Người dùng (User):
 
@@ -161,27 +539,27 @@ Hệ thống được khởi tạo sẵn **4 tài khoản Quản trị viên (Ad
 
 ---
 
-## 5. Cài Đặt & Khởi Chạy Nhanh
+## 7. Cài Đặt & Khởi Chạy Nhanh
 
-### 5.1. Yêu cầu hệ thống
+### 7.1. Yêu cầu hệ thống
 - **Node.js**: Phiên bản `18.17.0` trở lên (Khuyến nghị Node.js 20 LTS).
 - **Trình duyệt**: Chrome, Microsoft Edge, Brave, Safari hiện đại.
 - **Để build Android App (Tùy chọn)**: Android Studio Ladybug hoặc Koala, JDK 17 / 21, Android SDK Platform 34+.
 
-### 5.2. Cài đặt các gói phụ thuộc
+### 7.2. Cài đặt các gói phụ thuộc
 Tại thư mục gốc dự án:
 ```powershell
 npm install
 ```
 
-### 5.3. Thiết lập biến môi trường
+### 7.3. Thiết lập biến môi trường
 Tạo tệp `.env` từ tệp mẫu:
 ```powershell
 copy .env.example .env
 copy backend\.env.example backend\.env
 ```
 
-### 5.4. Khởi chạy ứng dụng
+### 7.4. Khởi chạy ứng dụng
 
 | Lệnh thực thi | Mô tả | Cổng dịch vụ |
 | :--- | :--- | :--- |
@@ -197,11 +575,11 @@ Truy cập Dashboard trên máy tính tại: **[http://localhost:3000](http://lo
 
 ---
 
-## 6. Đóng Gói Ứng Dụng Di Động (Mobile App: Android APK & iOS PWA)
+## 8. Đóng Gói Ứng Dụng Di Động (Mobile App: Android APK & iOS PWA)
 
 Dự án áp dụng mô hình **Hybrid WebView Bridge** qua Capacitor 8. Cách tiếp cận này giữ nguyên 100% kiến trúc Next.js App Router (18 dynamic Route Handlers và SSE `/api/events` không bị hỏng như khi dùng lệnh `output: 'export'`).
 
-### 6.1. Cấu trúc Android App
+### 8.1. Cấu trúc Android App
 File cấu hình Capacitor đặt tại [frontend/capacitor.config.ts](frontend/capacitor.config.ts):
 ```typescript
 import type { CapacitorConfig } from '@capacitor/cli';
@@ -211,22 +589,20 @@ const config: CapacitorConfig = {
   appName: 'SortiX Dashboard',
   webDir: 'out',
   server: {
-    // Địa chỉ server Next.js:
-    // - Máy ảo Android Studio Emulator: http://10.0.2.2:3000
-    // - Điện thoại thật chung mạng Wi-Fi: http://192.168.1.4:3000 (thay theo IP máy tính của bạn)
-    // - Khi đã deploy Cloud: https://sortix-dashboard.vercel.app
-    url: 'http://10.0.2.2:3000',
+    url: process.env.CAPACITOR_SERVER_URL || 'http://192.168.1.169:3000',
     cleartext: true,
+    androidScheme: 'https',
   },
   android: {
     allowMixedContent: true,
+    backgroundColor: '#070b14',
   },
 };
 
 export default config;
 ```
 
-### 6.2. Quy trình Xuất File APK Cài Đặt (Android)
+### 8.2. Quy trình Xuất File APK Cài Đặt (Android)
 1. Biên dịch Frontend và đồng bộ vào Android project:
    ```powershell
    npm run build
@@ -240,20 +616,26 @@ export default config;
    - Vào menu: **Build** > **Generate App Bundles or APKs** > **Generate APKs**.
    - Chọn **debug** (hoặc release) và nhấn **Create**.
 4. File `.apk` tạo ra sẵn sàng cài đặt tại:
-   `frontend/android/app/build/outputs/apk/debug/app-debug.apk` (khoảng 4.1 MB).
-   > Nhóm đã sao chép sẵn file này thành `SortiX-Dashboard.apk` để thuận tiện phân phối.
+   `frontend/android/app/build/outputs/apk/debug/SortiX-Dashboard.apk` (khoảng 4.1 MB).
+   Đồng thời đã được đồng bộ vào thư mục tĩnh `frontend/public/SortiX-Dashboard.apk` để tải trực tiếp từ máy chủ web.
 
-### 6.3. Cài đặt trên iPhone / iPad (iOS PWA Không Cần Mac)
-Do hệ điều hành iOS không hỗ trợ file `.apk`, người dùng iPhone trải nghiệm giao diện nguyên bản chuẩn Native thông qua PWA:
-1. Đảm bảo iPhone và máy tính cùng kết nối chung một mạng Wi-Fi (hoặc truy cập URL Vercel).
-2. Mở trình duyệt **Safari** trên iPhone, nhập: `http://192.168.1.4:3000` (hoặc domain Vercel).
-3. Bấm vào nút **Chia sẻ** (biểu tượng hình vuông có mũi tên hướng lên ở thanh dưới Safari).
-4. Cuộn xuống chọn **"Thêm vào MH chính"** (Add to Home Screen) > bấm **Thêm**.
-5. Biểu tượng ứng dụng **SortiX** sẽ xuất hiện trên màn hình chính của iPhone. Khi mở ra, ứng dụng sẽ chạy toàn màn hình (Standalone Mode), ẩn hoàn toàn thanh địa chỉ Safari, cho trải nghiệm không khác gì ứng dụng Native từ App Store.
+### 8.3. Cài đặt trên iPhone / iPad (iOS PWA Không Cần Mac)
+1. Mở trình duyệt **Safari** trên iPhone, nhập: `http://192.168.1.169:3000` (hoặc URL domain Cloud).
+2. Bấm vào nút **Chia sẻ** (biểu tượng hình vuông có mũi tên hướng lên ở thanh dưới Safari).
+3. Cuộn xuống chọn **"Thêm vào MH chính"** (Add to Home Screen) > bấm **Thêm**.
+4. Biểu tượng ứng dụng **SortiX-Med** sẽ xuất hiện trên màn hình chính, chạy toàn màn hình (Standalone Mode).
+
+### 8.4. Quét Mã QR Truy Cập Nhanh Cho Thiết Bị Android & Tải File APK
+- **Mã QR Code chính thức**: Được tạo sẵn tại tệp [`SortiX_Dashboard.png`](SortiX_Dashboard.png).
+- **Cách thức hoạt động**:
+  1. Điện thoại Android kết nối cùng mạng Wi-Fi với máy tính host (`192.168.1.x`).
+  2. Dùng Camera điện thoại hoặc ứng dụng quét mã QR bất kỳ quét tệp `SortiX_Dashboard.png`.
+  3. Trình duyệt tự động mở ngay **SortiX-Med Dashboard** tại địa chỉ `http://192.168.1.169:3000` với đầy đủ giao diện thời gian thực, điều khiển 60fps và nhận dạng dụng cụ.
+  4. Người dùng cũng có thể tải trực tiếp file APK cài đặt tại đường dẫn: `http://192.168.1.169:3000/SortiX-Dashboard.apk`.
 
 ---
 
-## 7. Chế Độ Vận Hành: Mô Phỏng vs. Máy Thật
+## 9. Chế Độ Vận Hành: Mô Phỏng vs. Máy Thật
 
 Hệ thống cho phép Quản trị viên (Admin) chuyển đổi linh hoạt chế độ vận hành:
 
@@ -261,33 +643,14 @@ Hệ thống cho phép Quản trị viên (Admin) chuyển đổi linh hoạt ch
 - **Cách 1 (Nút bấm nhanh trên TopHeader)**: Ngay cạnh tiêu đề trang, có sẵn một nút bấm hình viên nang:
   - Khi ở chế độ Mô phỏng: Hiện nút tím `[🧪 Mô phỏng]`. Bấm vào sẽ chuyển ngay sang Thực tế.
   - Khi ở chế độ Thực tế: Hiện nút xanh ngọc `[📡 Thực tế]`. Bấm vào sẽ chuyển về Mô phỏng.
-- **Cách 2 (Menu Sidebar Drawer)**: Bấm vào biểu tượng **3 dấu gạch ngang (Hamburger Menu)** ở góc trên cùng bên trái để mở ngăn kéo điều hướng. Ngay trên đầu menu là khối **"CHẾ ĐỘ VẬN HÀNH"** gồm 2 nút bấm to bản `[🧪 Mô phỏng]` và `[📡 Thực tế]`.
+- **Cách 2 (Menu Sidebar Drawer)**: Bấm vào biểu tượng **3 dấu gạch ngang (Hamburger Menu)** ở góc trên cùng bên trái. Khối "CHẾ ĐỘ VẬN HÀNH" nằm ngay trên đầu với 2 nút lớn `[🧪 Mô phỏng]` và `[📡 Thực tế]`.
 
 ### 💻 Trên Giao Diện Máy Tính (Desktop Web):
 - Switch chuyển đổi kép hiển thị trực tiếp ở giữa thanh TopHeader.
 
-### 7.1. Chế độ Mô Phỏng (Simulation Mode)
-- **Mục đích**: Vận hành giả lập kiểm thử trực quan trên máy tính và điện thoại mà không cần cắm phần cứng ESP32 hay camera thật.
-- **Hoạt động**:
-  - Dữ liệu độc lập, không làm nhiễu dữ liệu phần cứng thật.
-  - Nạp phôi nhanh (**Coca-Cola, Pepsi, Red Bull, Aquafina**) hoặc **Phôi ngẫu nhiên**.
-  - Thanh trượt nhiệt độ ảo (30°C - 95°C) và nút preset kiểm thử quá nhiệt.
-  - Thanh trượt điều chỉnh sức chứa từng khay (5 - 50 SP) và nạp phôi thử nghiệm kịch bản đầy khay.
-  - Nút thử nghiệm ngắt kết nối MQTT client, test E-Stop, test kẹt phôi.
-  - Nút **Tạo dữ liệu demo** sinh nhanh 50–100 bản ghi lịch sử phục vụ vẽ đồ thị thống kê.
-
-### 7.2. Chế độ Máy Thật (Live Hardware Mode)
-- **Mục đích**: Kết nối trực tiếp với hệ thống phần cứng thực tế qua giao thức MQTT.
-- **Hoạt động**:
-  - Nhận luồng phân loại trực tiếp từ camera AI (Vision topic: `sorter/01/vision`).
-  - Nhận dữ liệu cảm biến hồng ngoại S1, S2, S3 và bộ mã hóa encoder (Telemetry: `sorter/01/telemetry`).
-  - Ẩn toàn bộ thanh trượt giả lập, nút nạp ảo và nút test sự cố.
-  - Hiển thị bảng telemetry cảm biến phần cứng thật (ESP32 DS18B20) với cờ `[PHẦN CỨNG THẬT]`.
-  - Xuất lệnh điều khiển hoặc cấu hình phân loại xuống vi điều khiển (`sorter/01/control`, `sorter/01/config`).
-
 ---
 
-## 8. Các Trang Chức Năng Chính
+## 10. Các Trang Chức Năng Chính
 
 | Trang | Đường dẫn | Chức năng chính |
 | :--- | :--- | :--- |
@@ -303,7 +666,7 @@ Hệ thống cho phép Quản trị viên (Admin) chuyển đổi linh hoạt ch
 
 ---
 
-## 9. Hệ Thống An Toàn, Giám Sát & Cảnh Báo
+## 11. Hệ Thống An Toàn, Giám Sát & Cảnh Báo
 
 1. **Dừng Khẩn Cấp (E-Stop)**:
    - Kích hoạt qua nút bấm vật lý (IO10) hoặc nút bấm trên Web/Mobile Dashboard.
@@ -324,7 +687,7 @@ Hệ thống cho phép Quản trị viên (Admin) chuyển đổi linh hoạt ch
 
 ---
 
-## 10. Hệ Thống Xác Thực & Bảo Mật
+## 12. Hệ Thống Xác Thực & Bảo Mật
 
 1. **Bảo mật mật khẩu**: Mọi mật khẩu người dùng đều được băm bằng thuật toán **Bcrypt (10 salt rounds)**.
 2. **Quy trình Khôi phục Mật khẩu (Forgot Password)**:
@@ -339,7 +702,7 @@ Hệ thống cho phép Quản trị viên (Admin) chuyển đổi linh hoạt ch
 
 ---
 
-## 11. Kiểm Thử & Đảm Bảo Chất Lượng (QA)
+## 13. Kiểm Thử & Đảm Bảo Chất Lượng (QA)
 
 Dự án sở hữu bộ kiểm thử tự động toàn diện với **108/108 Tests PASS (100%)** qua **15 Test Suites**:
 
@@ -371,7 +734,7 @@ npx tsc --noEmit --pretty false
 
 ---
 
-## 12. Biến Môi Trường (Environment Variables)
+## 14. Biến Môi Trường (Environment Variables)
 
 Xem chi tiết tại [`.env.example`](.env.example):
 
@@ -390,7 +753,7 @@ Xem chi tiết tại [`.env.example`](.env.example):
 
 ---
 
-## 13. Xử Lý Sự Cố Thường Gặp (Troubleshooting)
+## 15. Xử Lý Sự Cố Thường Gặp (Troubleshooting)
 
 - **Không thấy nút Chế độ Mô phỏng trên Điện thoại**:
   - *Nguyên nhân 1*: Bạn đang đăng nhập bằng tài khoản Người vận hành (`role: 'user'`). Theo quy chuẩn an toàn, tài khoản `user` bị khóa cứng ở chế độ Thực tế. Hãy đăng nhập bằng tài khoản Quản trị viên (`admin1` / `123456`) để có quyền chuyển sang Mô phỏng.
@@ -411,7 +774,7 @@ Xem chi tiết tại [`.env.example`](.env.example):
 
 ---
 
-## 14. Nhóm Tác Giả & Đóng Góp
+## 16. Nhóm Tác Giả & Đóng Góp
 
 - **Nguyễn Tá Duy Phong** (Trưởng nhóm)
 - **Nguyễn Nhật Minh**

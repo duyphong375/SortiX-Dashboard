@@ -8,10 +8,10 @@ export interface VisualItemRendererProps {
 }
 
 export const VisualItemRenderer: React.FC<VisualItemRendererProps> = ({ item }) => {
-  const isCoca = item.brandKey === "brand_c";
-  const isPepsi = item.brandKey === "brand_a";
-  const isRedBull = item.brandKey === "brand_b";
-  const isAquafina = item.brandKey === "brand_d";
+  const isSyringe = item.brandKey === "med_syringe" || item.brandKey === "brand_c";
+  const isForceps = item.brandKey === "med_forceps" || item.brandKey === "brand_a";
+  const isScissors = item.brandKey === "med_scissors" || item.brandKey === "brand_b";
+  const isVial = item.brandKey === "med_vial" || item.brandKey === "brand_d";
 
   const yTranslate = item.yOffset || 0;
   const opacity = item.opacity ?? 1;
@@ -29,125 +29,167 @@ export const VisualItemRenderer: React.FC<VisualItemRendererProps> = ({ item }) 
       }}
     >
       {/* Bóng đổ chân thực trên mặt băng chuyền cao su */}
-      <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 h-3 w-11 rounded-full bg-black/80 blur-[3px]" />
+      <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 h-2.5 w-12 rounded-full bg-black/80 blur-[3px]" />
 
-      {/* 1. MẪU LON COCA-COLA (Đỏ ruby ánh kim, nắp dập nổi có khoen mở nắp) */}
-      {isCoca && (
-        <div className="sample-coca relative flex h-14 w-9 flex-col items-center justify-between rounded-lg p-1 text-center shadow-lg overflow-hidden">
-          {/* Vệt phản quang ánh kim specular dọc thân lon */}
-          <div className="pointer-events-none absolute inset-y-0 left-1 w-1 rounded-full bg-white/35" />
-
-          {/* Nắp nhôm bạc dập nổi có khoen kéo */}
-          <div className="can-top-rim relative z-10 h-2.5 w-7 border border-slate-300 flex items-center justify-center">
-            <div className="h-1 w-2.5 rounded-full bg-slate-400 border border-slate-500 shadow-inner flex items-center justify-center">
-              <div className="h-0.5 w-1 rounded-full bg-slate-600" />
+      {/* 1. MẪU BƠM KIM TIÊM / DAO MỔ (Vật sắc nhọn lây nhiễm - Vàng Y tế) */}
+      {isSyringe && (
+        <div className="sample-syringe relative flex h-16 w-8 flex-col items-center justify-between p-0.5 filter drop-shadow-md select-none">
+          {/* Đầu kim thép không gỉ sắc nhọn vát góc */}
+          <div className="relative flex flex-col items-center z-20">
+            {/* Mũi kim sắc nhọn vát nghiêng */}
+            <div className="h-4 w-[2px] bg-gradient-to-b from-slate-100 via-slate-300 to-slate-400 shadow-[0_0_4px_rgba(255,255,255,0.8)]" />
+            {/* Chuôi gắn kim Luer-lock màu vàng y tế */}
+            <div className="h-2 w-3 rounded-t-xs bg-amber-400 border border-amber-600 shadow-xs flex items-center justify-center">
+              <div className="h-1 w-1 rounded-full bg-amber-600" />
             </div>
           </div>
 
-          {/* Thân lon in chữ Coca-Cola */}
-          <div className="my-auto relative z-10 font-black italic tracking-tighter text-[9px] text-white leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-            Coca
-            <br />
-            Cola
+          {/* Thân xi-lanh trong suốt có vạch chia ml */}
+          <div className="relative z-10 -mt-0.5 flex h-9 w-6 flex-col items-center justify-between rounded-sm border border-cyan-400/60 bg-gradient-to-r from-white/60 via-sky-100/40 to-white/30 backdrop-blur-xs shadow-inner overflow-hidden">
+            {/* Vạch chia thể tích ml sắc nét */}
+            <div className="absolute inset-y-1 left-0.5 flex flex-col justify-between w-2.5 pointer-events-none">
+              <div className="h-[1px] w-2 bg-slate-800" />
+              <div className="h-[1px] w-1.5 bg-slate-600" />
+              <div className="h-[1px] w-2 bg-slate-800" />
+              <div className="h-[1px] w-1.5 bg-slate-600" />
+              <div className="h-[1px] w-2.5 bg-rose-600" />
+            </div>
+
+            {/* Pít-tông bên trong màu xanh y tế */}
+            <div className="my-auto w-3.5 h-6 rounded-xs bg-gradient-to-b from-cyan-600 to-sky-700 border border-sky-400 shadow-xs flex flex-col items-center justify-between">
+              <div className="w-full h-1 bg-slate-900" />
+              <span className="text-[6px] font-mono font-bold text-white leading-none">10</span>
+              <div className="w-full h-1 bg-slate-900" />
+            </div>
+
+            {/* Ánh sáng phản quang specular dọc thân xi-lanh */}
+            <div className="pointer-events-none absolute inset-y-0 right-1 w-0.5 bg-white/70" />
           </div>
 
-          {/* Đáy lon dập lõm */}
-          <div className="relative z-10 h-1.5 w-6 rounded-b-md bg-red-950/80 border-t border-red-900/50" />
+          {/* Cần đẩy pít-tông & vành tỳ ngón tay */}
+          <div className="relative z-20 flex flex-col items-center -mt-0.5">
+            <div className="h-2 w-1.5 bg-slate-300 border-x border-slate-400" />
+            <div className="h-1.5 w-7 rounded-sm bg-gradient-to-r from-sky-400 via-sky-500 to-sky-600 border border-sky-300 shadow-xs" />
+          </div>
         </div>
       )}
 
-      {/* 2. MẪU LON PEPSI (Xanh cobalt ánh kim, logo xoáy âm dương sắc nét) */}
-      {isPepsi && (
-        <div className="sample-pepsi relative flex h-14 w-9 flex-col items-center justify-between rounded-lg p-1 text-center shadow-lg overflow-hidden">
-          {/* Vệt phản quang ánh kim specular dọc thân lon */}
-          <div className="pointer-events-none absolute inset-y-0 left-1 w-1 rounded-full bg-white/35" />
-
-          {/* Nắp nhôm bạc dập nổi có khoen kéo */}
-          <div className="can-top-rim relative z-10 h-2.5 w-7 border border-slate-300 flex items-center justify-center">
-            <div className="h-1 w-2.5 rounded-full bg-slate-400 border border-slate-500 shadow-inner flex items-center justify-center">
-              <div className="h-0.5 w-1 rounded-full bg-slate-600" />
+      {/* 2. MẪU KẸP PHẪU THUẬT PEAN / PANH (Kim loại Inox sáng bóng, đầu khía) */}
+      {isForceps && (
+        <div className="sample-forceps relative flex h-16 w-8 flex-col items-center justify-between p-0.5 filter drop-shadow-md select-none">
+          {/* Mỏ kẹp phẫu thuật có rãnh răng cưa ngang */}
+          <div className="relative flex flex-col items-center z-10">
+            <div className="flex items-center gap-[1px]">
+              <div className="h-4.5 w-1 rounded-t-xs bg-gradient-to-b from-slate-100 via-slate-300 to-slate-400 border border-slate-400 shadow-xs" />
+              <div className="h-4.5 w-1 rounded-t-xs bg-gradient-to-b from-slate-200 via-slate-300 to-slate-400 border border-slate-400 shadow-xs" />
+            </div>
+            {/* Rãnh răng cưa ngang trên mỏ kẹp */}
+            <div className="absolute top-1 inset-x-1 flex flex-col gap-0.5 items-center pointer-events-none">
+              <div className="h-[1px] w-2 bg-slate-700/60" />
+              <div className="h-[1px] w-2 bg-slate-700/60" />
+              <div className="h-[1px] w-2 bg-slate-700/60" />
             </div>
           </div>
 
-          {/* Thân lon với logo Pepsi xoáy âm dương đỏ-trắng-xanh */}
-          <div className="my-auto relative z-10 flex flex-col items-center">
-            <div className="relative h-4.5 w-4.5 rounded-full border border-white/80 overflow-hidden shadow-sm">
-              <div className="absolute top-0 inset-x-0 h-1/2 bg-red-600" />
-              <div className="absolute top-[40%] -left-1 -right-1 h-1.5 bg-white -rotate-12" />
-              <div className="absolute bottom-0 inset-x-0 h-1/2 bg-blue-700" />
+          {/* Chốt trục tròn trung tâm (Box lock joint) */}
+          <div className="relative z-20 -my-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-gradient-to-tr from-slate-400 via-slate-100 to-slate-300 border border-slate-500 shadow-xs">
+            <div className="h-1 w-1 rounded-full bg-slate-600 shadow-inner" />
+          </div>
+
+          {/* Thân cán kẹp & ngàm khóa hãm (Ratchet) */}
+          <div className="relative z-10 w-full flex justify-center items-center -my-0.5">
+            <div className="h-3 w-1 -rotate-6 bg-slate-300 border-x border-slate-400" />
+            <div className="h-1 w-2 bg-slate-700 mx-0.5 rounded-xs" title="Khóa hãm Ratchet" />
+            <div className="h-3 w-1 rotate-6 bg-slate-300 border-x border-slate-400" />
+          </div>
+
+          {/* Hai vòng xỏ ngón tay đối xứng ở chuôi kẹp */}
+          <div className="relative z-20 flex w-7 justify-between items-center mt-0.5">
+            <div className="h-3.5 w-3 rounded-full border-2 border-slate-400 bg-slate-900/30 shadow-xs flex items-center justify-center">
+              <div className="h-1.5 w-1.5 rounded-full bg-slate-950/70" />
             </div>
-            <span className="mt-0.5 text-[8px] font-black tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-              PEPSI
-            </span>
+            <div className="h-3.5 w-3 rounded-full border-2 border-slate-400 bg-slate-900/30 shadow-xs flex items-center justify-center">
+              <div className="h-1.5 w-1.5 rounded-full bg-slate-950/70" />
+            </div>
           </div>
-
-          {/* Đáy lon dập lõm */}
-          <div className="relative z-10 h-1.5 w-6 rounded-b-md bg-blue-950/80 border-t border-blue-900/50" />
         </div>
       )}
 
-      {/* 3. MẪU LON RED BULL (Vàng gold & xanh navy kim loại, khoen nắp gold) */}
-      {isRedBull && (
-        <div className="sample-redbull relative flex h-15 w-8 flex-col items-center justify-between rounded-md p-1 text-center shadow-lg overflow-hidden">
-          {/* Vệt phản quang ánh kim specular */}
-          <div className="pointer-events-none absolute inset-y-0 left-1 w-0.5 rounded-full bg-amber-200/50" />
-
-          {/* Nắp nhôm mạ gold có khoen kéo */}
-          <div className="can-top-rim relative z-10 h-2 w-6 border border-amber-300 bg-gradient-to-r from-amber-200 to-amber-400 flex items-center justify-center">
-            <div className="h-0.5 w-2 rounded-full bg-amber-600 border border-amber-500" />
+      {/* 3. MẪU KÉO PHẪU THUẬT (Surgical Scissors - Inox tiệt trùng Autoclave) */}
+      {isScissors && (
+        <div className="sample-scissors relative flex h-16 w-8 flex-col items-center justify-between p-0.5 filter drop-shadow-md select-none">
+          {/* Hai lưỡi kéo sắc bén đan chéo vát nhọn */}
+          <div className="relative flex items-center justify-center z-10 w-full h-5">
+            <div className="absolute h-5 w-1 rounded-t-sm bg-gradient-to-b from-slate-100 via-slate-200 to-slate-400 border border-slate-400 -rotate-12 origin-bottom shadow-xs" />
+            <div className="absolute h-5 w-1 rounded-t-sm bg-gradient-to-b from-white via-slate-200 to-slate-400 border border-slate-400 rotate-12 origin-bottom shadow-xs" />
+            {/* Điểm sáng kim loại phản chiếu */}
+            <div className="absolute -top-0.5 h-1 w-1 rounded-full bg-white shadow-[0_0_4px_#ffffff]" />
           </div>
 
-          {/* Thân lon phối màu chéo vàng & xanh navy */}
-          <div className="my-auto relative z-10">
-            <span className="block text-[8px] font-black text-amber-200 uppercase leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-              RED
-              <br />
-              BULL
-            </span>
+          {/* Ốc vít tán tròn trung tâm */}
+          <div className="relative z-20 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-gradient-to-tr from-amber-300 via-amber-100 to-amber-400 border border-amber-500 shadow-xs">
+            <div className="h-0.5 w-1.5 bg-slate-700" />
           </div>
 
-          {/* Đáy lon dập lõm */}
-          <div className="relative z-10 h-1.5 w-5 rounded-b-md bg-blue-950/90" />
+          {/* Hai thân càng kéo kéo dài */}
+          <div className="relative z-10 flex w-5 justify-between items-center h-4">
+            <div className="h-4 w-1 -rotate-6 bg-gradient-to-b from-slate-300 to-slate-400 border-x border-slate-500" />
+            <div className="h-4 w-1 rotate-6 bg-gradient-to-b from-slate-300 to-slate-400 border-x border-slate-500" />
+          </div>
+
+          {/* Hai vòng khuyên ngón tay tròn đối xứng */}
+          <div className="relative z-20 flex w-7 justify-between items-center mt-0.5">
+            <div className="h-3.5 w-3.5 rounded-full border-2 border-slate-300 bg-gradient-to-br from-slate-700 to-slate-900 shadow-sm flex items-center justify-center">
+              <div className="h-1.5 w-1.5 rounded-full bg-slate-950" />
+            </div>
+            <div className="h-3.5 w-3.5 rounded-full border-2 border-slate-300 bg-gradient-to-br from-slate-700 to-slate-900 shadow-sm flex items-center justify-center">
+              <div className="h-1.5 w-1.5 rounded-full bg-slate-950" />
+            </div>
+          </div>
         </div>
       )}
 
-      {/* 4. MẪU CHAI AQUAFINA (Nhựa trong suốt có ngấn gân khúc xạ, nắp xanh) */}
-      {isAquafina && (
-        <div className="sample-aquafina relative flex h-16 w-8 flex-col items-center justify-between rounded-xl p-1 text-center shadow-lg">
-          {/* Nắp chai nhựa xanh có gờ ren vặn */}
-          <div className="relative z-10 h-2 w-3.5 rounded-t-sm bg-blue-600 border border-blue-400 shadow-sm flex items-center justify-center">
-            <div className="h-0.5 w-2 bg-blue-300 rounded-full" />
+      {/* 4. MẪU LỌ THUỐC / ỐNG NGHIỆM THỦY TINH (Medical Vial & Test Tube) */}
+      {isVial && (
+        <div className="sample-vial relative flex h-16 w-8 flex-col items-center justify-between p-0.5 filter drop-shadow-md select-none">
+          {/* Nắp cao su y tế tiệt trùng màu xanh ngọc / xanh dương */}
+          <div className="relative z-20 flex flex-col items-center">
+            <div className="h-1.5 w-4 rounded-t-sm bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-600 border border-teal-300 shadow-xs flex items-center justify-center">
+              <div className="h-0.5 w-2 rounded-full bg-teal-200" />
+            </div>
+            <div className="h-1 w-4.5 rounded-b-xs bg-slate-300 border-x border-b border-slate-400" />
           </div>
 
-          {/* Thân chai với ngấn gân khúc xạ ánh sáng */}
-          <div className="relative z-10 my-auto w-full flex flex-col items-center">
-            <div className="w-5 h-[1px] bg-white/60 mb-0.5 shadow-sm" />
-            <div className="w-6 h-[1px] bg-white/40 mb-1" />
-
-            {/* Nhãn chai Aquafina */}
-            <div className="w-full rounded bg-gradient-to-r from-blue-700 via-blue-600 to-blue-700 py-0.5 px-0.5 border border-white/40 shadow-xs">
-              <span className="text-[6.5px] font-black tracking-tighter text-white uppercase block leading-tight drop-shadow-sm">
-                AQUAFINA
-              </span>
+          {/* Thân ống nghiệm thủy tinh trong suốt đáy chữ U */}
+          <div className="relative z-10 -mt-0.5 flex h-11 w-5 flex-col items-center justify-end rounded-b-full border-x border-b border-teal-400/50 bg-gradient-to-r from-white/50 via-teal-100/25 to-white/30 backdrop-blur-xs shadow-inner overflow-hidden">
+            {/* Vạch chia độ ml dọc thân ống nghiệm */}
+            <div className="absolute top-1.5 left-0.5 flex flex-col gap-1 w-2 pointer-events-none z-20">
+              <div className="h-[1px] w-1.5 bg-slate-700" />
+              <div className="h-[1px] w-1 bg-slate-600" />
+              <div className="h-[1px] w-1.5 bg-slate-700" />
+              <div className="h-[1px] w-1 bg-slate-600" />
             </div>
 
-            <div className="w-6 h-[1px] bg-white/40 mt-1" />
-            <div className="w-5 h-[1px] bg-white/60 mt-0.5 shadow-sm" />
-          </div>
+            {/* Cột chất lỏng dung dịch mẫu phẩm (Xanh ngọc lấp lánh có mặt khum meniscus) */}
+            <div className="w-full h-7 rounded-b-full bg-gradient-to-t from-teal-600 via-emerald-500/80 to-teal-400/70 border-t border-teal-300 shadow-inner flex flex-col items-center justify-center">
+              <div className="w-3 h-0.5 rounded-full bg-teal-200/80 -mt-3 shadow-xs" />
+              <span className="text-[6px] font-mono font-bold text-white tracking-tighter drop-shadow-xs">5ml</span>
+            </div>
 
-          {/* Đáy chai nhựa 5 múi chân */}
-          <div className="relative z-10 h-2 w-6 rounded-b-lg bg-sky-900/30 border-t border-sky-400/30" />
+            {/* Vệt phản quang khúc xạ thủy tinh */}
+            <div className="pointer-events-none absolute inset-y-1 right-0.5 w-0.5 rounded-full bg-white/70" />
+          </div>
         </div>
       )}
 
-      {/* Nhãn cảnh báo kẹt phôi trực tiếp trên vật phẩm */}
+      {/* Nhãn cảnh báo kẹt dụng cụ */}
       {item.isJammed && (
         <div className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-rose-400 bg-rose-600 px-1.5 py-0.5 text-[8px] font-black text-white shadow-[0_0_10px_rgba(244,63,94,0.8)] animate-bounce z-50">
-          ⚠️ KẸT PHÔI
+          ⚠️ KẸT DỤNG CỤ
         </div>
       )}
 
-      {/* Nhãn cảnh báo khay đầy trực tiếp trên phôi đang dừng đợi thay khay */}
+      {/* Nhãn cảnh báo khay đầy */}
       {item.waitingForBin && !item.isJammed && (
         <div className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-amber-400 bg-amber-600 px-1.5 py-0.5 text-[8px] font-black text-white shadow-[0_0_10px_rgba(245,158,11,0.8)] animate-pulse z-50 flex items-center gap-1">
           <span>⚠️ KHAY {item.waitingForBin} ĐẦY</span>

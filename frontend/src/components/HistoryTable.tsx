@@ -316,9 +316,9 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
               className="rounded-xl border border-slate-200 bg-slate-50/90 px-2.5 py-1.5 text-xs font-semibold text-slate-800 outline-none focus:border-cyan-500 dark:border-white/[0.07] dark:bg-[#111319] dark:text-slate-200"
             >
               <option value="all">Tất cả khay (1, 2, 3)</option>
-              <option value="1">Khay 1 (Coca / Gạt 1)</option>
-              <option value="2">Khay 2 (Pepsi / Gạt 2)</option>
-              <option value="3">Khay 3 (Mặc định)</option>
+              <option value="1">Khay 1 (Thùng sắc nhọn / Gạt 1)</option>
+              <option value="2">Khay 2 (Hấp Autoclave / Gạt 2)</option>
+              <option value="3">Khay 3 (Vật tư & Ống nghiệm)</option>
             </select>
           </div>
 
@@ -407,14 +407,14 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
 
                     {/* Thống kê 3 khay của ngày đó */}
                     <div className="flex items-center gap-1.5 text-[11px] font-semibold">
-                      <span className="rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 px-1.5 py-0.5">
-                        K1 (Coca): {group.bin1}
+                      <span className="rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-1.5 py-0.5">
+                        K1 (Sắc nhọn): {group.bin1}
                       </span>
                       <span className="rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 px-1.5 py-0.5">
-                        K2 (Pepsi): {group.bin2}
+                        K2 (Tiệt trùng): {group.bin2}
                       </span>
-                      <span className="rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 px-1.5 py-0.5">
-                        K3 (Khác): {group.bin3}
+                      <span className="rounded-md bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border border-cyan-500/20 px-1.5 py-0.5">
+                        K3 (Vật tư): {group.bin3}
                       </span>
                     </div>
                   </div>

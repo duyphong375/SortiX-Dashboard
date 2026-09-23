@@ -1,6 +1,40 @@
 # NHẬT KÝ THAY ĐỔI HỆ THỐNG (CHANGELOG.md)
 
-Tất cả các thay đổi về kiến trúc, tính năng, sửa lỗi và nâng cấp chất lượng của dự án **SortiX Dashboard** được ghi lại tại tài liệu này theo tiêu chuẩn [Keep a Changelog](https://keepachangelog.com/).
+Tất cả các thay đổi về kiến trúc, tính năng, sửa lỗi và nâng cấp chất lượng của dự án **SortiX-Med** (Hệ thống phân loại dụng cụ y tế & chuẩn bị khử trùng phòng mổ - Đồ án PBL3 Biomedical & Industrial IoT) được ghi lại tại tài liệu này theo tiêu chuẩn [Keep a Changelog](https://keepachangelog.com/).
+
+---
+
+## [3.0.0] - 2026-09-23 (Chuyển Đổi Sang SortiX-Med: Hệ Thống Phân Loại Dụng Cụ Y Tế & Chuẩn Bị Khử Trùng Phòng Mổ)
+
+### 🏥 Medical & Biomedical Features (Tính Năng Y Tế & Y Sinh)
+- **Chuẩn Hóa Danh Mục 4 Nhóm Dụng Cụ Y Tế (`CATALOG_BRANDS`)**:
+  - `med_syringe`: "Bơm kim tiêm / Dao mổ" (Vàng y tế `#EAB308`, Khay 1 - Sharps Waste).
+  - `med_forceps`: "Kẹp phẫu thuật (Pean)" (Xanh dương y tế `#0284C7`, Khay 2 - Autoclave).
+  - `med_scissors`: "Kéo phẫu thuật" (Xanh tím tiệt trùng `#6366F1`, Khay 2 - Autoclave).
+  - `med_vial`: "Lọ thuốc / Ống nghiệm" (Xanh ngọc Emerald `#10B981`, Khay 3 - General Supplies).
+  - Tương thích ngược hoàn toàn (Backward Compatible) với các mã cũ (`brand_c` -> `med_syringe`, `brand_p` -> `med_forceps`, `brand_r` -> `med_scissors`, `brand_a` -> `med_vial`).
+- **Tên & Chức Năng 3 Khay Chứa Y Tế Chuyên Dụng**:
+  - **Khay 1**: "Thùng vật sắc nhọn lây nhiễm (Sharps Waste)" — Tiếp nhận bơm tiêm, dao mổ, lưỡi trích (Cơ cấu Servo 1 - PWM IO23 gạt vào).
+  - **Khay 2**: "Khay hấp tiệt trùng Autoclave (Surgical Instruments)" — Tiếp nhận kẹp phẫu thuật Pean và kéo mổ bằng thép không gỉ (Cơ cấu Servo 2 - PWM IO24 gạt vào).
+  - **Khay 3**: "Khay vật tư y tế & Phục hồi / Khay mặc định (General Supplies)" — Tiếp nhận lọ thuốc, ống nghiệm qua máng trượt trọng lực cuối băng tải.
+- **Cơ Chế An Toàn Sinh Học Fail-Safe**:
+  - Khi độ tin cậy nhận diện `confidence < 60%` (0.60) hoặc vật phẩm không nhận diện được, hệ thống tự động đưa về **Khay 3** để nhân viên y tế kiểm tra lại, loại bỏ 100% rủi ro đưa nhầm vật sắc nhọn vào khay tiệt trùng.
+- **Trực Quan Hóa Băng Chuyền Vật Lý 60fps & Nạp Dụng Cụ Nhanh**:
+  - Cập nhật thanh công cụ `QuickFeedBar` với 4 nút nạp dụng cụ y tế trực quan kèm icon và mã màu y tế.
+  - Cập nhật vật thể kẹt mẫu thành Bơm kim tiêm / Dao mổ (`med_syringe`).
+  - Hiển thị drop-shadow phát sáng theo mã màu y tế tương ứng cho từng dụng cụ.
+
+### 📱 Mobile & QR Code Enhancements (Nâng Cấp Di Động & Mã QR)
+- **Tạo Mới Mã QR Truy Cập Nhanh (`SortiX_Dashboard.png`)**:
+  - Thiết kế mã QR chuẩn đồ họa phân giải cao, hiển thị nhận diện thương hiệu SortiX-Med.
+  - Quét mã bằng camera điện thoại Android để mở trực tiếp Web Dashboard trên mạng LAN (`http://192.168.1.169:3000`).
+  - Hỗ trợ tải trực tiếp file APK cài đặt tại `http://192.168.1.169:3000/SortiX-Dashboard.apk` (đồng bộ vào `frontend/public/SortiX-Dashboard.apk`).
+- **Cập Nhật Cấu Hình Capacitor 8 (`frontend/capacitor.config.ts`)**:
+  - Cập nhật URL máy chủ mặc định trỏ tới `http://192.168.1.169:3000`.
+
+### 🛡️ Quality Gate (Kiểm Thử & Đảm Bảo Chất Lượng)
+- Bảo toàn **108/108 Tests PASS (100%)** trên toàn bộ 15 Test Suites.
+- Biên dịch thành công 100% Next.js 14 Production Build (31/31 routes).
 
 ---
 

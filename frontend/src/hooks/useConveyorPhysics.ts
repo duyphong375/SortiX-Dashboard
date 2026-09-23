@@ -440,7 +440,7 @@ export function useConveyorPhysics({
       if (!hasZoneAItem) {
         const demoJammedItem: VisualItem = {
           id: `#JAM_${Date.now().toString().slice(-4)}`,
-          brandKey: "brand_c", // Coca-Cola
+          brandKey: "med_syringe", // Bơm kim tiêm / Dao mổ
           progress: 45,
           targetBin: 1,
           yOffset: 0,

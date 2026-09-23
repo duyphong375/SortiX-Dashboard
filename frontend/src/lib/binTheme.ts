@@ -142,7 +142,13 @@ export const BIN_THEMES: Record<BinColorScheme, BinColorTheme> = {
 export function getBrandColorScheme(brandId?: string): BinColorScheme | null {
   if (!brandId) return null;
   const normalized = brandId.toLowerCase();
-  if (normalized === "brand_c" || normalized.includes("coca")) return "rose";
+  if (normalized === "med_syringe" || normalized.includes("syringe") || normalized.includes("kim") || normalized.includes("dao")) return "amber";
+  if (normalized === "med_forceps" || normalized.includes("forceps") || normalized.includes("panh") || normalized.includes("pean") || normalized.includes("kep")) return "blue";
+  if (normalized === "med_scissors" || normalized.includes("scissors") || normalized.includes("keo")) return "blue";
+  if (normalized === "med_vial" || normalized.includes("vial") || normalized.includes("tube") || normalized.includes("nghiem") || normalized.includes("thuoc")) return "cyan";
+
+  // Legacy fallback mappings
+  if (normalized === "brand_c" || normalized.includes("coca")) return "amber";
   if (normalized === "brand_a" || normalized.includes("pepsi")) return "blue";
   if (normalized === "brand_b" || normalized.includes("redbull") || normalized.includes("red bull")) return "amber";
   if (normalized === "brand_d" || normalized.includes("aqua")) return "cyan";
@@ -150,10 +156,11 @@ export function getBrandColorScheme(brandId?: string): BinColorScheme | null {
   // Kiểm tra CATALOG_BRANDS nếu có
   const brand = CATALOG_BRANDS[brandId];
   if (brand?.color) {
+    if (brand.color.includes("EAB308") || brand.color.includes("f59e0b") || brand.color.includes("amber")) return "amber";
+    if (brand.color.includes("0284C7") || brand.color.includes("3b82f6") || brand.color.includes("blue")) return "blue";
+    if (brand.color.includes("6366F1") || brand.color.includes("indigo")) return "blue";
+    if (brand.color.includes("10B981") || brand.color.includes("06b6d4") || brand.color.includes("cyan")) return "cyan";
     if (brand.color.includes("ef4444") || brand.color.includes("red")) return "rose";
-    if (brand.color.includes("3b82f6") || brand.color.includes("blue")) return "blue";
-    if (brand.color.includes("f59e0b") || brand.color.includes("amber")) return "amber";
-    if (brand.color.includes("06b6d4") || brand.color.includes("cyan")) return "cyan";
   }
 
   return null;
@@ -165,7 +172,7 @@ export function getBrandColorScheme(brandId?: string): BinColorScheme | null {
  */
 export function getBinColorTheme(
   brandId?: string,
-  fallbackScheme: BinColorScheme = "rose"
+  fallbackScheme: BinColorScheme = "amber"
 ): BinColorTheme {
   const scheme = getBrandColorScheme(brandId) || fallbackScheme;
   return BIN_THEMES[scheme];

@@ -1,6 +1,6 @@
-# THIẾT KẾ KIẾN TRÚC HỆ THỐNG (SORTIX SYSTEM ARCHITECTURE)
+# THIẾT KẾ KIẾN TRÚC HỆ THỐNG SORTIX-MED (BIOMEDICAL & INDUSTRIAL IOT ARCHITECTURE)
 
-> **Tài liệu Kỹ Thuật Đồ Án PBL3**: Hệ thống điều khiển, giám sát và phân loại sản phẩm trên băng chuyền tự động thông minh tích hợp vi điều khiển IoT (ESP32-C5) & Thị giác máy tính (Vision AI) với kiến trúc 1-Codebase đa nền tảng (Desktop Web, Android APK & iOS PWA).
+> **Tài liệu Kỹ Thuật Đồ Án PBL3**: Hệ thống điều khiển, giám sát và tự động phân loại dụng cụ y tế sau phẫu thuật chuẩn bị cho quy trình khử trùng Autoclave phòng mổ. Tích hợp vi điều khiển IoT (**ESP32-C5**), camera thị giác máy tính (**YOLOv8 AI**), bảng điều khiển quản trị phân tầng và ứng dụng di động đa nền tảng (Android APK & iOS PWA) từ một cơ sở mã nguồn duy nhất (1-Codebase Hybrid Architecture).
 
 ---
 
@@ -11,23 +11,33 @@
    - 2.2. Backend Layer (`backend/`)
    - 2.3. Frontend Web Layer (`frontend/`)
    - 2.4. Mobile Shell Layer (Capacitor Android & iOS PWA)
-3. [Các Luồng Dữ Liệu Cốt Lõi (Core Data Flows)](#3-các-luồng-dữ-liệu-cốt-lõi-core-data-flows)
-4. [Kiến Trúc Luồng Sự Kiện Thời Gian Thực (SSE & MQTT Architecture)](#4-kiến-trúc-luồng-sự-kiện-thời-gian-thực-sse--mqtt-architecture)
-5. [Kiến Trúc Lưu Trữ & Chuyển Đổi Dữ Liệu (Persistence & Migrations)](#5-kiến-trúc-lưu-trữ--chuyển-đổi-dữ-liệu-persistence--migrations)
-6. [Mô Hình Bảo Mật & Ràng Buộc An Toàn (Security Architecture)](#6-mô-hình-bảo-mật--ràng-buộc-an-toàn-security-architecture)
-7. [Kiến Trúc Kiểm Thử & Cổng Chất Lượng (Quality Gates & Testing)](#7-kiến-trúc-kiểm-thử--cổng-chất-lượng-quality-gates--testing)
+   - 2.5. IoT & Hardware Layer (ESP32-C5, Sensors & Actuators)
+3. [Luồng Hoạt Động & Quy Trình Tuần Tự (Detailed Workflows & Sequence Diagrams)](#3-luồng-hoạt-động--quy-trình-tuần-tự-detailed-workflows--sequence-diagrams)
+   - 3.1. Sơ Đồ Tuần Tự: Luồng Phân Loại Dụng Cụ Y Tế Thực Tế (End-to-End Sorting Pipeline)
+   - 3.2. Sơ Đồ Tuần Tự: Luồng Dừng Khẩn Cấp (E-Stop) & Mở Khóa An Toàn (Safe Unlock)
+   - 3.3. Sơ Đồ Máy Trạng Thái Hệ Thống (System State Machine)
+   - 3.4. Sơ Đồ Phân Phối Telemetry & Broadcast SSE
+4. [Kiến Trúc & Cơ Chế Hoạt Động Của Cơ Sở Dữ Liệu (Database Architecture)](#4-kiến-trúc--cơ-chế-hoạt-động-của-cơ-sở-dữ-liệu-database-architecture)
+   - 4.1. Sơ Đồ Quan Hệ Thực Thể (Entity Relationship Diagram - ERD)
+   - 4.2. Chiến Lược Lưu Trữ 2 Tầng (Dual-Mode Persistence: JSON vs RDBMS/NoSQL)
+   - 4.3. Thuật Toán Ghi Nguyên Tử Chống Hỏng File (Atomic File Write Algorithm)
+   - 4.4. Cơ Chế Giới Hạn Bộ Nhớ Đệm An Toàn (Bounded Buffers - 1.000 Items)
+   - 4.5. Phân Tích Thiết Kế DDL Migrations (PostgreSQL, MySQL, SQLite, MongoDB)
+   - 4.6. Cơ Chế Đồng Bộ 3 Lớp: LocalStorage <-> RAM Cache <-> Persistent Storage
+5. [Mô Hình Bảo Mật & Ràng Buộc An Toàn (Security Architecture)](#5-mô-hình-bảo-mật--ràng-buộc-an-toàn-security-architecture)
+6. [Kiến Trúc Kiểm Thử & Cổng Chất Lượng (Quality Gates & Testing)](#6-kiến-trúc-kiểm-thử--cổng-chất-lượng-quality-gates--testing)
 
 ---
 
 ## 1. Tổng Quan Kiến Trúc (High-Level Architecture)
 
-Hệ thống **SortiX Dashboard** được thiết kế theo mô hình kiến trúc phân tầng chuyên biệt (**Layered Architecture**) và quản lý mã nguồn dưới dạng **Monorepo (npm workspaces)**. Kiến trúc phân định 5 khối chức năng liên kết chặt chẽ:
+Hệ thống **SortiX-Med** được thiết kế theo mô hình kiến trúc phân tầng chuyên biệt (**Layered Architecture**) và quản lý mã nguồn dưới dạng **Monorepo (npm workspaces)**. Kiến trúc phân định 5 khối chức năng liên kết chặt chẽ:
 
-1. **Frontend Web (Giao diện Client)**: Ứng dụng Next.js 14 App Router, chịu trách nhiệm trực quan hóa đồ họa Canvas 60fps, âm thanh công nghiệp tổng hợp qua Web Audio API, đồng hồ nhiệt độ bán nguyệt 2 chế độ, các thanh trượt điều chỉnh dung lượng khay (5-50 SP) và tương tác người dùng.
+1. **Frontend Web (Giao diện Client)**: Ứng dụng Next.js 14 App Router, chịu trách nhiệm trực quan hóa đồ họa Canvas 60fps mô phỏng dụng cụ y tế di chuyển, âm thanh công nghiệp tổng hợp qua Web Audio API, đồng hồ nhiệt độ bán nguyệt 2 chế độ, các thanh trượt điều chỉnh dung lượng khay (5-50 SP) và tương tác người dùng.
 2. **Mobile Shell Layer (Ứng Dụng Di Động)**: Vỏ bọc Hybrid đa nền tảng sử dụng **Capacitor 8** để đóng gói thành ứng dụng **Android APK** native và hỗ trợ **iOS PWA Standalone** toàn màn hình từ cùng 1 codebase.
 3. **Backend API Server**: Máy chủ Express/Node.js độc lập xử lý xác thực, phân quyền RBAC, giám sát an toàn công nghiệp (E-Stop, Kẹt phôi, Khay đầy, Quá nhiệt, Thiết bị offline, Mất kết nối MQTT, Báo cáo 1 ngày làm việc), broadcast SSE và lưu trữ dữ liệu bền vững.
 4. **Shared Layer (Tầng Dùng Chung)**: Định nghĩa kiểu dữ liệu (Types), Zod Schemas và hằng số hệ thống dùng chung giữa Frontend, Mobile và Backend.
-5. **IoT & Vision Gateway**: Cầu nối truyền thông hai chiều thời gian thực giữa vi điều khiển ESP32-C5, cụm cảm biến/cơ cấu piston đẩy và MQTT Broker qua Wi-Fi 6.
+5. **IoT & Vision Gateway**: Cầu nối truyền thông hai chiều thời gian thực giữa vi điều khiển ESP32-C5, cụm cảm biến S1-S3, 2 cơ cấu Servo gạt phôi và MQTT Broker qua Wi-Fi 6.
 
 ```
       ┌────────────────────────────────────────────────────────┐
@@ -45,7 +55,7 @@ Hệ thống **SortiX Dashboard** được thiết kế theo mô hình kiến tr
                                 ▼
       ┌────────────────────────────────────────────────────────┐
       │                 FRONTEND (Next.js 14 App Router)       │
-      │  TailwindCSS • HTML5 Canvas 60fps Physics Piston Loop  │
+      │  TailwindCSS • HTML5 Canvas 60fps Physics Servo Loop   │
       │  Web Audio Industrial Sound • Dynamic Bin Capacities   │
       │  Dual-Mode Gauge Dial • Báo Cáo 1 Ngày Làm Việc        │
       │  Mobile Drawer Sidebar • Header Quick-Toggle Pill      │
@@ -69,7 +79,7 @@ Hệ thống **SortiX Dashboard** được thiết kế theo mô hình kiến tr
                        │                                      │ Wi-Fi 6
                        ▼                          ┌───────────┴────────────┐
 ┌─────────────────────────────────────────────┐   │     ESP32-C5 Hardware  │
-│          PERSISTENCE & DATA STORE           │   │ (Sensors S1-S3, Piston)│
+│          PERSISTENCE & DATA STORE           │   │(Sensors S1-S3, Servo)  │
 │  - data/users.json (User Accounts Store)    │   └────────────────────────┘
 │  - data/notifications.json (Safety Events)  │
 │  - SQLite / PostgreSQL / MySQL / MongoDB    │
@@ -84,8 +94,8 @@ Hệ thống **SortiX Dashboard** được thiết kế theo mô hình kiến tr
 Đóng vai trò là nguồn sự thật duy nhất (Single Source of Truth) giữa Client và Server:
 - **`types/index.ts`**:
   - `TelemetryData`: Vận tốc encoder, nhiệt độ vi điều khiển, trạng thái cảm biến S1–S3.
-  - `VisionDetection`: Nhãn sản phẩm (`brand_c`, `brand_p`, `brand_r`, `brand_a`), độ tin cậy confidence (0.0 – 1.0), timestamp.
-  - `SorterConfig`: Cấu hình quy tắc phân loại nhãn vào 3 khay chứa, versioning và cơ chế áp dụng.
+  - `VisionDetection`: Nhãn dụng cụ y tế (`med_syringe`, `med_forceps`, `med_scissors`, `med_vial`), độ tin cậy confidence (0.0 – 1.0), timestamp.
+  - `SorterConfig`: Cấu hình quy tắc phân loại dụng cụ vào 3 khay chứa, versioning và cơ chế áp dụng.
   - `ClassificationRecord`: Bản ghi phân loại lịch sử (id, product_id, brand, khay đích, khay thực tế, trạng thái).
   - `User`, `SafeUser`, `AuthCredentials`: Kiểu dữ liệu xác thực và quản lý tài khoản.
   - Payloads sự cố an toàn: `EmergencyStopPayload`, `JamDetectedPayload`, `BinFullPayload`, `TemperatureWarningPayload`, `DeviceOfflinePayload`, `HeartbeatPayload`, `ShiftSummaryPayload`, `MqttDisconnectedPayload`.
@@ -94,8 +104,17 @@ Hệ thống **SortiX Dashboard** được thiết kế theo mô hình kiến tr
   - **Quy tắc `.passthrough()`**: Tất cả schema tương tác với thiết bị và sự kiện ngoại vi đều kích hoạt `.passthrough()` để firmware ESP32-C5 có thể bổ sung các trường chẩn đoán mới mà không gây crash ứng dụng.
 - **`constants/index.ts`**:
   - Danh sách MQTT Topics (`TELEMETRY`, `VISION`, `CONTROL`, `ESTOP`, `JAM`, `BIN_STATUS`, `TEMP`, `HEARTBEAT`).
-  - Mã màu khay chuẩn hóa (Khay 1: Xanh lá, Khay 2: Xanh dương, Khay 3: Cam/Vàng).
+  - Danh mục nhận diện dụng cụ y tế:
+    - `med_syringe`: "Bơm kim tiêm / Dao mổ" (Vàng y tế `#EAB308`, Khay 1)
+    - `med_forceps`: "Kẹp phẫu thuật (Pean)" (Xanh dương y tế `#0284C7`, Khay 2)
+    - `med_scissors`: "Kéo phẫu thuật" (Xanh tím tiệt trùng `#6366F1`, Khay 2)
+    - `med_vial`: "Lọ thuốc / Ống nghiệm" (Xanh ngọc Emerald `#10B981`, Khay 3)
+  - Tên 3 Khay phân loại:
+    - Khay 1: "Thùng vật sắc nhọn lây nhiễm (Sharps Waste)"
+    - Khay 2: "Khay hấp tiệt trùng Autoclave (Surgical Instruments)"
+    - Khay 3: "Khay vật tư y tế & Phục hồi / Khay mặc định (General Supplies)"
   - Định mức dung lượng mặc định (50 SP, dải điều chỉnh [5, 50]).
+  - Ngưỡng Fail-safe an toàn sinh học: Độ tin cậy `< 60%` tự động đưa về Khay 3.
 
 ### 2.2. Backend Layer (`backend/`)
 Được thiết kế theo mô hình MVC thu gọn (Model - Controller - Service - Route):
@@ -114,7 +133,7 @@ Hệ thống **SortiX Dashboard** được thiết kế theo mô hình kiến tr
   - `alertNotificationService.ts`: Tích hợp Nodemailer (SMTP) và Telegram Bot API kèm gắn nhãn định danh chế độ (`🧪 Chế độ Giả Lập` / `🔴 Phần cứng Thực Tế`) và Rate Limiting chống spam.
   - `historyService.ts` & `configService.ts`: Quản lý nghiệp vụ lịch sử và cấu hình.
 - **Models (`backend/src/models/`)**:
-  - `notificationModel.ts`: Lưu trữ bền vững các sự cố an toàn vào file `data/notifications.json`.
+  - `notificationModel.ts`: Lưu trữ bền vững các sự cố an toàn vào file `data/notifications.json` qua cơ chế ghi nguyên tử Atomic Write.
   - `userModel.ts`: Thao tác dữ liệu người dùng bền vững trên file `data/users.json`, tích hợp sẵn Admin Seeder khởi tạo 4 tài khoản Ban Quản trị.
   - `historyModel.ts` & `configModel.ts`: Quản lý bộ nhớ đệm an toàn (Bounded Buffer tối đa 1000 bản ghi), loại trừ nguy cơ tràn RAM.
 - **Middlewares (`backend/src/middlewares/`)**:
@@ -124,9 +143,9 @@ Hệ thống **SortiX Dashboard** được thiết kế theo mô hình kiến tr
 
 ### 2.3. Frontend Web Layer (`frontend/`)
 Xây dựng trên nền tảng Next.js 14 App Router với hiệu năng tối ưu:
-- **Trực quan hóa vật lý 60fps & Piston Chuyển Hướng (`useConveyorPhysics.ts`)**:
-  - Vòng lặp `requestAnimationFrame` tính toán tọa độ di chuyển của vật thể trên băng chuyền.
-  - Mô phỏng cơ cấu **Piston đẩy thụt ra thụt vô** (Piston Stroke IO23, IO24) đẩy sản phẩm vào đúng máng trượt Khay 1, Khay 2 hoặc đi thẳng vào Khay 3.
+- **Trực quan hóa vật lý 60fps & Cơ Cấu Gạt Servo (`useConveyorPhysics.ts`)**:
+  - Vòng lặp `requestAnimationFrame` tính toán tọa độ di chuyển của dụng cụ y tế trên băng chuyền.
+  - Mô phỏng cơ cấu **Servo gạt xoay góc** (Servo 1 - PWM IO23, Servo 2 - PWM IO24) gạt dụng cụ vào đúng máng trượt Khay 1 (Sắc nhọn), Khay 2 (Tiệt trùng) hoặc trượt thẳng vào Khay 3 (Vật tư/Fail-safe).
   - Cho phép người dùng **dọn khay chủ động bất kỳ lúc nào** ngay trên giao diện mà không cần đợi đủ định mức.
 - **Độ Rộng & Sức Chứa Khay Linh Hoạt (Dynamic Bin Capacities 5 - 50 SP)**:
   - Cung cấp 3 thanh trượt điều chỉnh độ rộng/sức chứa riêng biệt cho từng khay trên `ConveyorVisualizer.tsx`, `BinTrays.tsx`, `LiveHealthAndBinWidget.tsx` và `ConfigAndDiagnostics.tsx`.
@@ -151,13 +170,9 @@ Xây dựng trên nền tảng Next.js 14 App Router với hiệu năng tối ư
 - **Mô hình 1-Codebase Hybrid Bridge**:
   - Đóng gói giao diện Next.js 14 thành ứng dụng Native Android qua **Capacitor 8**.
   - Không sử dụng chế độ tĩnh `output: 'export'` tĩnh để bảo vệ toàn vẹn 18 dynamic API routes và SSE stream `/api/events`.
-  - Kết nối thông qua cấu hình `server.url` linh hoạt:
-    - Máy ảo Android Studio: `http://10.0.2.2:3000` (địa chỉ loopback máy host).
-    - Thiết bị thật qua Wi-Fi cục bộ: `http://192.168.1.4:3000` (LAN IP).
-    - Triển khai Cloud: URL Vercel / Custom Domain.
   - Trang dự phòng ngoại tuyến `frontend/out/index.html` bảo đảm app không bị sập khi chưa có kết nối mạng.
 - **Cấu hình Quyền & Mạng (`AndroidManifest.xml`)**:
-  - Kích hoạt `android:usesCleartextTraffic="true"` cho phép giao tiếp HTTP nội bộ trong quá trình phát triển và kết nối vi điều khiển qua IP cục bộ.
+  - Kích hoạt `android:usesCleartextTraffic="true"` cho phép giao tiếp HTTP nội bộ trong quá trình phát triển và kết nối vi điều khiển qua IP cục bộ (`http://192.168.1.169:3000`).
   - Cấp các quyền mạng cần thiết: `INTERNET`, `ACCESS_NETWORK_STATE`.
 - **Tối ưu Viewport & Giao Diện Cảm Ứng Di Động**:
   - Tích hợp chuẩn Next.js 14 `Viewport` trong `frontend/src/app/layout.tsx`:
@@ -168,93 +183,349 @@ Xây dựng trên nền tảng Next.js 14 App Router với hiệu năng tối ư
   - **TopHeader Quick-Toggle Pill**: Nút bấm nhỏ gọn dạng viên nang trên thanh tiêu đề di động (`flex shrink-0 sm:hidden`) cho phép Admin chuyển đổi nhanh chế độ Mô phỏng / Thực tế chỉ bằng một chạm.
   - **Sidebar Drawer Switcher**: Ngăn kéo menu trượt từ cạnh trái (kích hoạt qua nút Hamburger) bố trí khối "CHẾ ĐỘ VẬN HÀNH" kích thước lớn, trực quan ngay đầu danh mục điều hướng.
 
----
-
-## 3. Các Luồng Dữ Liệu Cốt Lõi (Core Data Flows)
-
-### 3.1. Luồng Giám Sát & Phân Loại Sản Phẩm (Telemetry & Vision Flow)
-```
-[Camera AI / Cảm biến S1-S3]
-            │
-            ▼ (MQTT Publish: vision/telemetry)
-     [MQTT Broker]
-            │
-            ▼ (WebSocket Subscribe)
- [Web & Mobile Frontend]
-            ├──> Cập nhật tọa độ & kích hoạt piston đẩy trên Canvas 60fps
-            ├──> Phát âm thanh khí nén / cảm biến qua Web Audio API
-            ├──> Kiểm tra sức chứa từng khay (5 - 50 SP) -> Cảnh báo nếu đầy khay
-            └──> Ghi nhận vào Lịch sử phân loại (Frontend/Backend History)
-```
-
-### 3.2. Luồng Dừng Khẩn Cấp (E-Stop) & Mở Khóa An Toàn (Safe Unlock)
-```
-[Nút E-Stop Vật Lý (IO10) / Web UI / Mobile App]
-            │
-            ├──> Dừng ngay lập tức băng chuyền (isRunning = false)
-            ├──> Bật còi báo động hú liên tục (Continuous Alarm)
-            ├──> Hiển thị Banner khóa toàn màn hình (is_locked = true)
-            │
-            ▼ (POST /api/safety/estop)
-     [Safety Service]
-            ├──> Lưu trữ sự cố vào data/notifications.json
-            ├──> Gửi Email & Telegram cảnh báo
-            └──> Broadcast SSE: event "emergency_stop" tới tất cả Clients (Web & Mobile)
-            
-                        ═════════════════════════════
-                        
-[Admin Xác Thực Mở Khóa (POST /api/safety/unlock)]
-            │
-            ├──> Kiểm tra quyền Quản trị viên (Admin RBAC Gate)
-            ├──> Ghi nhận lý do mở khóa vào lịch sử sự cố
-            ├──> Thiết lập thời gian ân hạn 5 giây chống lặp echo tín hiệu
-            ├──> Tắt còi báo động và ẩn Banner khóa
-            └──> Broadcast SSE: event "safety_unlocked"
-```
+### 2.5. IoT & Hardware Layer (ESP32-C5, Sensors & Actuators)
+- **Vi điều khiển ESP32-C5**: Lõi RISC-V 240MHz, hỗ trợ Wi-Fi 6 tần số 2.4GHz & 5GHz, đảm bảo độ trễ thấp và tính ổn định cao trong môi trường phòng mổ / y tế.
+- **Cảm biến đầu vào**:
+  - Cảm biến quang học S1 (GPIO IO0): Phát hiện dụng cụ bắt đầu đi vào băng tải, kích hoạt vùng quét camera AI.
+  - Cảm biến quang học S2 (GPIO IO1): Xác định vị trí trước Khay 1 (Thùng vật sắc nhọn).
+  - Cảm biến quang học S3 (GPIO IO6): Xác định vị trí trước Khay 2 (Khay hấp tiệt trùng Autoclave).
+  - Cảm biến kẹt phôi (Optical Jam Sensor #02): Giám sát tắc nghẽn liên tục > 5s tại Zone A.
+  - Cảm biến nhiệt độ DS18B20: Giám sát nhiệt độ động cơ và khu vực điều khiển.
+  - Bộ mã hóa Encoder: Đo tốc độ quay thực tế của trục động cơ băng tải.
+- **Cơ cấu chấp hành (Actuators)**:
+  - Động cơ DC kéo băng tải điều khiển qua mạch MCPWM (GPIO IO4).
+  - 2 Cơ cấu Servo gạt phôi: Servo 1 (PWM IO23) cho Khay 1; Servo 2 (PWM IO24) cho Khay 2.
+  - Máng trượt trọng lực cuối băng tải: Cho Khay 3 (Lọ thuốc / fail-safe không cần servo).
+  - Nút dừng khẩn cấp vật lý E-Stop (chân GPIO IO10 với cơ chế ngắt phần cứng - Interrupt).
 
 ---
 
-## 4. Kiến Trúc Luồng Sự Kiện Thời Gian Thực (SSE & MQTT Architecture)
+## 3. Luồng Hoạt Động & Quy Trình Tuần Tự (Detailed Workflows & Sequence Diagrams)
 
-Hệ thống kết hợp cả hai mô hình truyền thông thời gian thực:
-1. **MQTT qua WebSocket**: Dành cho dữ liệu telemetry cao tần (60fps, tọa độ cảm biến, nhận diện camera).
-2. **Server-Sent Events (SSE)**: Dành cho các sự kiện trạng thái hệ thống, cảnh báo an toàn và đồng bộ đa màn hình từ máy chủ xuống client.
+### 3.1. Sơ Đồ Tuần Tự: Luồng Phân Loại Dụng Cụ Y Tế Thực Tế (End-to-End Sorting Pipeline)
 
-```
-[IoT Hardware / Controller] ──(MQTT)──> [MQTT Broker] ──(WSS)──> [Web & Mobile Clients]
-                                                                        ▲
-[Backend Safety Engine] ─────(SSE /api/events Broadcast)────────────────┘
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Belt as Băng Tải & Cảm Biến S1
+    participant Cam as Camera & Vision AI (YOLOv8)
+    participant ESP as Vi Điều Khiển ESP32-C5
+    participant Broker as MQTT Broker
+    participant Servo as Cơ Cấu Gạt Servo
+    participant Server as Express Backend
+    participant UI as Dashboard Web/Mobile
+
+    Belt->>ESP: Dụng cụ kích hoạt S1 (IO0)
+    Cam->>Cam: Chụp ảnh & Chạy mô hình YOLOv8 nhận diện dụng cụ
+    Cam->>Broker: Publish: sorter/01/vision { brand: "med_syringe", confidence: 0.96 }
+    Broker->>ESP: Forward vision payload
+    Broker->>UI: WSS Telemetry update (Vẽ dụng cụ trên Canvas 60fps)
+    
+    ESP->>ESP: Tra cứu rules: med_syringe -> Bin 1 (Sharps Waste)
+    ESP->>Belt: Giám sát Encoder tính toán thời điểm đến vị trí Khay 1
+    
+    Belt->>ESP: Dụng cụ chạm cảm biến S2 (IO1 - Trước khay 1)
+    ESP->>Servo: Xuất xung PWM kích hoạt Servo #1 (IO23) gạt phôi
+    Servo->>Servo: Gạt dụng cụ sắc nhọn vào Khay 1 an toàn
+    
+    ESP->>Broker: Publish: sorter/01/telemetry { bin_1_count: +1, speed: 1.2 }
+    Broker->>UI: Cập nhật số đếm Khay 1 & Phát âm thanh phân loại
+    
+    UI->>Server: POST /api/history (Ghi bản ghi phân loại)
+    Server->>Server: Lưu vào HistoryModel (Bounded Buffer 1000 items)
 ```
 
 ---
 
-## 5. Kiến Trúc Lưu Trữ & Chuyển Đổi Dữ Liệu (Persistence & Migrations)
+### 3.2. Sơ Đồ Tuần Tự: Luồng Dừng Khẩn Cấp (E-Stop) & Mở Khóa An Toàn (Safe Unlock)
 
-Hệ thống cung cấp cơ chế lưu trữ hai tầng linh hoạt:
-- **Tầng 1 (Mặc định - Zero Setup)**: Lưu trữ bền vững trên JSON file store (`data/users.json`, `data/notifications.json`).
-- **Tầng 2 (Doanh Nghiệp - Production)**: Bộ migrations chuẩn hóa trong `backend/database/migrations/` sẵn sàng triển khai trên:
-  - SQLite: `001_create_users_table_sqlite.sql`
-  - PostgreSQL: `001_create_users_table_postgres.sql`
-  - MySQL: `001_create_users_table_mysql.sql`
-  - MongoDB: `001_create_users_mongodb.js`
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Op as Người Vận Hành
+    actor Admin as Quản Trị Viên (Admin)
+    participant UI as Web/Mobile Client
+    participant Server as Express Backend
+    participant SSE as SSE Stream (/api/events)
+    participant DB as notifications.json
+    participant Alerts as Telegram Bot & SMTP
+    participant Hardware as Relay Động Cơ Băng Tải
+
+    Op->>UI: Bấm nút E-Stop (hoặc ấn nút vật lý IO10)
+    UI->>Hardware: Ngắt relay động cơ lập tức (isRunning = false)
+    UI->>Server: POST /api/safety/estop { station_id: "STATION_01", triggered_by: "Operator" }
+    
+    Server->>Server: Cập nhật trạng thái an toàn: is_locked = true
+    Server->>DB: Ghi sự cố vào notifications.json (Atomic Write)
+    Server->>Alerts: Gửi cảnh báo khẩn cấp (Telegram & Email)
+    Server->>SSE: Broadcast event: "emergency_stop"
+    
+    SSE->>UI: Nhận sự kiện dừng khẩn cấp
+    UI->>UI: Bật còi hú liên tục & Khóa màn hình bằng Banner an toàn đỏ
+    
+    Note over Op,Hardware: DÂY CHUYỀN ĐÃ KHÓA AN TOÀN — CẦN ADMIN XÁC THỰC MỞ KHÓA
+    
+    Admin->>UI: Mở modal mở khóa, nhập lý do hiện trường & mật khẩu Admin
+    UI->>Server: POST /api/safety/unlock { admin_id: "admin-001", reason: "Đã kiểm tra an toàn" }
+    
+    Server->>Server: Kiểm tra quyền Admin (RBAC Gate)
+    Server->>Server: Kích hoạt thời gian ân hạn 5 giây chống lặp tín hiệu (Anti-Echo Grace Period)
+    Server->>DB: Cập nhật sự cố: status = "resolved", resolved_by = "admin-001"
+    Server->>SSE: Broadcast event: "safety_unlocked"
+    
+    SSE->>UI: Nhận sự kiện mở khóa
+    UI->>UI: Tắt còi hú, gỡ bỏ Banner khóa, cho phép khởi động lại băng tải
+```
 
 ---
 
-## 6. Mô Hình Bảo Mật & Ràng Buộc An Toàn (Security Architecture)
+### 3.3. Sơ Đồ Máy Trạng Thái Hệ Thống (System State Machine)
 
-1. **Mật khẩu an toàn**: Mọi mật khẩu được băm bằng thuật toán `bcrypt` với `10 salt rounds`.
-2. **Phiên làm việc ký số**: Token phiên làm việc được ký số bảo mật, xác thực người dùng và vai trò qua `authToken.ts`.
-3. **Phân quyền vai trò chặt chẽ (RBAC)**:
+```mermaid
+stateDiagram-v2
+    [*] --> IDLE: Khởi động hệ thống
+
+    IDLE --> RUNNING: Bấm [Bắt đầu] (isRunning = true)
+    RUNNING --> IDLE: Bấm [Dừng]
+
+    RUNNING --> WARNING_JAM: Cảm biến quang #02 che khuất > 5s
+    WARNING_JAM --> RUNNING: Dọn sạch phôi kẹt & Bấm [Tiếp tục]
+
+    RUNNING --> WARNING_BIN_FULL: Số lượng sản phẩm >= Sức chứa định mức (5-50 SP)
+    WARNING_BIN_FULL --> RUNNING: Bấm [Xác nhận đã thay khay mới] (Reset về 0)
+
+    RUNNING --> WARNING_OVERHEAT: Nhiệt độ cảm biến DS18B20 > 75.0°C
+    WARNING_OVERHEAT --> RUNNING: Nhiệt độ giảm dưới 70.0°C
+
+    RUNNING --> EMERGENCY_STOP: Nhấn nút E-Stop (Vật lý hoặc UI)
+    WARNING_JAM --> EMERGENCY_STOP: Sự cố nghiêm trọng
+    WARNING_BIN_FULL --> EMERGENCY_STOP: Sự cố tràn khay
+    
+    EMERGENCY_STOP --> LOCKED: Động cơ dừng, còi hú, ghi DB, broadcast SSE
+    LOCKED --> RECOVERING: Admin mở khóa an toàn (Grace period 5s)
+    RECOVERING --> IDLE: Hệ thống sẵn sàng vận hành lại
+```
+
+---
+
+### 3.4. Sơ Đồ Phân Phối Telemetry & Broadcast SSE
+
+```mermaid
+flowchart TD
+    subgraph HIGH_FREQUENCY["Luồng Dữ Liệu Cao Tần (High-Frequency Realtime)"]
+        ESP32["ESP32-C5 Sensors"] -->|MQTT over Wi-Fi 6| BROKER["MQTT Broker"]
+        BROKER -->|WebSocket WSS (60fps)| CLIENT_WS["Trình duyệt Client (Canvas Loop)"]
+    end
+
+    subgraph SYSTEM_EVENTS["Luồng Sự Kiện An Toàn & Đồng Bộ (Low-Frequency Events)"]
+        SERVER["Express Backend Engine"] -->|SSE /api/events| CLIENT_SSE["Trình duyệt Client (EventSource)"]
+        CLIENT_SSE --> EVENT_DISPATCH{"Bộ Phân Phối Sự Kiện"}
+        EVENT_DISPATCH -->|emergency_stop| ESTOP_HANDLER["Bật còi hú & Khóa Banner"]
+        EVENT_DISPATCH -->|safety_unlocked| UNLOCK_HANDLER["Tắt còi & Mở khóa"]
+        EVENT_DISPATCH -->|jam_detected| JAM_HANDLER["Cảnh báo kẹt phôi đỏ"]
+        EVENT_DISPATCH -->|bin_full| BINFULL_HANDLER["Toast cảnh báo đầy khay"]
+        EVENT_DISPATCH -->|temperature_warning| TEMP_HANDLER["Chuyển kim đồng hồ đỏ"]
+        EVENT_DISPATCH -->|device_offline| OFFLINE_HANDLER["Báo mất kết nối vi điều khiển"]
+        EVENT_DISPATCH -->|mqtt_disconnected| MQTT_HANDLER["Báo mất kết nối Broker"]
+        EVENT_DISPATCH -->|shift_summary| SHIFT_HANDLER["Hiện Modal báo cáo ngày"]
+    end
+```
+
+---
+
+## 4. Kiến Trúc & Cơ Chế Hoạt Động Của Cơ Sở Dữ Liệu (Database Architecture)
+
+### 4.1. Sơ Đồ Quan Hệ Thực Thể (Entity Relationship Diagram - ERD)
+
+```mermaid
+erDiagram
+    USERS ||--o{ NOTIFICATIONS : "xử lý sự cố (resolved_by)"
+    USERS {
+        string id PK "Mã định danh (admin-001, UUID)"
+        string username UK "Tên đăng nhập (3-50 ký tự)"
+        string full_name "Họ và tên hiển thị"
+        string email UK "Địa chỉ email"
+        string password_hash "Mật khẩu băm Bcrypt (10 rounds)"
+        string role "Vai trò: admin | user"
+        string status "Trạng thái: active | locked"
+        string reset_otp "Mã OTP 6 số (NULL nếu không yêu cầu)"
+        datetime reset_otp_expires_at "Thời hạn OTP (5 phút)"
+        datetime created_at "Thời điểm tạo"
+        datetime updated_at "Thời điểm cập nhật"
+    }
+
+    NOTIFICATIONS {
+        string id PK "Mã thông báo (notif_1789...)"
+        string event "Loại sự kiện (emergency_stop, jam, ...)"
+        string station_id "Mã trạm phát sinh sự cố"
+        string mode "Chế độ: real | simulation"
+        string severity "Mức độ: info | warning | critical"
+        string description "Mô tả chi tiết"
+        string status "Trạng thái: unprocessed | resolved"
+        datetime timestamp "Thời điểm xảy ra"
+        datetime resolved_at "Thời điểm giải quyết"
+        string resolved_by FK "Người giải quyết (username)"
+    }
+
+    CLASSIFICATION_HISTORY {
+        string id PK "Mã bản ghi (rec-1789...)"
+        string product_id "Mã dụng cụ (MED-0042)"
+        string brand "Nhóm dụng cụ y tế (med_syringe, med_forceps, ...)"
+        int target_bin "Khay mục tiêu (1: Sắc nhọn, 2: Tiệt trùng, 3: Vật tư/Mặc định)"
+        int actual_bin "Khay thực tế (1, 2, 3)"
+        string status "Kết quả: success | misplaced | rejected"
+        float confidence "Độ tin cậy YOLOv8 (0.0 - 1.0)"
+        datetime timestamp "Thời điểm phân loại"
+    }
+
+    SORTER_CONFIG {
+        int schema_version "Phiên bản schema (mặc định: 1)"
+        int config_version "Số hiệu cấu hình (tự tăng)"
+        string device_id "Mã máy phân loại (sorter_01)"
+        string catalog_version "Phiên bản danh mục dụng cụ (catalog_01)"
+        json bins "Quy tắc gán nhãn vào khay"
+        int default_bin "Khay mặc định (3)"
+        json bin_capacities "Sức chứa từng khay (5-50 SP)"
+        float conveyor_speed "Tốc độ băng tải (m/s)"
+        string apply_mode "Chế độ áp dụng (when_line_empty)"
+        datetime timestamp "Thời điểm lưu cấu hình"
+    }
+```
+
+---
+
+### 4.2. Chiến Lược Lưu Trữ 2 Tầng (Dual-Mode Persistence: JSON vs RDBMS/NoSQL)
+
+Hệ thống hỗ trợ 2 tầng lưu trữ song song:
+
+1. **Tầng 1 (Local JSON Store - Zero Setup)**:
+   - Thư mục lưu trữ: `data/users.json`, `data/notifications.json`, `data/history.json`.
+   - Toàn bộ thao tác đọc/ghi được bọc bằng cơ chế ghi nguyên tử (Atomic Write).
+   - Tự động nạp sẵn dữ liệu 4 tài khoản Admin thông qua Admin Seeder idempotent.
+   - Không yêu cầu người dùng phải cài đặt PostgreSQL hay MySQL, cực kỳ thuận tiện cho việc bảo vệ đồ án và chấm điểm trực tiếp trên máy chấm thi.
+
+2. **Tầng 2 (Enterprise Database - Production Ready)**:
+   - Toàn bộ cấu trúc thực thể đã có sẵn các file migration DDL trong `backend/database/migrations/`:
+     - `001_create_users_table_postgres.sql`: PostgreSQL với `pgcrypto`, UUID, trigger cập nhật `updated_at`.
+     - `001_create_users_table_mysql.sql`: MySQL 8.0 với `VARCHAR(36)` UUID và `ON UPDATE CURRENT_TIMESTAMP`.
+     - `001_create_users_table_sqlite.sql`: SQLite 3 cho các bo mạch nhúng (Raspberry Pi, Jetson Nano).
+     - `001_create_users_mongodb.js`: MongoDB Schema Validation qua JSON Schema chuẩn BSON.
+
+---
+
+### 4.3. Thuật Toán Ghi Nguyên Tử Chống Hỏng File (Atomic File Write Algorithm)
+
+Trong quá trình phân loại tốc độ cao, việc ghi file JSON đồng thời có thể dẫn đến hiện tượng tệp tin bị cắt cụt (corrupted/truncated file) nếu xảy ra sự cố sập nguồn. Để khắc phục triệt để, SortiX áp dụng thuật toán ghi nguyên tử:
+
+```typescript
+function saveUsersToDisk(users: UserAccount[]): void {
+  const filePath = resolveStorageFilePath();
+  const directory = path.dirname(filePath);
+  fs.mkdirSync(directory, { recursive: true });
+
+  // Bước 1: Tạo đường dẫn tệp tạm độc nhất theo PID, timestamp và chuỗi ngẫu nhiên
+  const temporaryPath = path.join(
+    directory,
+    `.${path.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
+  );
+
+  try {
+    // Bước 2: Ghi toàn bộ nội dung JSON vào tệp tạm
+    fs.writeFileSync(temporaryPath, JSON.stringify(users, null, 2), "utf-8");
+
+    // Bước 3: Đổi tên tệp tạm thành tệp đích (Thao tác nguyên tử cấp độ OS Kernel)
+    fs.renameSync(temporaryPath, filePath);
+  } finally {
+    // Bước 4: Dọn dẹp tệp tạm nếu có lỗi phát sinh
+    try {
+      if (fs.existsSync(temporaryPath)) fs.unlinkSync(temporaryPath);
+    } catch {
+      // Bỏ qua lỗi dọn dẹp nếu rename đã thành công
+    }
+  }
+}
+```
+
+---
+
+### 4.4. Cơ Chế Giới Hạn Bộ Nhớ Đệm An Toàn (Bounded Buffers - 1.000 Items)
+
+Để ngăn ngừa lỗi rò rỉ bộ nhớ (Out of Memory - OOM) khi hệ thống hoạt động liên tục 24/7:
+- **`HistoryModel`**: Duy trì mảng trong RAM và file `history.json` tối đa **1.000 bản ghi phân loại gần nhất** (`MAX_SERVER_RECORDS = 1000`). Bản ghi mới nhất được đẩy lên đầu (`unshift`), và mảng được cắt gọn bằng `slice(0, 1000)`.
+- **`NotificationModel`**: Tương tự, danh sách sự cố an toàn trong `notifications.json` luôn được giới hạn ở **1.000 sự cố gần nhất**, sắp xếp giảm dần theo thời gian xảy ra.
+- **Client Cache**: LocalStorage trên trình duyệt của người dùng cũng được đồng bộ và làm sạch định kỳ khi người dùng kích hoạt tính năng dọn dẹp lịch sử.
+
+---
+
+### 4.5. Phân Tích Thiết Kế DDL Migrations (PostgreSQL, MySQL, SQLite, MongoDB)
+
+#### PostgreSQL Migration (`001_create_users_table_postgres.sql`):
+- Sử dụng tiện ích mở rộng `pgcrypto` để tự động sinh UUID v4 qua hàm `gen_random_uuid()`.
+- Định nghĩa kiểu ENUM riêng biệt (`user_role`, `user_status`) để tối ưu hóa không gian lưu trữ và đảm bảo tính toàn vẹn kiểu dữ liệu.
+- Ràng buộc Check Constraints:
+  - `chk_users_username_format`: Kiểm tra regex `^[a-zA-Z0-9_.-]{3,50}$`.
+  - `chk_users_email_format`: Kiểm tra regex chuẩn định dạng email.
+  - `chk_users_full_name_length`: Độ dài tên tối thiểu 2 ký tự.
+- Trigger `set_users_updated_at()` tự động cập nhật trường `updated_at` mỗi khi có thao tác `UPDATE` trên hàng dữ liệu.
+
+#### MySQL Migration (`001_create_users_table_mysql.sql`):
+- Sử dụng bảng mã `utf8mb4` và collation `utf8mb4_unicode_ci` hỗ trợ đầy đủ tiếng Việt có dấu.
+- Trường `updated_at` có thuộc tính `ON UPDATE CURRENT_TIMESTAMP`.
+
+#### SQLite Migration (`001_create_users_table_sqlite.sql`):
+- Tối ưu cho thiết bị phần cứng nhúng với cơ chế Trigger `AFTER UPDATE` giả lập tính năng tự động cập nhật thời gian.
+
+---
+
+### 4.6. Cơ Chế Đồng Bộ 3 Lớp: LocalStorage <-> RAM Cache <-> Persistent Storage
+
+```
++-------------------------------------------------------------+
+| TẦNG 1: TRÌNH DUYỆT & APP DI ĐỘNG (CLIENT)                  |
+| - LocalStorage: 'sortix_bin_capacities' (Dung lượng 5-50 SP)|
+| - LocalStorage: 'sortix_history' (Cache lịch sử gần nhất)   |
+| - React State: Trực quan hóa tọa độ Canvas 60fps            |
++------------------------------+------------------------------+
+                               |
+                   REST API / SSE Streams
+                               |
++------------------------------v------------------------------+
+| TẦNG 2: MÁY CHỦ EXPRESS (SERVER IN-MEMORY CACHE)            |
+| - usersStore[]: Danh sách tài khoản đã xác thực             |
+| - inMemoryHistory[]: Bounded Buffer tối đa 1.000 bản ghi    |
+| - notificationsStore[]: Bounded Buffer tối đa 1.000 sự cố   |
+| - currentConfig: Bản sao cấu hình phân loại trong RAM       |
++------------------------------+------------------------------+
+                               |
+                  Atomic File Write / SQL DDL
+                               |
++------------------------------v------------------------------+
+| TẦNG 3: BỘ NHỚ LƯU TRỮ BỀN VỮNG (PERSISTENCE LAYER)         |
+| - data/users.json (Atomic Rename qua .tmp)                  |
+| - data/notifications.json (Atomic Rename qua .tmp)          |
+| - data/history.json (Atomic Rename qua .tmp)                |
+| - Hệ quản trị CSDL PostgreSQL / MySQL / SQLite / MongoDB    |
++-------------------------------------------------------------+
+```
+
+---
+
+## 5. Mô Hình Bảo Mật & Ràng Buộc An Toàn (Security Architecture)
+
+1. **Băm mật khẩu an toàn**: Mọi mật khẩu được băm bằng thuật toán `bcrypt` với `10 salt rounds`. Không lưu trữ bất kỳ mật khẩu thô nào trong mã nguồn hoặc tệp dữ liệu.
+2. **Phiên làm việc ký số (Signed Session Token)**: Token phiên làm việc được ký số bảo mật, xác thực người dùng và vai trò qua module `authToken.ts`.
+3. **Phân quyền vai trò chặt chẽ (RBAC Gate)**:
    - Chỉ người dùng có vai trò `admin` mới được truy cập các tài nguyên quản trị máy, xóa lịch sử, thay đổi quy tắc phân loại và mở khóa E-Stop.
-4. **Ngăn ngừa leo thang đặc quyền**: Luồng đăng ký tài khoản tự do luôn bị ép cứng vai trò `user`.
-5. **Ràng buộc sinh tồn Admin**:
-   - Admin không thể tự xóa tài khoản của chính mình khi đang đăng nhập.
-   - Không thể xóa tài khoản Admin nếu chỉ còn duy nhất 1 Quản trị viên trong hệ thống.
+   - Người dùng có vai trò `user` chỉ có quyền giám sát, bị khóa cứng ở chế độ Thực tế và trả về `403 Forbidden` khi cố tình gọi API quản trị.
+4. **Ngăn ngừa leo thang đặc quyền (Privilege Escalation Prevention)**: Luồng đăng ký tài khoản tự do luôn bị ép cứng vai trò `user`.
+5. **Ràng buộc sinh tồn Admin (Admin Survival Rules)**:
+   - Admin không thể tự xóa tài khoản của chính mình khi đang đăng nhập (`400 Bad Request`).
+   - Không thể xóa tài khoản Admin nếu chỉ còn duy nhất 1 Quản trị viên trong hệ thống (`400 Bad Request`).
 6. **Mã Mock OTP 6 chữ số**: Thời hạn hiệu lực 5 phút (300 giây), vô hiệu hóa ngay sau khi sử dụng và chặn khôi phục từ bên ngoài đối với các tài khoản Admin.
 
 ---
 
-## 7. Kiến Trúc Kiểm Thử & Cổng Chất Lượng (Quality Gates & Testing)
+## 6. Kiến Trúc Kiểm Thử & Cổng Chất Lượng (Quality Gates & Testing)
 
 Dự án áp dụng quy trình kiểm định chất lượng phần mềm nghiêm ngặt với 15 bộ test suites tự động bảo đảm **108/108 tests PASS (100%)**:
 

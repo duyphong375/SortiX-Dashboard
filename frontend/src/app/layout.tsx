@@ -14,9 +14,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "SortiX",
+  title: "SortiX-Med | Hệ thống phân loại dụng cụ y tế và chuẩn bị khử trùng phòng mổ",
   description:
-    "Hệ thống điều khiển và giám sát thời gian thực băng tải phân loại thông minh SortiX (ESP32-C5, Camera AI YOLOv8, MQTT, Telegram và Email)",
+    "Hệ thống điều khiển và giám sát thời gian thực tự động phân loại dụng cụ y tế và chuẩn bị khử trùng phòng mổ SortiX-Med (ESP32-C5, Camera AI YOLOv8, MQTT, Telegram và Email)",
 };
 
 export default function RootLayout({

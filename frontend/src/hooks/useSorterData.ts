@@ -275,7 +275,7 @@ export function useSorterData({ configRef, onIncomingConfig, onSpawnRealVisualIt
   // Record Real Detection from MQTT Vision Camera (YOLOv8)
   const handleRealHardwareDetection = useCallback(
     (detection: VisionDetection) => {
-      const targetBin = determineTargetBin(detection.brand_id, configRef.current);
+      const targetBin = determineTargetBin(detection.brand_id, configRef.current, detection.confidence);
       
       // Direct visualization on belt if in Real Mode
       if (!isSimulationRef.current && onSpawnRealVisualItem) {

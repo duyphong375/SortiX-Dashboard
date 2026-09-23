@@ -103,7 +103,12 @@ export function cleanVisionPayload(raw: unknown): VisionDetection | null {
   return null;
 }
 
-export function determineTargetBin(brandId: string, config: SorterConfig): number {
+export function determineTargetBin(brandId: string, config: SorterConfig, confidence?: number): number {
+  // Fail-safe AI: Độ tin cậy thấp (< 60%) tự động chuyển về Khay 3 để kiểm tra thủ công, tránh gạt nhầm vào khay tiệt trùng
+  if (confidence !== undefined && confidence < 0.6) {
+    return config?.default_bin || 3;
+  }
+
   if (!config || !Array.isArray(config.bins)) return 3;
 
   for (const binRule of config.bins) {

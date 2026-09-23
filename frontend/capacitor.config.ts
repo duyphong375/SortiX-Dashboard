@@ -16,7 +16,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
  */
 const config: CapacitorConfig = {
   appId: 'com.pbl3.dashboard',
-  appName: 'SortiX Dashboard',
+  appName: 'SortiX-Med Dashboard',
   webDir: 'out',
   server: {
     url: process.env.CAPACITOR_SERVER_URL || 'http://192.168.1.4:3000',

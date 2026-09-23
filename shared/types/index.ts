@@ -37,47 +37,59 @@ export interface BrandInfo {
 }
 
 export const CATALOG_BRANDS: Record<string, BrandInfo> = {
-  brand_c: {
-    id: "brand_c",
-    name: "Coca-Cola",
-    code: "COCA",
-    color: "#ef4444", // Đỏ
-    badgeBg: "bg-red-500/20",
-    borderColor: "border-red-500/50",
-    textColor: "text-red-400",
-    packaging: "Lon nhôm 330ml", icon: "🔴",
-  },
-  brand_a: {
-    id: "brand_a",
-    name: "Pepsi",
-    code: "PEPSI",
-    color: "#3b82f6", // Xanh dương
-    badgeBg: "bg-blue-500/20",
-    borderColor: "border-blue-500/50",
-    textColor: "text-blue-400",
-    packaging: "Lon nhôm 330ml", icon: "🔵",
-  },
-  brand_b: {
-    id: "brand_b",
-    name: "Red Bull",
-    code: "REDBULL",
-    color: "#f59e0b", // Vàng hổ phách
+  med_syringe: {
+    id: "med_syringe",
+    name: "Bơm kim tiêm / Dao mổ",
+    code: "SYRINGE",
+    color: "#EAB308", // Vàng y tế #EAB308
     badgeBg: "bg-amber-500/20",
     borderColor: "border-amber-500/50",
-    textColor: "text-amber-400",
-    packaging: "Lon nhôm 250ml", icon: "🟡",
+    textColor: "text-amber-500 dark:text-amber-400",
+    packaging: "Vật sắc nhọn lây nhiễm dùng 1 lần",
+    icon: "💉",
   },
-  brand_d: {
-    id: "brand_d",
-    name: "Aquafina",
-    code: "AQUA",
-    color: "#06b6d4", // Cyan
-    badgeBg: "bg-cyan-500/20",
-    borderColor: "border-cyan-500/50",
-    textColor: "text-cyan-400",
-    packaging: "Chai nhựa PET 500ml", icon: "🔷",
+  med_forceps: {
+    id: "med_forceps",
+    name: "Kẹp phẫu thuật (Pean)",
+    code: "FORCEPS",
+    color: "#0284C7", // Xanh dương y tế #0284C7
+    badgeBg: "bg-sky-500/20",
+    borderColor: "border-sky-500/50",
+    textColor: "text-sky-600 dark:text-sky-400",
+    packaging: "Thép y tế không gỉ (Inox 316L)",
+    icon: "🩺",
+  },
+  med_scissors: {
+    id: "med_scissors",
+    name: "Kéo phẫu thuật",
+    code: "SCISSORS",
+    color: "#6366F1", // Xanh tím tiệt trùng #6366F1
+    badgeBg: "bg-indigo-500/20",
+    borderColor: "border-indigo-500/50",
+    textColor: "text-indigo-600 dark:text-indigo-400",
+    packaging: "Dụng cụ mổ tái sử dụng Autoclave",
+    icon: "✂️",
+  },
+  med_vial: {
+    id: "med_vial",
+    name: "Lọ thuốc / Ống nghiệm",
+    code: "VIAL",
+    color: "#10B981", // Xanh ngọc Emerald #10B981
+    badgeBg: "bg-emerald-500/20",
+    borderColor: "border-emerald-500/50",
+    textColor: "text-emerald-600 dark:text-emerald-400",
+    packaging: "Thủy tinh borosilicate / Nhựa y tế",
+    icon: "🧪",
   },
 };
+
+// Bí danh tương thích ngược (Backward-compatible legacy aliases)
+Object.defineProperties(CATALOG_BRANDS, {
+  brand_c: { get: () => CATALOG_BRANDS.med_syringe, enumerable: false, configurable: true },
+  brand_a: { get: () => CATALOG_BRANDS.med_forceps, enumerable: false, configurable: true },
+  brand_b: { get: () => CATALOG_BRANDS.med_scissors, enumerable: false, configurable: true },
+  brand_d: { get: () => CATALOG_BRANDS.med_vial, enumerable: false, configurable: true },
+});
 
 export interface BinRule {
   bin_id: 1 | 2;

@@ -30,9 +30,9 @@ export function BinTrays({
 }: BinTraysProps) {
   const [confirmBinClear, setConfirmBinClear] = useState<1 | 2 | 3 | null>(null);
 
-  const bin1Theme = getBinColorTheme(bin1Brands[0], "rose");
+  const bin1Theme = getBinColorTheme(bin1Brands[0], "amber");
   const bin2Theme = getBinColorTheme(bin2Brands[0], "blue");
-  const bin3Theme = getBinColorTheme(bin3Brands[0], "amber");
+  const bin3Theme = getBinColorTheme(bin3Brands[0], "cyan");
 
   const cap1 = binCapacities?.bin1 || 50;
   const cap2 = binCapacities?.bin2 || 50;
@@ -57,7 +57,7 @@ export function BinTrays({
                 ) : (
                   <span className={`h-2 w-2 rounded-full shrink-0 ${bin1Theme.dotClass}`} />
                 )}
-                <span className="truncate">Khay 1 (Piston 1)</span>
+                <span className="truncate">Thùng vật sắc nhọn (Khay 1)</span>
               </span>
               <div className="flex items-center gap-1.5 shrink-0">
                 {binCounts.bin1 >= cap1 ? (
@@ -76,7 +76,7 @@ export function BinTrays({
                 ) : (
                   <>
                     <span className={`rounded-md px-2 py-0.5 text-[10px] font-mono font-bold ${bin1Theme.badgeClass}`}>
-                      Piston IO23
+                      Servo IO23
                     </span>
                     <button
                       type="button"
@@ -167,7 +167,7 @@ export function BinTrays({
                 ) : (
                   <span className={`h-2 w-2 rounded-full shrink-0 ${bin2Theme.dotClass}`} />
                 )}
-                <span className="truncate">Khay 2 (Piston 2)</span>
+                <span className="truncate">Khay hấp tiệt trùng Autoclave (Khay 2)</span>
               </span>
               <div className="flex items-center gap-1.5 shrink-0">
                 {binCounts.bin2 >= cap2 ? (
@@ -186,7 +186,7 @@ export function BinTrays({
                 ) : (
                   <>
                     <span className={`rounded-md px-2 py-0.5 text-[10px] font-mono font-bold ${bin2Theme.badgeClass}`}>
-                      Piston IO24
+                      Servo IO24
                     </span>
                     <button
                       type="button"
@@ -277,7 +277,7 @@ export function BinTrays({
                 ) : (
                   <span className={`h-2 w-2 rounded-full shrink-0 ${bin3Theme.dotClass}`} />
                 )}
-                <span className="truncate">Khay 3 (Mặc định)</span>
+                <span className="truncate">Khay vật tư & Ống nghiệm (Khay 3)</span>
               </span>
               <div className="flex items-center gap-1.5 shrink-0">
                 {binCounts.bin3 >= cap3 ? (
@@ -296,7 +296,7 @@ export function BinTrays({
                 ) : (
                   <>
                     <span className={`rounded-md px-2 py-0.5 text-[10px] font-mono font-bold ${bin3Theme.badgeClass}`}>
-                      Đi thẳng
+                      Trượt trọng lực
                     </span>
                     <button
                       type="button"

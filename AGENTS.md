@@ -1,6 +1,6 @@
-# QUY TẮC PHÁT TRIỂN DỰ ÁN (AGENTS.md)
+# QUY TẮC PHÁT TRIỂN DỰ ÁN SORTIX-MED (AGENTS.md)
 
-Tài liệu này quy định các tiêu chuẩn kỹ thuật, ràng buộc kiến trúc và nguyên tắc bảo mật **BẮT BUỘC** áp dụng cho tất cả các AI Agent và Lập trình viên khi làm việc với codebase của **SortiX Dashboard** (Đồ án PBL3).
+Tài liệu này quy định các tiêu chuẩn kỹ thuật, ràng buộc kiến trúc và nguyên tắc an toàn y sinh **BẮT BUỘC** áp dụng cho tất cả các AI Agent và Lập trình viên khi làm việc với codebase của **SortiX-Med** — Hệ thống tự động phân loại dụng cụ y tế & chuẩn bị khử trùng phòng mổ (Đồ án PBL3 Biomedical & Industrial IoT).
 
 ---
 
@@ -95,7 +95,7 @@ Tài liệu này quy định các tiêu chuẩn kỹ thuật, ràng buộc kiế
   - Bắt buộc sử dụng tiền tố **`[BÁO CÁO 1 NGÀY LÀM VIỆC]`** trong tiêu đề và nội dung thông báo.
   - Dữ liệu báo cáo phải được đồng bộ trực tiếp từ số liệu thời gian thực của 3 khay chứa và lịch sử phân loại.
 - **Quy Tắc Cô Lập Kiểm Thử Tuyệt Đối (Strict Simulation Isolation)**:
-  - Các chức năng test giả lập (nút *Bấm test giả lập kẹt phôi*, *Giả lập bấm E-Stop*, *Thả lon phôi mẫu*, *Tạo dữ liệu demo*, *Test ngắt kết nối MQTT*, *Thanh trượt nhiệt độ ảo*) **CHỈ ĐƯỢC PHÉP XUẤT HIỆN VÀ THỰC THI Ở CHẾ ĐỘ MÔ PHỎNG (`isSimulation === true`)**.
+  - Các chức năng test giả lập (nút *Bấm test giả lập kẹt phôi*, *Giả lập bấm E-Stop*, *Nạp dụng cụ y tế mẫu*, *Tạo dữ liệu demo*, *Test ngắt kết nối MQTT*, *Thanh trượt nhiệt độ ảo*) **CHỈ ĐƯỢC PHÉP XUẤT HIỆN VÀ THỰC THI Ở CHẾ ĐỘ MÔ PHỎNG (`isSimulation === true`)**.
   - Khi ở chế độ Thực tế (`isSimulation === false`):
     - Giao diện ẩn hoàn toàn tất cả các nút test và nạp phôi ảo.
     - Tất cả các hàm xử lý phải chặn các yêu cầu có nguồn gốc từ `user_action` hoặc `physics_in`, đảm bảo dữ liệu 100% đến từ cảm biến và camera phần cứng thực tế.
