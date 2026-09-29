@@ -20,6 +20,7 @@
 
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "lucide-react": "^0.441.0",
     "mqtt": "^5.10.1",
     "next": "14.2.15",
@@ -30,6 +31,7 @@
     "zod": "^4.6.2"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.16.5",
     "@types/nodemailer": "^6.4.16",
     "@types/react": "^18.3.8",
