@@ -5,14 +5,14 @@ import { ThemeMode } from "@/lib/types";
 import { industrialAudio } from "@/lib/audioService";
 
 export function useThemeAudio() {
-  const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
+  const [themeMode, setThemeMode] = useState<ThemeMode>("light");
   const [isMuted, setIsMuted] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
-    const savedTheme = (localStorage.getItem("pbl3_theme_mode") as ThemeMode) || "dark";
-    setThemeMode(savedTheme === "light" ? "light" : "dark");
+    const savedTheme = localStorage.getItem("pbl3_theme_mode") as ThemeMode | null;
+    setThemeMode(savedTheme === "dark" ? "dark" : "light");
 
     const savedMuted = localStorage.getItem("pbl3_sound_muted") === "true";
     setIsMuted(savedMuted);

@@ -19,6 +19,11 @@ import {
 } from "lucide-react";
 import { LoginSchema, RegisterSchema } from "@shared/schemas";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  clearClassificationHistory,
+  clearAlertHistory,
+  saveOperatingMode,
+} from "@/lib/history";
 import { ForgotPasswordModal } from "@/components/ui/ForgotPasswordModal";
 import styles from "./login.module.css";
 
@@ -166,6 +171,14 @@ export default function LoginPage() {
       if (mode === "login") {
         const result = await loginWithCredentials(identifier.trim(), password);
         if (result.success) {
+          clearClassificationHistory();
+          clearAlertHistory();
+          saveOperatingMode(false);
+          try {
+            localStorage.setItem("pbl3_theme_mode", "light");
+            document.documentElement.classList.remove("dark");
+            document.documentElement.classList.add("light");
+          } catch {}
           setPassword("");
           router.replace("/");
         } else {

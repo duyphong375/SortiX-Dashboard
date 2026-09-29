@@ -70,7 +70,7 @@ const SYNC_FILE = resolveStorageFilePath("sync_state.json");
 
 function createDefaultSyncState(): DashboardSyncState {
   return {
-    mode: "sim",
+    mode: "real",
     isRunning: false,
     speed: 50,
     binCounts: { bin1: 0, bin2: 0, bin3: 0 },

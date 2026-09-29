@@ -10,7 +10,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#070b14",
+  themeColor: "#f8fafc",
 };
 
 export const metadata: Metadata = {
@@ -25,12 +25,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi" className="dark" suppressHydrationWarning>
+    <html lang="vi" className="light" suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content="#070b14" />
+        <meta name="theme-color" content="#f8fafc" />
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var m=localStorage.getItem("pbl3_theme_mode");if(m==="light"){document.documentElement.classList.remove("dark");document.documentElement.classList.add("light");}}catch(e){}`,
+            __html: `try{var m=localStorage.getItem("pbl3_theme_mode");if(m==="dark"){document.documentElement.classList.remove("light");document.documentElement.classList.add("dark");}else{document.documentElement.classList.remove("dark");document.documentElement.classList.add("light");}}catch(e){}`,
           }}
         />
       </head>
