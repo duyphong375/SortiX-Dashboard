@@ -19,7 +19,7 @@ const config: CapacitorConfig = {
   appName: 'SortiX-Med Dashboard',
   webDir: 'out',
   server: {
-    url: process.env.CAPACITOR_SERVER_URL || 'http://192.168.1.4:3000',
+    url: process.env.CAPACITOR_SERVER_URL || 'https://sorti-x-dashboard.vercel.app',
     cleartext: true,
     androidScheme: 'https',
   },
