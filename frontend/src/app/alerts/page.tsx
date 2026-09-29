@@ -13,37 +13,49 @@ import {
   Clock,
   CheckCircle2,
   Download,
+  Filter,
 } from "lucide-react";
 import { exportAlertsToCSV } from "@/lib/exportCsv";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ExportDialog } from "@/components/ui/ExportDialog";
 import { useToast } from "@/components/ui/Toast";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 const SEVERITY_CONFIG: Record<
   AlertSeverity,
   {
     icon: React.FC<{ className?: string }>;
-    color: string;
-    bg: string;
+    badgeVariant: "destructive" | "warning" | "default";
+    borderClass: string;
+    bgClass: string;
+    textClass: string;
     label: string;
   }
 > = {
   critical: {
     icon: Zap,
-    color: "text-rose-600 dark:text-rose-400",
-    bg: "border-rose-200/80 bg-rose-50/70 dark:border-rose-500/20 dark:bg-[#161822]",
+    badgeVariant: "destructive",
+    borderClass: "border-rose-500/40 dark:border-rose-500/30",
+    bgClass: "bg-rose-500/[0.04] dark:bg-rose-950/[0.15]",
+    textClass: "text-rose-600 dark:text-rose-400",
     label: "Nghiêm trọng",
   },
   warning: {
     icon: AlertTriangle,
-    color: "text-amber-600 dark:text-amber-400",
-    bg: "border-amber-200/80 bg-amber-50/70 dark:border-amber-500/20 dark:bg-[#161822]",
+    badgeVariant: "warning",
+    borderClass: "border-amber-500/40 dark:border-amber-500/30",
+    bgClass: "bg-amber-500/[0.04] dark:bg-amber-950/[0.15]",
+    textClass: "text-amber-600 dark:text-amber-400",
     label: "Cảnh báo",
   },
   info: {
     icon: Info,
-    color: "text-blue-600 dark:text-blue-400",
-    bg: "border-blue-200/80 bg-blue-50/70 dark:border-blue-500/20 dark:bg-[#161822]",
+    badgeVariant: "default",
+    borderClass: "border-cyan-500/30 dark:border-cyan-500/20",
+    bgClass: "bg-cyan-500/[0.03] dark:bg-cyan-950/[0.10]",
+    textClass: "text-cyan-600 dark:text-cyan-400",
     label: "Thông tin",
   },
 };
@@ -115,105 +127,125 @@ export default function AlertsPage() {
   };
 
   return (
-    <div className="space-y-4 page-transition-enter">
+    <div className="space-y-4 page-transition-enter pb-6">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Cảnh báo</h2>
-          <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
-            {alerts.length} sự kiện • {severityCounts.critical} sự cố nghiêm trọng
+          <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+            <span>Trung tâm Cảnh báo & Sự cố</span>
+            <Badge variant="outline" className="font-mono text-xs">
+              {alerts.length} Sự kiện
+            </Badge>
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Giám sát cảnh báo quá nhiệt, kẹt phôi, dừng khẩn cấp và lỗi kết nối vi điều khiển.
           </p>
         </div>
+
         <div className="flex flex-wrap items-center gap-2">
-          {/* Filter buttons */}
-          <div className="flex items-center rounded-xl border border-slate-200/80 bg-slate-100/80 p-0.5 dark:border-white/[0.06] dark:bg-[#111319]">
+          {/* Bộ lọc phân loại */}
+          <div className="flex items-center rounded-xl border border-slate-200/80 bg-slate-100/80 p-0.5 dark:border-white/[0.08] dark:bg-[#111319]">
             {(["all", "critical", "warning", "info"] as const).map((sev) => (
               <button
                 key={sev}
                 onClick={() => setFilter(sev)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${filter === sev
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
+                  filter === sev
                     ? "bg-white text-slate-900 shadow-sm border border-slate-200/80 dark:border-white/20 dark:bg-[#1E212D] dark:text-white"
                     : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-                  }`}
+                }`}
               >
                 {sev === "all"
                   ? `Tất cả (${alerts.length})`
                   : sev === "critical"
-                    ? `Nghiêm trọng (${severityCounts.critical})`
-                    : sev === "warning"
-                      ? `Cảnh báo (${severityCounts.warning})`
-                      : `Thông tin (${severityCounts.info})`}
+                  ? `Nghiêm trọng (${severityCounts.critical})`
+                  : sev === "warning"
+                  ? `Cảnh báo (${severityCounts.warning})`
+                  : `Thông tin (${severityCounts.info})`}
               </button>
             ))}
           </div>
 
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setExportDialogOpen(true)}
             disabled={alerts.length === 0}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-white/10 dark:bg-[#161822] dark:text-slate-300 dark:hover:bg-white/5 transition-colors disabled:opacity-50"
+            className="gap-1.5 font-bold"
           >
             <Download className="h-3.5 w-3.5" />
             <span>Xuất CSV</span>
-          </button>
+          </Button>
 
           {canDelete && (
-            <button
+            <Button
+              variant="destructive"
+              size="sm"
               onClick={() => setConfirmClearOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-100 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20"
+              className="gap-1.5 font-bold shadow-sm"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              Xóa tất cả
-            </button>
+              <span>Xóa tất cả</span>
+            </Button>
           )}
         </div>
       </div>
 
       {!canDelete && (
-        <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-800 dark:border-amber-500/20 dark:bg-amber-950/30 dark:text-amber-400">
+        <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs font-semibold text-amber-800 dark:border-amber-500/20 dark:bg-amber-950/30 dark:text-amber-400">
           <ShieldAlert className="h-4 w-4 shrink-0" />
-          <span>Bạn chỉ có quyền xem cảnh báo — thao tác xóa cần quyền quản trị viên.</span>
+          <span>Bạn chỉ có quyền xem cảnh báo — thao tác xóa sự kiện yêu cầu quyền quản trị viên.</span>
         </div>
       )}
 
-      {/* Alert List */}
-      <div className="space-y-2.5">
+      {/* Danh sách Alert Cards */}
+      <div className="space-y-3">
         {filteredAlerts.length === 0 ? (
-          <div className="relate-card flex flex-col items-center justify-center rounded-2xl border border-slate-200/80 bg-white/95 py-16 dark:border-white/[0.07] dark:bg-[#161822]">
-            <CheckCircle2 className="mb-3 h-10 w-10 text-emerald-500" />
-            <p className="font-bold text-slate-800 dark:text-white">Không có cảnh báo nào</p>
-            <p className="text-xs font-normal text-slate-500 dark:text-slate-400">Hệ thống hoạt động ổn định, không ghi nhận sự cố</p>
-          </div>
+          <Card className="flex flex-col items-center justify-center border-slate-200/80 py-16 dark:border-white/[0.08] dark:bg-[#131722]/90">
+            <CheckCircle2 className="mb-3 h-12 w-12 text-emerald-500" />
+            <p className="font-bold text-slate-800 dark:text-white text-base">Hệ thống đang hoạt động an toàn</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Không ghi nhận bất kỳ sự cố hay lỗi cảnh báo nào trong hệ thống.
+            </p>
+          </Card>
         ) : (
           filteredAlerts.map((alert) => {
             const cfg = SEVERITY_CONFIG[alert.severity];
             const IconComp = cfg.icon;
             return (
-              <div
+              <Card
                 key={alert.event_id}
-                className={`relate-card flex items-start gap-4 rounded-2xl border p-4 transition-all shadow-xs ${cfg.bg}`}
+                className={`flex items-start gap-4 border p-4.5 transition-all shadow-sm ${cfg.borderClass} ${cfg.bgClass}`}
               >
-                <div className={`mt-0.5 shrink-0 ${cfg.color}`}>
+                <div
+                  className={`mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl shrink-0 border border-white/10 ${cfg.textClass}`}
+                  style={{ background: "rgba(255,255,255,0.03)" }}
+                >
                   <IconComp className="h-5 w-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-xs font-semibold uppercase tracking-wider ${cfg.color}`}>{cfg.label}</span>
-                    <span className="rounded-full bg-slate-200/70 px-2 py-0.5 text-[10px] font-mono font-medium text-slate-700 dark:bg-white/[0.08] dark:text-slate-300 dark:border dark:border-white/[0.05]">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Badge variant={cfg.badgeVariant} className="text-[10px] uppercase font-bold tracking-wider">
+                      {cfg.label}
+                    </Badge>
+                    <span className="font-mono text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
                       {alert.event_type.replace(/_/g, " ")}
                     </span>
                   </div>
-                  <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
                     {alert.description}
                   </p>
-                  <div className="mt-2 flex items-center gap-3 text-[11px] font-normal text-slate-500 dark:text-slate-400">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
+                  <div className="mt-2.5 flex flex-wrap items-center gap-4 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 text-cyan-500" />
                       {new Date(alert.timestamp).toLocaleString("vi-VN")}
                     </span>
-                    <span>Thiết bị: <strong className="font-mono text-slate-700 dark:text-slate-300">{alert.device_id}</strong></span>
+                    <span>
+                      Thiết bị: <strong className="text-slate-700 dark:text-slate-300">{alert.device_id}</strong>
+                    </span>
                   </div>
                 </div>
-              </div>
+              </Card>
             );
           })
         )}

@@ -22,12 +22,14 @@ export interface CalendarWidgetProps {
   records: ClassificationRecord[];
   bin1Brands: string[];
   bin2Brands: string[];
+  compact?: boolean;
 }
 
 export const CalendarWidget = React.memo(function CalendarWidget({
   records,
   bin1Brands,
   bin2Brands,
+  compact = true,
 }: CalendarWidgetProps) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const year = currentDate.getFullYear();
@@ -79,6 +81,84 @@ export const CalendarWidget = React.memo(function CalendarWidget({
     }
     return map;
   }, [records]);
+
+  const todayFormatted = useMemo(() => {
+    const parts = todayKey.split("-");
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return todayKey;
+  }, [todayKey]);
+
+  const todayStats = dateStatsMap[todayKey];
+
+  if (compact) {
+    return (
+      <div className="rounded-2xl border border-slate-200/90 bg-white/95 p-4 shadow-sm dark:border-white/[0.08] dark:bg-[#161822]">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-white/[0.06]">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 shrink-0">
+              <Calendar className="h-4 w-4" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span>Hôm nay · {todayFormatted}</span>
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Tóm tắt phân loại ca trực</p>
+            </div>
+          </div>
+          <span className="rounded-full bg-cyan-500/10 px-2.5 py-0.5 text-xs font-mono font-bold text-cyan-700 dark:text-cyan-300 border border-cyan-500/20">
+            HÔM NAY
+          </span>
+        </div>
+
+        {/* Thống kê Tổng & 3 khay */}
+        <div className="mt-3.5 space-y-3">
+          <div className="flex items-baseline justify-between">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Tổng sản lượng hôm nay:
+            </span>
+            <span className="font-mono text-xl font-black text-slate-900 dark:text-white">
+              {todayStats?.total || 0} SP
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-xl border border-amber-500/20 bg-amber-50/50 dark:border-amber-500/15 dark:bg-amber-950/20 p-2.5 text-center">
+              <p className="text-xs font-bold text-amber-600 dark:text-amber-400">Khay 1</p>
+              <p className="font-mono text-base font-extrabold text-slate-900 dark:text-white mt-0.5">
+                {todayStats?.bin1 || 0} SP
+              </p>
+            </div>
+            <div className="rounded-xl border border-sky-500/20 bg-sky-50/50 dark:border-sky-500/15 dark:bg-sky-950/20 p-2.5 text-center">
+              <p className="text-xs font-bold text-sky-600 dark:text-sky-400">Khay 2</p>
+              <p className="font-mono text-base font-extrabold text-slate-900 dark:text-white mt-0.5">
+                {todayStats?.bin2 || 0} SP
+              </p>
+            </div>
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-50/50 dark:border-emerald-500/15 dark:bg-emerald-950/20 p-2.5 text-center">
+              <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Khay 3</p>
+              <p className="font-mono text-base font-extrabold text-slate-900 dark:text-white mt-0.5">
+                {todayStats?.bin3 || 0} SP
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Nút Xem lịch sử ngày */}
+        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/[0.06]">
+          <Link
+            href="/history"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/[0.05] dark:hover:bg-white/[0.09] py-2 text-xs font-bold text-slate-700 dark:text-slate-200 transition-colors"
+          >
+            <span>Xem lịch sử ngày</span>
+            <ArrowRight className="h-3.5 w-3.5 text-slate-500" />
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const handlePrevMonth = () => {
     setCurrentDate(new Date(year, month - 1, 1));

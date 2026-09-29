@@ -63,7 +63,7 @@ export default function ConveyorPage() {
         onToggleRun={handleToggleRun}
         onEmergencyStop={wrappedEmergencyStop}
         onSpeedChange={handleSpeedChange}
-        onSpawnPackage={isSimulation ? spawnVisualPackage : undefined}
+        onSpawnPackage={spawnVisualPackage}
         arm1Active={arm1Active}
         arm2Active={arm2Active}
         binCounts={binCounts}

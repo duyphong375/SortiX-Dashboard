@@ -102,7 +102,7 @@ Các mục lịch sử bên dưới có thể mô tả trạng thái ở thời 
 - 🎚️ **Độ Rộng & Sức Chứa Khay Tùy Chỉnh (Dynamic Bin Capacities 5 - 50 SP)**: Mỗi khay cho phép tùy chỉnh định mức chứa từ 5 đến 50 sản phẩm qua thanh trượt mượt mà; tự động đồng bộ tức thời giữa thanh trượt máng trượt Canvas, Widget giám sát, trang Cấu hình và LocalStorage.
 - 🌡️ **Đồng Hồ Đo Nhiệt Độ Bán Nguyệt (Dual-Mode Temperature Gauge)**: 
   - *Chế độ Mô phỏng*: Cung cấp thanh trượt ảo (30°C - 95°C) và các nút đặt nhanh (42.5°C, 72.0°C, 78.5°C) để thử nghiệm phản ứng quá nhiệt.
-  - *Chế độ Thực tế*: Tự động ẩn thanh trượt giả lập, hiển thị bảng telemetry phần cứng (cảm biến DS18B20 / ESP32) với nhãn `[PHẦN CỨNG THẬT]` và kim đo nhảy theo telemetry thực.
+  - *Chế độ Thực tế*: Tự động ẩn thanh trượt giả lập, hiển thị bảng telemetry phần cứng (cảm biến nội vi tích hợp trên chip ESP32-C5) với nhãn `[PHẦN CỨNG THẬT]` và kim đo nhảy theo telemetry thực.
 - 📡 **Giám Sát Kết Nối IoT & Mạng Đa Tầng**:
   - Tự động phát hiện mất kết nối MQTT Broker quá 5 giây (`mqtt_disconnected`), đổi huy hiệu Header sang đỏ chớp nháy, phát còi cảnh báo và tự động kết nối lại theo lịch trình (3s -> 5s -> 10s).
   - Watchdog 6 giây giám sát nhịp tim định kỳ 2 giây (`conveyor/heartbeat`), cảnh báo tức thì khi vi điều khiển ESP32 ngoại tuyến (`device_offline`).
@@ -206,7 +206,7 @@ Phần này mô tả chi tiết cách thức toàn bộ hệ thống phối hợ
 flowchart TD
     subgraph HARDWARE_LAYER["1. Tầng Phần Cứng & Thu Thập Dữ Liệu"]
         CAM["Camera AI YOLOv8"] -->|"Nhận diện dụng cụ y tế"| DETECT["Kết quả Detection (loại dụng cụ, confidence)"]
-        SENSORS["Cụm Cảm Biến S1-S3 + Encoder + DS18B20"] -->|"Đo tốc độ, nhiệt độ, kẹt dụng cụ"| ESP32["Vi điều khiển ESP32-C5"]
+        SENSORS["Cụm Cảm Biến S1-S3 + Encoder + Cảm biến nội vi ESP32-C5"] -->|"Đo tốc độ, nhiệt độ, kẹt dụng cụ"| ESP32["Vi điều khiển ESP32-C5"]
         DETECT -->|"UART Serial / Wi-Fi 6"| ESP32
     end
 

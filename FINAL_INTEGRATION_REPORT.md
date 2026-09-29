@@ -43,7 +43,7 @@
 | 7 | **Bảo Mật Mật Khẩu** | File `data/users.json` còn lưu trường `plain_password` | Xóa bỏ hoàn toàn mật khẩu thô, 100% tài khoản mã hóa Bcrypt 10 salt rounds | ✅ Đã sửa |
 | 8 | **Chữ Ký Session** | Session token chưa được ký số đồng nhất | Tích hợp module `authToken.ts` tạo token ký số an toàn và xác thực role | ✅ Đã sửa |
 | 9 | **Dung Lượng Khay** | Sức chứa khay bị fix cứng 50 SP | Triển khai Dynamic Bin Capacities 5 - 50 SP đồng bộ trên Canvas, Widget, Config | ✅ Đã sửa |
-| 10 | **Nhiệt Độ Bán Nguyệt** | Đồng hồ nhiệt độ hiển thị thanh trượt ở cả chế độ máy thật | Tách biệt hoàn toàn: Slider ảo ở Mô phỏng, Bảng telemetry DS18B20 ở Thực tế | ✅ Đã sửa |
+| 10 | **Nhiệt Độ Bán Nguyệt** | Đồng hồ nhiệt độ hiển thị thanh trượt ở cả chế độ máy thật | Tách biệt hoàn toàn: Slider ảo ở Mô phỏng, Bảng telemetry cảm biến nội vi ESP32-C5 ở Thực tế | ✅ Đã sửa |
 | 11 | **Mobile Android App** | Cần đóng gói Mobile App cho di động mà không được làm hỏng Web Next.js | Tích hợp Capacitor 8 Hybrid Bridge, xuất file APK 4.1MB, bảo vệ 100% web routes | ✅ Đã sửa |
 | 12 | **Điều Hướng Mobile** | Nút chuyển đổi Chế độ Mô phỏng bị ẩn trên màn hình di động hẹp (<640px) | Bổ sung nút viên nang trên TopHeader và khối chuyển đổi lớn trong Sidebar Drawer | ✅ Đã sửa |
 | 13 | **Chủ Đề Y Sinh (SortiX-Med)** | Chuyển đổi toàn diện sang nhận diện 4 nhóm dụng cụ y tế phòng mổ | Chuẩn hóa `CATALOG_BRANDS`, đổi tên 3 khay y tế, áp dụng quy tắc Fail-safe (<60% vào Khay 3) | ✅ Đã sửa |

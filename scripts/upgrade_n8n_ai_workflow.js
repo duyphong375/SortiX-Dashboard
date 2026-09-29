@@ -71,9 +71,9 @@ const systemMessageText = `Bạn là Kỹ sư Trưởng kiêm Chuyên gia AI Cop
   * Thao tác thay khay an toàn: Nhấc nhẹ nhàng, đặt lên xe đẩy có lót đệm. Đặt khay mới đúng vị trí cữ. Tuyệt đối không quăng ném hoặc xếp chồng dao kéo lên đầu kẹp vi phẫu tránh mẻ lưỡi hoặc cong vênh mỏ kẹp.
 
 # 3. KIẾN TRÚC PHẦN CỨNG & CƠ CHẾ AN TOÀN LIÊN ĐỘNG (INTERLOCKS)
-- Vi điều khiển trung tâm ESP32: Dual Core, điều khiển động cơ băng tải và cơ cấu gạt phân loại, truyền telemetry thời gian thực qua giao thức MQTT.
-- Cảm biến nhiệt độ DS18B20:
-  * Giám sát liên tục nhiệt độ bo mạch điều khiển và driver động cơ:
+- Vi điều khiển trung tâm ESP32-C5: Dual Core / RISC-V, điều khiển động cơ băng tải và cơ cấu gạt phân loại, truyền telemetry thời gian thực qua giao thức MQTT.
+- Cảm biến nhiệt độ nội vi ESP32-C5 (On-Chip Internal Temperature Sensor):
+  * Tích hợp sẵn trên vi điều khiển ESP32-C5 (không dùng cảm biến rời ngoại vi), giám sát liên tục nhiệt độ chip và hệ thống:
   * 🟢 < 60°C: Bình thường (Normal).
   * 🟡 60°C - 75°C: Cảnh báo nhiệt độ ấm (Warm Warning) - Cần kiểm tra quạt thông gió tủ điện.
   * 🔴 >= 75°C: Quá nhiệt nguy cấp (Overheat Critical) - Nguy cơ hư hỏng linh kiện bán dẫn, sai lệch xung PWM, mất an toàn cháy nổ; Hệ thống kích hoạt Interlock dừng ngay băng tải.
@@ -82,16 +82,16 @@ const systemMessageText = `Bạn là Kỹ sư Trưởng kiêm Chuyên gia AI Cop
 - Nút dừng khẩn cấp E-Stop:
   * Khi bị nhấn cơ học, ngắt tức thì nguồn động lực và chuyển hệ thống sang trạng thái SYSTEM_LOCKED.
 - Quy trình 4 bước xử lý sự cố & Mở khóa an toàn (4-Step Recovery Protocol):
-  * Bước 1 (Xác định & Cách ly): Kiểm tra cờ cảm biến (E-Stop, kẹt phôi Zone A, khay đầy hay quá nhiệt DS18B20).
+  * Bước 1 (Xác định & Cách ly): Kiểm tra cờ cảm biến (E-Stop, kẹt phôi Zone A, khay đầy hay quá nhiệt chip ESP32-C5).
   * Bước 2 (Xử lý hiện trường): Xoay nhả nút E-Stop theo chiều mũi tên HOẶC dùng kẹp vô trùng gắp dụng cụ bị kẹt HOẶC thay thế khay mới.
-  * Bước 3 (Kiểm tra an toàn): Đảm bảo nhiệt độ DS18B20 < 75°C và cảm biến quang #02 đã thông thoáng.
+  * Bước 3 (Kiểm tra an toàn): Đảm bảo nhiệt độ chip ESP32-C5 < 75°C và cảm biến quang #02 đã thông thoáng.
   * Bước 4 (Mở khóa hệ thống): Kỹ sư/Quản trị viên thực hiện lệnh "Mở khóa hệ thống" (Safety Unlock) trên Dashboard để tái kích hoạt băng tải.
 
 # 4. DANH SÁCH TOOLS HỖ TRỢ VÀ NGUYÊN TẮC VẬN HÀNH
 Hệ thống cung cấp cho bạn 8 Tools chuyên dụng:
 1. Tool: Khay_Chua_Realtime - Đọc số lượng hiện tại, sức chứa, tỷ lệ lấp đầy (%), chế độ vận hành (isSimulation) và mã màu đồng bộ (🟢/🟡/🔴) của 3 khay chứa.
 2. Tool: Thong_Ke_Phan_Loai - Đọc tổng sản lượng và số lượng chi tiết từng nhóm kéo, kẹp panh, dao mổ, lỗi.
-3. Tool: Cam_Bien_DS18B20 - Đọc nhiệt độ DS18B20 (°C), chế độ vận hành (isSimulation), trạng thái động cơ (isRunning, tốc độ) và cảm biến kẹt phôi.
+3. Tool: Cam_Bien_Nhiet_Do_ESP32 - Đọc nhiệt độ cảm biến nội vi chip ESP32-C5 (°C), chế độ vận hành (isSimulation), trạng thái động cơ (isRunning, tốc độ) và cảm biến kẹt phôi.
 4. Tool: An_Toan_He_Thong - Đọc chi tiết cờ khóa hệ thống, cờ E-Stop và nguyên nhân sự cố.
 5. Tool: Lich_Su_Phan_Loai - Đọc danh sách các lượt phân loại dụng cụ gần nhất kèm độ tin cậy AI.
 6. Tool: Cau_Hinh_He_Thong - Đọc cấu hình chế độ vận hành (mode), tốc độ định mức và các ngưỡng an toàn.
@@ -135,13 +135,13 @@ const toolsList = [
     }
   },
   {
-    name: 'Tool: Cam_Bien_DS18B20',
+    name: 'Tool: Cam_Bien_Nhiet_Do_ESP32',
     id: '3aed0a6d-60ec-4176-8eff-76da36a8f68a',
     position: [480, 96],
     parameters: {
       url: 'http://localhost:5000/api/telemetry',
-      toolDescription: 'Lấy dữ liệu telemetry phần cứng thời gian thực: Nhiệt độ bo mạch điều khiển ESP32 đo bằng cảm biến DS18B20 (°C), ngưỡng cảnh báo an toàn 75°C, trạng thái động cơ băng tải (isRunning, tốc độ) và cảm biến quang học #02 Zone A phát hiện kẹt phôi.',
-      description: 'Lấy dữ liệu telemetry phần cứng thời gian thực: Nhiệt độ bo mạch điều khiển ESP32 đo bằng cảm biến DS18B20 (°C), ngưỡng cảnh báo an toàn 75°C, trạng thái động cơ băng tải (isRunning, tốc độ) và cảm biến quang học #02 Zone A phát hiện kẹt phôi.'
+      toolDescription: 'Lấy dữ liệu telemetry phần cứng thời gian thực: Nhiệt độ vi điều khiển ESP32-C5 đo bằng cảm biến nhiệt độ nội vi tích hợp trên chip (°C), ngưỡng cảnh báo an toàn 75°C, trạng thái động cơ băng tải (isRunning, tốc độ) và cảm biến quang học #02 Zone A phát hiện kẹt phôi.',
+      description: 'Lấy dữ liệu telemetry phần cứng thời gian thực: Nhiệt độ vi điều khiển ESP32-C5 đo bằng cảm biến nhiệt độ nội vi tích hợp trên chip (°C), ngưỡng cảnh báo an toàn 75°C, trạng thái động cơ băng tải (isRunning, tốc độ) và cảm biến quang học #02 Zone A phát hiện kẹt phôi.'
     }
   },
   {
@@ -150,8 +150,8 @@ const toolsList = [
     position: [624, 96],
     parameters: {
       url: 'http://localhost:5000/api/safety/status',
-      toolDescription: 'Lấy tình trạng an toàn chi tiết của hệ thống: Cờ khóa khẩn cấp (SYSTEM_LOCKED / OPERATIONAL), nguyên nhân khóa (E-Stop, kẹt phôi Zone A > 5s, đầy khay 100%, quá nhiệt DS18B20), trạng thái cảm biến quang học.',
-      description: 'Lấy tình trạng an toàn chi tiết của hệ thống: Cờ khóa khẩn cấp (SYSTEM_LOCKED / OPERATIONAL), nguyên nhân khóa (E-Stop, kẹt phôi Zone A > 5s, đầy khay 100%, quá nhiệt DS18B20), trạng thái cảm biến quang học.'
+      toolDescription: 'Lấy tình trạng an toàn chi tiết của hệ thống: Cờ khóa khẩn cấp (SYSTEM_LOCKED / OPERATIONAL), nguyên nhân khóa (E-Stop, kẹt phôi Zone A > 5s, đầy khay 100%, quá nhiệt chip ESP32-C5), trạng thái cảm biến quang học.',
+      description: 'Lấy tình trạng an toàn chi tiết của hệ thống: Cờ khóa khẩn cấp (SYSTEM_LOCKED / OPERATIONAL), nguyên nhân khóa (E-Stop, kẹt phôi Zone A > 5s, đầy khay 100%, quá nhiệt chip ESP32-C5), trạng thái cảm biến quang học.'
     }
   },
   {
@@ -170,8 +170,8 @@ const toolsList = [
     position: [944, 96],
     parameters: {
       url: 'http://localhost:5000/api/config',
-      toolDescription: 'Lấy cấu hình vận hành và các ngưỡng an toàn của hệ thống SortiX-Med: Chế độ phân loại (mode: auto/manual/semi-auto), tốc độ băng tải định mức (conveyorSpeed), ngưỡng nhiệt độ cảnh báo DS18B20 (warning/critical 75°C), cấu hình broker MQTT và thông số cài đặt.',
-      description: 'Lấy cấu hình vận hành và các ngưỡng an toàn của hệ thống SortiX-Med: Chế độ phân loại (mode: auto/manual/semi-auto), tốc độ băng tải định mức (conveyorSpeed), ngưỡng nhiệt độ cảnh báo DS18B20 (warning/critical 75°C), cấu hình broker MQTT và thông số cài đặt.'
+      toolDescription: 'Lấy cấu hình vận hành và các ngưỡng an toàn của hệ thống SortiX-Med: Chế độ phân loại (mode: auto/manual/semi-auto), tốc độ băng tải định mức (conveyorSpeed), ngưỡng nhiệt độ cảnh báo chip ESP32-C5 (warning/critical 75°C), cấu hình broker MQTT và thông số cài đặt.',
+      description: 'Lấy cấu hình vận hành và các ngưỡng an toàn của hệ thống SortiX-Med: Chế độ phân loại (mode: auto/manual/semi-auto), tốc độ băng tải định mức (conveyorSpeed), ngưỡng nhiệt độ cảnh báo chip ESP32-C5 (warning/critical 75°C), cấu hình broker MQTT và thông số cài đặt.'
     }
   },
   {

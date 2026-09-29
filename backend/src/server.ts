@@ -15,6 +15,7 @@ import { ENV } from "./config/env";
 import { HistoryQuerySchema } from "@shared/schemas";
 import { SyncService } from "./services/syncService";
 import { HistoryModel } from "./models/historyModel";
+import { TelemetryController } from "./controllers/telemetryController";
 
 function parseJsonBody(req: http.IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
@@ -78,7 +79,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // Telemetry Route (DS18B20 temperature & sensor status for AI Copilot / Diagnostics)
+    // Telemetry Route (ESP32-C5 on-chip internal temperature & sensor status for AI Copilot / Diagnostics)
     if (pathname === "/api/telemetry" && method === "GET") {
       const result = SafetyRoutes.handleGetTelemetry();
       const syncState = SyncService.getState();
@@ -90,9 +91,32 @@ const server = http.createServer(async (req, res) => {
         modeName: isSim ? "Mô phỏng (Simulation)" : "Thực tế (Real Hardware)",
         modeDescription: isSim
           ? "Hệ thống đang hoạt động ở chế độ MÔ PHỎNG (Simulation). Dữ liệu nhiệt độ và cảm biến là từ môi trường mô phỏng."
-          : "Hệ thống đang hoạt động ở chế độ THỰC TẾ (Real Hardware). Dữ liệu nhiệt độ đo trực tiếp từ cảm biến DS18B20 trên ESP32 thật.",
+          : "Hệ thống đang hoạt động ở chế độ THỰC TẾ (Real Hardware). Dữ liệu nhiệt độ đo trực tiếp từ cảm biến nội vi tích hợp trên chip ESP32-C5 thật.",
       };
       sendJson(res, result.status, enhancedBody);
+      return;
+    }
+
+    // Telemetry Ingestion via HTTP POST (ESP32 định kỳ 5s/lần đẩy dữ liệu cảm biến)
+    if ((pathname === "/api/telemetry" || pathname === "/api/sensors") && method === "POST") {
+      const body = await parseJsonBody(req);
+      const result = TelemetryController.handlePostTelemetry(body);
+      sendJson(res, result.status, result.body);
+      return;
+    }
+
+    // Telemetry History Route (Minh chứng database ghi nhận HTTP POST)
+    if (pathname === "/api/telemetry/history" && method === "GET") {
+      const limit = parsedUrl.searchParams.get("limit") || undefined;
+      const result = TelemetryController.handleGetTelemetryHistory({ limit });
+      sendJson(res, result.status, result.body);
+      return;
+    }
+
+    // Delete Telemetry History (Dọn dẹp log trước khi chạy demo)
+    if (pathname === "/api/telemetry/history" && method === "DELETE") {
+      const result = TelemetryController.handleDeleteTelemetryHistory();
+      sendJson(res, result.status, result.body);
       return;
     }
 

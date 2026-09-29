@@ -1,8 +1,10 @@
 "use client";
 
 import React from "react";
-import { Play, Pause, OctagonAlert, Sliders } from "lucide-react";
+import { Play, Pause, AlertOctagon, Gauge, Sliders, Zap } from "lucide-react";
 import { TelemetryData } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export interface ConveyorControlsProps {
   telemetry: TelemetryData;
@@ -28,102 +30,128 @@ export function ConveyorControls({
   onSpeedChange,
 }: ConveyorControlsProps) {
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-3">
       {/* Cụm nút Bắt đầu / Tạm dừng / Dừng khẩn cấp */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <button
+          <Button
             onClick={onToggleRun}
             disabled={telemetry.estop_pressed}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
-              isRunning
-                ? "border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-400 dark:hover:bg-amber-500/25"
-                : "border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-400 dark:hover:bg-emerald-500/25"
-            }`}
+            variant={isRunning ? "outline" : "emerald"}
+            size="default"
+            className="gap-2 font-bold shadow-sm"
           >
-            {isRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            <span>{isRunning ? "Tạm dừng" : "Khởi động"}</span>
-          </button>
+            {isRunning ? <Pause className="h-4 w-4 text-amber-500" /> : <Play className="h-4 w-4" />}
+            <span>{isRunning ? "Tạm dừng" : "Khởi động Băng tải"}</span>
+          </Button>
 
-          <button
+          <Button
             onClick={onEmergencyStop}
-            className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-black uppercase tracking-wider transition-all shadow-sm active:scale-95 ${
-              telemetry.estop_pressed
-                ? "border-rose-600 bg-rose-600 text-white shadow-[0_0_16px_rgba(244,63,94,0.6)] animate-pulse"
-                : "border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-400 dark:hover:bg-rose-500/25"
-            }`}
+            variant="estop"
+            size="default"
+            className="gap-2 font-black uppercase tracking-wider"
           >
-            <OctagonAlert className="h-4 w-4 text-rose-600 dark:text-rose-400" />
-            <span>{telemetry.estop_pressed ? "E-Stop đang bật" : "Dừng khẩn E-Stop"}</span>
-          </button>
+            <AlertOctagon className="h-4 w-4 animate-pulse" />
+            <span>{telemetry.estop_pressed ? "E-Stop ĐANG BẬT" : "DỪNG KHẨN E-STOP"}</span>
+          </Button>
         </div>
 
         {/* Trạng thái băng tải */}
         <div className="flex items-center gap-2">
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
+          <Badge
+            variant={
               telemetry.estop_pressed
-                ? "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                ? "destructive"
                 : isRunning
-                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-            }`}
+                ? "success"
+                : "warning"
+            }
+            className="px-3 py-1 text-xs font-bold"
           >
-            <span className="relative flex h-2 w-2">
-              <span
-                className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                  isRunning && !telemetry.estop_pressed ? "animate-ping bg-emerald-400" : ""
-                }`}
-              />
+            <span className="relative flex h-2 w-2 mr-1">
+              {isRunning && !telemetry.estop_pressed && (
+                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+              )}
               <span
                 className={`relative inline-flex h-2 w-2 rounded-full ${
                   telemetry.estop_pressed
                     ? "bg-rose-500"
                     : isRunning
-                    ? "bg-emerald-500"
-                    : "bg-amber-500"
+                    ? "bg-emerald-400"
+                    : "bg-amber-400"
                 }`}
               />
             </span>
             <span>
               {telemetry.estop_pressed
-                ? "E-Stop bật"
+                ? "E-Stop Kích hoạt"
                 : isRunning
-                ? "Đang chạy"
+                ? "Băng tải đang chạy"
                 : "Tạm dừng"}
             </span>
-          </span>
+          </Badge>
         </div>
       </div>
 
       {/* Thanh điều tốc Băng Tải (PWM) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-2 dark:border-white/[0.06] dark:bg-[#111319]">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <Sliders className="h-4 w-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
-          <span className="font-bold text-slate-700 dark:text-slate-300">Tốc độ băng tải:</span>
-          <span className="font-mono text-sm font-black text-cyan-600 dark:text-cyan-400">
-            {isBeltMoving ? `${speed}%` : "0% (Dừng)"}
-          </span>
-          <span className="font-mono text-slate-500 dark:text-slate-400 text-[11px]">
-            ({linearSpeedCms} cm/s • {rollerRpm} RPM)
-          </span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-slate-200/90 bg-slate-50/80 px-4 py-3 dark:border-white/[0.08] dark:bg-[#131722]/90 backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 border border-cyan-500/25 text-cyan-600 dark:text-cyan-400 shrink-0">
+            <Sliders className="h-4 w-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                Điều tốc động cơ Băng tải
+              </span>
+              <span className="font-mono text-xs font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-full">
+                {speed}% PWM
+              </span>
+            </div>
+            <p className="font-mono text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Vận tốc dài: <strong className="text-slate-700 dark:text-slate-300">{linearSpeedCms} cm/s</strong> • Con lăn: <strong className="text-slate-700 dark:text-slate-300">{rollerRpm} RPM</strong>
+            </p>
+          </div>
         </div>
 
-        <div className="flex w-full sm:max-w-xs md:max-w-sm items-center gap-3 shrink-0">
-          <span className="text-[11px] font-bold text-slate-500">10%</span>
+        <div className="flex items-center gap-3 sm:w-72">
           <input
             type="range"
-            min="10"
+            min="0"
             max="100"
+            step="5"
             value={speed}
             disabled={telemetry.estop_pressed}
             onChange={(e) => onSpeedChange(Number(e.target.value))}
-            className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-teal-600 dark:bg-slate-800 dark:accent-cyan-500 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 dark:bg-slate-700 accent-cyan-500 disabled:opacity-40"
           />
-          <span className="text-[11px] font-bold text-teal-600 dark:text-cyan-400">100%</span>
-          <span className="shrink-0 rounded-lg border border-teal-500/30 bg-teal-500/10 px-2 py-1 font-mono text-xs font-black text-teal-700 dark:text-cyan-300">
-            {speed}%
-          </span>
+
+          <div className="flex items-center gap-1 font-mono text-[10px] shrink-0">
+            <button
+              type="button"
+              disabled={telemetry.estop_pressed}
+              onClick={() => onSpeedChange(30)}
+              className="px-2 py-1 rounded bg-slate-200/70 dark:bg-white/5 hover:bg-cyan-500/20 hover:text-cyan-400 transition-colors disabled:opacity-40"
+            >
+              30%
+            </button>
+            <button
+              type="button"
+              disabled={telemetry.estop_pressed}
+              onClick={() => onSpeedChange(65)}
+              className="px-2 py-1 rounded bg-slate-200/70 dark:bg-white/5 font-bold hover:bg-cyan-500/20 hover:text-cyan-400 transition-colors disabled:opacity-40"
+            >
+              65%
+            </button>
+            <button
+              type="button"
+              disabled={telemetry.estop_pressed}
+              onClick={() => onSpeedChange(100)}
+              className="px-2 py-1 rounded bg-slate-200/70 dark:bg-white/5 hover:bg-cyan-500/20 hover:text-cyan-400 transition-colors disabled:opacity-40"
+            >
+              MAX
+            </button>
+          </div>
         </div>
       </div>
     </div>

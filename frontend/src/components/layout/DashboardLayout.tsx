@@ -298,6 +298,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
   });
   const telemetryRef = useRef<TelemetryData>(telemetry);
   telemetryRef.current = telemetry;
+  const [lastTelemetryTime, setLastTelemetryTime] = useState<string>("");
 
   // Cross-hook refs to avoid circular dependency / access before declaration
   const spawnRealItemRef = useRef<(item: VisualItem) => void>(() => {});
@@ -315,6 +316,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     (payload?: Partial<TemperatureWarningPayload>, source?: "user_action" | "mqtt_in" | "sse_in" | "sim_slider") => Promise<void>
   >(() => Promise.resolve());
   const setIsRunningRef = useRef<(running: boolean) => void>(() => {});
+  const lastOpticalBlockedRef = useRef<boolean>(false);
 
   // Hook 2: Sorter Data (Records, Bins, Brands, Mode, Alerts)
   const sorterData = useSorterData({
@@ -375,18 +377,52 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
   setAlertsRef.current = sorterData.setAlerts;
 
   // Tài khoản người dùng (role: user) chỉ có duy nhất chế độ thực tế, không có mô phỏng
+  const isUserRole = user?.role === "user";
+  const { isSimulation: sorterIsSim, setIsSimulation: setSorterIsSim } = sorterData;
   useEffect(() => {
-    if (user?.role === "user" && sorterData.isSimulation) {
-      sorterData.setIsSimulation(false);
+    if (isUserRole && sorterIsSim) {
+      setSorterIsSim(false);
     }
-  }, [user?.role, sorterData.isSimulation, sorterData.setIsSimulation]);
+  }, [isUserRole, sorterIsSim, setSorterIsSim]);
 
   // Hook 4: MQTT WebSocket Connection
   const mqtt = useMQTT({
     isClient: sorterData.isClient,
     isSimulation: user?.role === "user" ? false : sorterData.isSimulation,
     onVisionDetection: sorterData.handleRealHardwareDetection,
-    onTelemetryPayload: (payload) => {
+    onTelemetryPayload: (payload: any) => {
+      setLastTelemetryTime(new Date().toLocaleTimeString("vi-VN", { hour12: false }));
+      
+      // Kích hoạt phôi mẫu chạy khi cảm biến hồng ngoại S1 từ phần cứng phát hiện vật
+      const isBlocked =
+        payload?.optical_sensor === "BLOCKED" ||
+        payload?.optical_sensor === 1 ||
+        payload?.optical_sensor === "1" ||
+        payload?.s1_entry === true;
+
+      if (isBlocked && !lastOpticalBlockedRef.current) {
+        lastOpticalBlockedRef.current = true;
+        const targetBin = (Math.floor(Math.random() * 3) + 1) as 1 | 2 | 3;
+        const brands = ["brand_c", "brand_a", "brand_b"];
+        const brandKey = brands[targetBin - 1] || "brand_c";
+        const newItem: VisualItem = {
+          id: `ESP32_${Date.now().toString().slice(-4)}`,
+          brandKey: brandKey,
+          progress: 0,
+          targetBin: targetBin,
+          yOffset: 0,
+          opacity: 1,
+          deflected: false,
+          sorted: false,
+          isSim: sorterData.isSimulation,
+          timestamp: new Date().toISOString(),
+        };
+        spawnRealItemRef.current(newItem);
+        setIsRunningRef.current(true);
+      } else if (!isBlocked) {
+        lastOpticalBlockedRef.current = false;
+      }
+
       setTelemetry((prev) => {
         const updated = cleanTelemetryPayload(payload, prev);
         const detected = detectAnomalies(updated);
@@ -1304,6 +1340,46 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
           console.warn("Lỗi phân tích SSE spawn_item:", err);
         }
       });
+
+      eventSource.addEventListener("telemetry", (e) => {
+        try {
+          const telem = JSON.parse(e.data);
+          setLastTelemetryTime(new Date().toLocaleTimeString("vi-VN", { hour12: false }));
+          setTelemetry((prev) => cleanTelemetryPayload(telem, prev));
+
+          // Kích hoạt phôi mẫu chạy khi cảm biến hồng ngoại S1 từ HTTP POST SSE phát hiện vật
+          const isBlocked =
+            telem?.optical_sensor === "BLOCKED" ||
+            telem?.optical_sensor === 1 ||
+            telem?.optical_sensor === "1" ||
+            telem?.s1_entry === true;
+
+          if (isBlocked && !lastOpticalBlockedRef.current) {
+            lastOpticalBlockedRef.current = true;
+            const targetBin = (Math.floor(Math.random() * 3) + 1) as 1 | 2 | 3;
+            const brands = ["brand_c", "brand_a", "brand_b"];
+            const brandKey = brands[targetBin - 1] || "brand_c";
+            const newItem: VisualItem = {
+              id: `ESP32_${Date.now().toString().slice(-4)}`,
+              brandKey: brandKey,
+              progress: 0,
+              targetBin: targetBin,
+              yOffset: 0,
+              opacity: 1,
+              deflected: false,
+              sorted: false,
+              isSim: sorterData.isSimulationRef.current,
+              timestamp: new Date().toISOString(),
+            };
+            spawnRealItemRef.current(newItem);
+            setIsRunningRef.current(true);
+          } else if (!isBlocked) {
+            lastOpticalBlockedRef.current = false;
+          }
+        } catch (err) {
+          console.warn("Lỗi phân tích SSE telemetry:", err);
+        }
+      });
     } catch (err) {
       console.warn("Không thể kết nối SSE:", err);
     }
@@ -1311,7 +1387,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     return () => {
       eventSource?.close();
     };
-  }, [sorterData.isClient]);
+  }, [sorterData.isClient, sorterData.isSimulationRef]);
 
   // Auth Redirect check
   useEffect(() => {
@@ -1340,7 +1416,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     const interval = setInterval(() => {
       const isSimMode = isSimulationRef.current;
       const hasItems = conveyor.visualItemsRef.current.some(
-        (it) => !it.sorted || (it.yOffset || 0) < 45
+        (it) => !it.sorted && !it.deflected && (it.progress ?? 0) < 96
       );
       
       // Băng chuyền chỉ chuyển động khi có mẫu vật/phôi trên băng, dừng chờ khi rỗng (ở cả User và Admin)
@@ -1864,6 +1940,8 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
           onCloseMobile={() => setMobileMenuOpen(false)}
           isSimulation={user?.role === "user" ? false : sorterData.isSimulation}
           onToggleSimulationMode={user?.role === "user" ? undefined : handleToggleSimulationMode}
+          mqttStatus={mqtt.mqttStatus}
+          isDeviceOffline={isDeviceOffline}
         />
 
         {/* Mobile backdrop overlay */}
@@ -1911,6 +1989,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             onToggleSimulationMode={user?.role === "user" ? undefined : handleToggleSimulationMode}
             isDeviceOffline={isDeviceOffline}
             onTriggerShiftSummary={() => handleTriggerShiftSummary(undefined, "user_action")}
+            lastUpdated={lastTelemetryTime}
           />
 
           {/* Page Content with smooth GPU-accelerated transition */}

@@ -196,10 +196,12 @@ export const VisualItemRenderer: React.FC<VisualItemRendererProps> = ({ item }) 
         </div>
       )}
 
-      {/* Nhãn mã phôi HUD */}
-      <span className="absolute -top-4.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-slate-950/90 px-1.5 py-0.5 font-mono text-[8px] font-bold text-cyan-300 border border-cyan-500/40 shadow-xs tracking-wider">
-        {item.id}
-      </span>
+      {/* Nhãn mã phôi HUD (Chỉ hiển thị khi phôi đang di chuyển trên băng tải, ẩn đi khi đã lọt vào khay) */}
+      {!item.deflected && !item.sorted && (
+        <span className="absolute -top-4.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-slate-950/90 px-1.5 py-0.5 font-mono text-[8px] font-bold text-cyan-300 border border-cyan-500/40 shadow-xs tracking-wider">
+          {item.id}
+        </span>
+      )}
     </div>
   );
 };

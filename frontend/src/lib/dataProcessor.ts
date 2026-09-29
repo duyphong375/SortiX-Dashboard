@@ -13,6 +13,31 @@ export function cleanTelemetryPayload(raw: unknown, prev: TelemetryData): Teleme
   // heartbeat. Devices in the field occasionally serialize numbers/booleans as
   // strings, so accept the unambiguous forms first.
   const candidate: Record<string, unknown> = { ...raw };
+
+  // Chuẩn hóa cảm biến quang / hồng ngoại (S1) từ ESP32 HTTP POST / MQTT
+  const rawOptical = candidate.optical_sensor ?? candidate.sensor_optical;
+  if (rawOptical !== undefined) {
+    const isBlocked =
+      rawOptical === "BLOCKED" ||
+      rawOptical === 1 ||
+      rawOptical === "1" ||
+      rawOptical === true;
+    candidate.s1_entry = isBlocked;
+
+    // QUY TẮC CỐT LÕI (FE): CÒN VẬT THÌ CHẠY, HẾT VẬT DỪNG NGAY
+    // Băng tải chỉ chạy khi có vật cản trước cảm biến S1. Không có vật cản -> Băng tải dừng ngay!
+    candidate.conveyor_running = isBlocked;
+    if (!isBlocked) {
+      candidate.conveyor_speed = 0;
+    }
+  }
+  if (candidate.temperature !== undefined && candidate.cpu_temp === undefined) {
+    candidate.cpu_temp = typeof candidate.temperature === "number" ? candidate.temperature : Number(candidate.temperature);
+  }
+  if (candidate.is_running !== undefined && candidate.conveyor_running === undefined) {
+    candidate.conveyor_running = Boolean(candidate.is_running);
+  }
+
   const numericKeys = [
     "uptime", "cpu_temp", "wifi_rssi", "conveyor_speed", "encoder_count",
     "active_config_version",

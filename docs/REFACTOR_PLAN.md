@@ -31,7 +31,7 @@
    - Cảnh báo Kẹt phôi (`jam_detected`): Cảm biến quang học #02 che khuất liên tục > 5s, MQTT `conveyor/sensor/jam`, cơ cấu gạt servo, dọn khay chủ động bất kỳ lúc nào.
    - Cảnh báo Khay đầy (`bin_full`): Đạt ngưỡng dung lượng định mức từng khay (5 - 50 SP), topic MQTT `conveyor/storage/bin_status`, còi báo, nút dọn/thay khay reset bộ đếm và tự chạy lại.
    - Thanh trượt tùy chỉnh độ rộng / sức chứa khay (5 - 50 SP): Đồng bộ tức thời trên Canvas máng trượt, LiveHealthAndBinWidget, ConfigAndDiagnostics và LocalStorage.
-   - Đồng hồ đo nhiệt độ bán nguyệt 2 chế độ: Thanh trượt ảo 30°C - 95°C trong Mô phỏng; Bảng telemetry cảm biến ESP32 DS18B20 trong Thực tế.
+   - Đồng hồ đo nhiệt độ bán nguyệt 2 chế độ: Thanh trượt ảo 30°C - 95°C trong Mô phỏng; Bảng telemetry cảm biến nội vi ESP32-C5 trong Thực tế.
    - Cảnh báo Quá nhiệt (`temperature_warning`): Đo nhiệt độ động cơ/CPU, ngưỡng 75°C, topic MQTT `conveyor/telemetry/temp`, Gauge Chart đổi kim vùng đỏ.
    - Cảnh báo Mất kết nối Vi điều khiển (`device_offline`): Cơ chế nhịp tim ping `conveyor/heartbeat` mỗi 2s, watchdog timeout > 6s tự động phát hiện mất nguồn/WiFi, severity `ERROR`.
    - Cảnh báo Mất kết nối MQTT Broker (`mqtt_disconnected`): Debounce 5s, còi báo, đổi huy hiệu TopHeader sang đỏ chớp nháy, auto-reconnect backoff 3s -> 5s -> 10s.
@@ -76,7 +76,7 @@
 - [x] **Task 4.11**: Xây dựng tính năng Báo Cáo 1 Ngày Làm Việc (`shift_summary`): Event Code `shift_summary`, Severity `INFO`, trigger tự động lúc 17:00 hàng ngày hoặc bấm nút trên TopHeader, xuất CSV UTF-8 BOM chuẩn tiếng Việt và in báo cáo.
 - [x] **Task 4.12**: Xây dựng thanh trượt điều chỉnh dung lượng từng khay (5 - 50 SP), đồng bộ tức thời sang LocalStorage, state toàn hệ thống, widget giám sát, băng chuyền trực quan và chẩn đoán cấu hình.
 - [x] **Task 4.13**: Xây dựng cảnh báo Mất kết nối MQTT Broker (`mqtt_disconnected`): Watchdog mất kết nối quá 5 giây, huy hiệu Header đổi đỏ chớp nháy, cơ chế auto-reconnect backoff 3s, 5s, 10s.
-- [x] **Task 4.14**: Xây dựng Đồng Hồ Nhiệt Độ Bán Nguyệt 2 Chế Độ (`TemperatureGaugeWidget.tsx`): Mô phỏng với thanh trượt ảo 30°C - 95°C; Thực tế với bảng telemetry cảm biến DS18B20 thật.
+- [x] **Task 4.14**: Xây dựng Đồng Hồ Nhiệt Độ Bán Nguyệt 2 Chế Độ (`TemperatureGaugeWidget.tsx`): Mô phỏng với thanh trượt ảo 30°C - 95°C; Thực tế với bảng telemetry cảm biến nội vi ESP32-C5 thật.
 
 ### ✅ Giai Đoạn 5: Tích Hợp Toàn Diện, Mobile Capacitor & Kiểm Thử QA
 - [x] **Task 5.1**: Tích hợp build script backend tự động vá alias module `@shared/*` (`backend/scripts/patch-dist-aliases.cjs`).

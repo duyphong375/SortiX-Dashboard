@@ -10,7 +10,7 @@ let lastUnlockedAt: number = 0;
 
 let latestTelemetry = {
   device_id: "ESP32_MAIN_CONTROLLER",
-  sensor_type: "DS18B20",
+  sensor_type: "ESP32_INTERNAL_TEMP",
   current_temp: 42.5,
   threshold_temp: 75.0,
   unit: "°C",
@@ -237,7 +237,7 @@ export const SafetyService = {
     latestTelemetry = {
       ...latestTelemetry,
       device_id: deviceName,
-      sensor_type: "DS18B20",
+      sensor_type: "ESP32_INTERNAL_TEMP",
       current_temp: currentTemp,
       threshold_temp: thresholdTemp,
       unit,

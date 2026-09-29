@@ -99,7 +99,7 @@ Tất cả các thay đổi về kiến trúc, tính năng, sửa lỗi và nân
 - **Đồng Hồ Đo Nhiệt Độ Bán Nguyệt 2 Chế Độ (Dual-Mode Temperature Gauge Dial)**:
   - `TemperatureGaugeWidget.tsx`: Tự động phân định giao diện theo chế độ vận hành:
     - *Chế độ Mô phỏng*: Hiển thị thanh trượt nhiệt độ ảo (30°C - 95°C) và các nút preset (42.5°C, 72.0°C, 78.5°C) để thử nghiệm phản ứng quá nhiệt.
-    - *Chế độ Thực tế*: Tự động ẩn thanh trượt giả lập, hiển thị bảng telemetry cảm biến phần cứng thật (ESP32 DS18B20) với cờ `[PHẦN CỨNG THẬT]` và kim đo phản ánh dữ liệu cảm biến thực tế.
+    - *Chế độ Thực tế*: Tự động ẩn thanh trượt giả lập, hiển thị bảng telemetry cảm biến phần cứng thật (Cảm biến nội vi ESP32-C5) với cờ `[PHẦN CỨNG THẬT]` và kim đo phản ánh dữ liệu cảm biến thực tế.
 - **Giám Sát Mất Kết Nối MQTT Broker (`mqtt_disconnected`)**:
   - Watchdog 5 giây debounce chống nhấp nháy mạng ngắn hạn.
   - Tự động chuyển đổi huy hiệu trên TopHeader: `MQTT: ONLINE (Xanh)` <-> `MQTT: DISCONNECTED (Đỏ chớp nháy)`.

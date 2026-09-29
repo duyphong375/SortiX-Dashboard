@@ -164,7 +164,7 @@ Xây dựng trên nền tảng Next.js 14 App Router với hiệu năng tối ư
   - Khi số lượng đạt định mức của từng khay, hệ thống kích hoạt cảnh báo đầy khay tương ứng.
 - **Đồng Hồ Nhiệt Độ Bán Nguyệt 2 Chế Độ (`TemperatureGaugeWidget.tsx`)**:
   - *Mô phỏng*: Hiển thị thanh trượt nhiệt độ ảo (30°C - 95°C) kèm preset buttons (42.5°C, 72.0°C, 78.5°C) để kiểm thử cảnh báo quá nhiệt.
-  - *Thực tế*: Ẩn toàn bộ thanh trượt ảo, hiển thị bảng telemetry phần cứng (ESP32 DS18B20) với cờ `[PHẦN CỨNG THẬT]`.
+  - *Thực tế*: Ẩn toàn bộ thanh trượt ảo, hiển thị bảng telemetry phần cứng (Cảm biến nội vi ESP32-C5) với cờ `[PHẦN CỨNG THẬT]`.
 - **Báo Cáo 1 Ngày Làm Việc (`ShiftSummaryModal.tsx`, `ShiftSummaryToast.tsx`)**:
   - Nút bấm trực tiếp trên `TopHeader.tsx` ("Báo cáo 1 ngày làm việc") và tự động nhắc nhở lúc 17:00.
   - Đồng bộ hóa trực tiếp số liệu thời gian thực từ khay chứa, số sản phẩm đạt/lỗi, thời gian vận hành và số lần E-Stop.
@@ -201,7 +201,7 @@ Xây dựng trên nền tảng Next.js 14 App Router với hiệu năng tối ư
   - Cảm biến quang học S2 (GPIO IO1): Xác định vị trí trước Khay 1 (Thùng vật sắc nhọn).
   - Cảm biến quang học S3 (GPIO IO6): Xác định vị trí trước Khay 2 (Khay hấp tiệt trùng Autoclave).
   - Cảm biến kẹt phôi (Optical Jam Sensor #02): Giám sát tắc nghẽn liên tục > 5s tại Zone A.
-  - Cảm biến nhiệt độ DS18B20: Giám sát nhiệt độ động cơ và khu vực điều khiển.
+  - Cảm biến nhiệt độ nội vi ESP32-C5: Tích hợp sẵn trên vi điều khiển ESP32-C5 (On-chip sensor), giám sát nhiệt độ vi điều khiển mà không cần cảm biến rời ngoại vi.
   - Bộ mã hóa Encoder: Đo tốc độ quay thực tế của trục động cơ băng tải.
 - **Cơ cấu chấp hành (Actuators)**:
   - Động cơ DC kéo băng tải điều khiển qua mạch MCPWM (GPIO IO4).
@@ -305,7 +305,7 @@ stateDiagram-v2
     RUNNING --> WARNING_BIN_FULL: Số lượng sản phẩm >= Sức chứa định mức (5-50 SP)
     WARNING_BIN_FULL --> RUNNING: Bấm [Xác nhận đã thay khay mới] (Reset về 0)
 
-    RUNNING --> WARNING_OVERHEAT: Nhiệt độ cảm biến DS18B20 > 75.0°C
+    RUNNING --> WARNING_OVERHEAT: Nhiệt độ cảm biến nội vi ESP32-C5 > 75.0°C
     WARNING_OVERHEAT --> RUNNING: Nhiệt độ giảm dưới 70.0°C
 
     RUNNING --> EMERGENCY_STOP: Nhấn nút E-Stop (Vật lý hoặc UI)

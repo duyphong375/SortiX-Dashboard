@@ -88,20 +88,24 @@ export const ConveyorToolbar: React.FC<ConveyorToolbarProps> = ({
                 {telemetry.estop_pressed
                   ? "Dừng khẩn"
                   : !isRunning
-                  ? "Tạm dừng"
-                  : itemsCount > 0
-                  ? `Đang chạy (${itemsCount} dụng cụ)`
-                  : "Chờ dụng cụ"}
+                  ? itemsCount === 0
+                    ? "Đã dừng (Đã vào khay hết)"
+                    : "Tạm dừng"
+                  : itemsCount > 0 || isBeltMoving
+                  ? `Đang chạy (${itemsCount} phôi mẫu)`
+                  : "Chờ phôi mẫu (Đã dừng)"}
               </span>
             </div>
             <p className="text-xs font-normal text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1 sm:line-clamp-none">
               {telemetry.estop_pressed
                 ? "Băng tải đã ngắt điện do kích hoạt E-Stop"
                 : !isRunning
-                ? "Hệ thống đang tạm dừng • Nhấn Khởi động để tiếp tục"
-                : itemsCount > 0
-                ? `Băng tải đang vận chuyển ${itemsCount} dụng cụ qua trạm quét AI và cơ cấu gạt`
-                : "Băng tải đang chờ dụng cụ • Sẵn sàng tiếp nhận đồ sau mổ"}
+                ? itemsCount === 0
+                  ? "Toàn bộ mẫu vật đã vào khay • Băng tải tự động dừng • Đặt thêm mẫu vật lên là tự động chạy"
+                  : "Hệ thống đang tạm dừng • Nhấn Khởi động để tiếp tục"
+                : itemsCount > 0 || isBeltMoving
+                ? `Băng tải đang vận chuyển ${itemsCount} phôi mẫu qua trạm quét AI và cơ cấu gạt`
+                : "Băng tải đã tự động dừng khi phôi vào khay hết • Đặt thêm mẫu vật lên là tự động chạy"}
             </p>
           </div>
         </div>

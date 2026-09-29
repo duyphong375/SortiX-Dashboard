@@ -73,11 +73,12 @@ export default function DashboardPage() {
         conveyorSpeed={conveyorSpeed}
         visualItemsCount={visualItems.length}
         avgConfidence={avgConfidence}
+        sampleCount={records.length}
         pingMs={pingMs}
         isDeviceOffline={isDeviceOffline}
       />
 
-      {/* HÀNG 2: GIÁM SÁT NHANH & LỊCH VẬN HÀNH */}
+      {/* HÀNG 2: GIÁM SÁT NHANH & TÓM TẮT HÔM NAY */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         {/* Cột 1 (2/3 chiều rộng): Live Sorter Health & 3 Bins */}
         <div className="xl:col-span-2">
@@ -100,36 +101,21 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Cột 2 (1/3 chiều rộng): Đồng Hồ Đo Nhiệt Độ Gauge & Bộ Lọc Thống Kê */}
+        {/* Cột 2 (1/3 chiều rộng): Đồng Hồ Đo Nhiệt Độ Gauge & Tóm Tắt Hôm Nay */}
         <div className="space-y-4">
           <TemperatureGaugeWidget
             currentTemp={telemetry.cpu_temp}
             thresholdTemp={75.0}
-            deviceName="Động cơ chính / CPU Edge AI"
+            deviceName="Cảm biến nhiệt độ nội vi ESP32-C5"
             isOnline={isEspConnected || isSimulation}
             isSimulation={isSimulation}
-            onSimulateTempChange={
-              isSimulation
-                ? (temp) => {
-                    void handleTriggerTemperatureWarning(
-                      {
-                        device_name: "Main_Drive_Motor / Edge_AI_Box",
-                        current_temp: temp,
-                        threshold_temp: 75.0,
-                        unit: "°C",
-                        mode: "simulation",
-                      },
-                      "sim_slider"
-                    );
-                  }
-                : undefined
-            }
-            onCoolDown={isSimulation ? handleCoolDownTemperature : undefined}
+            showSimulationControls={false}
           />
           <CalendarWidget
             records={records}
             bin1Brands={bin1Brands}
             bin2Brands={bin2Brands}
+            compact={true}
           />
         </div>
       </div>

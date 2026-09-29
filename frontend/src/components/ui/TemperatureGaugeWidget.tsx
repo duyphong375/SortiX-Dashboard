@@ -20,6 +20,7 @@ export interface TemperatureGaugeWidgetProps {
   className?: string;
   compact?: boolean;
   isSimulation?: boolean;
+  showSimulationControls?: boolean;
   onSimulateTempChange?: (temp: number) => void;
   onCoolDown?: () => void;
 }
@@ -27,12 +28,13 @@ export interface TemperatureGaugeWidgetProps {
 export const TemperatureGaugeWidget: React.FC<TemperatureGaugeWidgetProps> = ({
   currentTemp,
   thresholdTemp = 75.0,
-  deviceName = "Động cơ chính / CPU Edge AI",
+  deviceName = "Cảm biến nhiệt độ nội vi ESP32-C5",
   unit = "°C",
   isOnline = true,
   className = "",
   compact = false,
   isSimulation = false,
+  showSimulationControls = false,
   onSimulateTempChange,
   onCoolDown,
 }) => {
@@ -129,7 +131,7 @@ export const TemperatureGaugeWidget: React.FC<TemperatureGaugeWidgetProps> = ({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Nhiệt độ Động cơ/CPU</span>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Nhiệt độ nội vi ESP32-C5</span>
             <div className="flex items-center gap-1">
               <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full border ${statusBg}`}>
                 {statusText}
@@ -386,8 +388,9 @@ export const TemperatureGaugeWidget: React.FC<TemperatureGaugeWidgetProps> = ({
         </div>
       )}
 
-      {/* 1. CHẾ ĐỘ MÔ PHỎNG: THANH CHỈNH NHIỆT ĐỘ ẢO KÈM CÁC MỨC NHANH */}
-      {isSimulation ? (
+      {/* HIỂN THỊ ĐIỀU KHIỂN HOẶC TRẠNG THÁI RÚT GỌN */}
+      {showSimulationControls && isSimulation ? (
+        /* 1. CHẾ ĐỘ MÔ PHỎNG ĐẦY ĐỦ (DÀNH CHO /config HOẶC PANEL KIỂM THỬ) */
         <div className="mt-3.5 w-full rounded-xl border border-amber-500/30 bg-amber-50/60 p-3 dark:border-amber-500/20 dark:bg-amber-950/20 transition-all">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
@@ -395,7 +398,7 @@ export const TemperatureGaugeWidget: React.FC<TemperatureGaugeWidgetProps> = ({
               <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
                 Thanh chỉnh nhiệt độ ảo
               </span>
-              <span className="rounded bg-amber-500/15 px-1.5 py-0.2 text-[9px] font-extrabold uppercase text-amber-600 dark:text-amber-400 border border-amber-500/30">
+              <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-xs font-extrabold uppercase text-amber-600 dark:text-amber-400 border border-amber-500/30">
                 Mô Phỏng
               </span>
             </div>
@@ -424,7 +427,7 @@ export const TemperatureGaugeWidget: React.FC<TemperatureGaugeWidgetProps> = ({
               className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-amber-500"
               aria-label="Điều chỉnh nhiệt độ mô phỏng"
             />
-            <div className="flex justify-between text-[10px] font-mono text-slate-400 dark:text-slate-500">
+            <div className="flex justify-between text-xs font-mono text-slate-400 dark:text-slate-500">
               <span>30°C (Mát)</span>
               <span className="font-bold text-amber-500">Ngưỡng: {thresholdTemp}°C</span>
               <span className="text-rose-500">95°C (Quá nhiệt)</span>
@@ -436,23 +439,23 @@ export const TemperatureGaugeWidget: React.FC<TemperatureGaugeWidgetProps> = ({
             <button
               type="button"
               onClick={() => onSimulateTempChange?.(42.5)}
-              className="rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-[#111319] py-1 text-[10px] font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all shadow-2xs active:scale-95 cursor-pointer text-center"
+              className="rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-[#111319] py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all shadow-2xs active:scale-95 cursor-pointer text-center"
             >
-              ❄️ 42.5°C An toàn
+              ❄️ 42.5°C
             </button>
             <button
               type="button"
               onClick={() => onSimulateTempChange?.(72.0)}
-              className="rounded-lg border border-amber-500/30 bg-amber-50 dark:bg-amber-950/20 py-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-all shadow-2xs active:scale-95 cursor-pointer text-center"
+              className="rounded-lg border border-amber-500/30 bg-amber-50 dark:bg-amber-950/20 py-1.5 text-xs font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-all shadow-2xs active:scale-95 cursor-pointer text-center"
             >
-              ⚠️ 72.0°C Cận ngưỡng
+              ⚠️ 72.0°C
             </button>
             <button
               type="button"
               onClick={() => onSimulateTempChange?.(78.5)}
-              className="rounded-lg border border-rose-500/40 bg-rose-50 dark:bg-rose-950/30 py-1 text-[10px] font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all shadow-2xs active:scale-95 cursor-pointer text-center"
+              className="rounded-lg border border-rose-500/40 bg-rose-50 dark:bg-rose-950/30 py-1.5 text-xs font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all shadow-2xs active:scale-95 cursor-pointer text-center"
             >
-              🔥 78.5°C Quá nhiệt
+              🔥 78.5°C
             </button>
           </div>
 
@@ -461,49 +464,38 @@ export const TemperatureGaugeWidget: React.FC<TemperatureGaugeWidgetProps> = ({
             <button
               type="button"
               onClick={onCoolDown}
-              className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 py-1.5 text-[10px] font-bold text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/20 transition-all active:scale-95 cursor-pointer"
+              className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 py-1.5 text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/20 transition-all active:scale-95 cursor-pointer"
             >
               <RefreshCw className="h-3 w-3" />
               Hạ nhiệt độ về 42.5°C (An toàn)
             </button>
           )}
         </div>
-      ) : (
-        /* 2. CHẾ ĐỘ THỰC TẾ: KHÔNG CÓ THANH TRƯỢT - CHỈ ĐO ĐẠC THỰC TẾ TỪ CẢM BIẾN PHẦN CỨNG */
-        <div className="mt-3.5 w-full rounded-xl border border-emerald-500/20 bg-emerald-50/50 p-3 dark:border-emerald-500/15 dark:bg-emerald-950/15 transition-all">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <Radio className="h-3.5 w-3.5 text-emerald-500 animate-pulse" />
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                Đo thực tế từ cảm biến
-              </span>
-            </div>
-            <span className="inline-flex items-center gap-1 rounded bg-emerald-500/15 px-1.5 py-0.2 text-[9px] font-extrabold uppercase text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
-              Thực Tế
-              <span className="sr-only">[PHẦN CỨNG THẬT]</span>
+      ) : isSimulation ? (
+        /* 2. CHẾ ĐỘ MÔ PHỎNG RÚT GỌN TRÊN TRANG TỔNG QUAN (CHỈ HIỆN BADGE MÔ PHỎNG NHỎ) */
+        <div className="mt-3 w-full flex items-center justify-between rounded-xl border border-purple-500/25 bg-purple-500/10 px-3 py-2 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-purple-500 animate-pulse shadow-[0_0_8px_#a855f7]" />
+            <span className="font-bold text-purple-700 dark:text-purple-300">
+              Chế độ mô phỏng
             </span>
           </div>
-
-          <div className="mt-2 space-y-1.5 text-[11px] text-slate-600 dark:text-slate-400">
-            <div className="flex items-center justify-between">
-              <span>Trạng thái cảm biến:</span>
-              <span className={`font-semibold flex items-center gap-1.5 ${isOnline ? "text-emerald-600 dark:text-emerald-400" : "text-amber-500"}`}>
-                <span className={`h-2 w-2 rounded-full ${isOnline ? "bg-emerald-500" : "bg-amber-500"}`} />
-                {isOnline ? "Trực tuyến (Live Telemetry)" : "Mất tín hiệu cảm biến"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Nguồn dữ liệu:</span>
-              <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">
-                ESP32 DS18B20 / Telemetry
-              </span>
-            </div>
+          <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
+            Ngưỡng: {thresholdTemp}{unit}
+          </span>
+        </div>
+      ) : (
+        /* 3. CHẾ ĐỘ THỰC TẾ: THÔNG TIN CẢM BIẾN NỘI VI TRÊN CHIP ESP32-C5 */
+        <div className="mt-3 w-full flex items-center justify-between rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
+            <span className="font-bold text-emerald-700 dark:text-emerald-300">
+              Cảm biến nội vi ESP32-C5 trực tuyến
+            </span>
           </div>
-
-          <p className="mt-2 border-t border-emerald-500/10 dark:border-emerald-500/15 pt-1.5 text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed">
-            🔒 Chế độ đo thực tế: Nhiệt độ được đo đạc liên tục từ cảm biến phần cứng qua MQTT. Không thể can thiệp bằng thanh trượt ảo.
-          </p>
+          <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
+            On-Chip Temp Sensor
+          </span>
         </div>
       )}
     </div>

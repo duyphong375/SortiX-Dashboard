@@ -41,6 +41,8 @@ interface SidebarProps {
   onCloseMobile?: () => void;
   isSimulation?: boolean;
   onToggleSimulationMode?: (targetMode?: boolean) => void;
+  mqttStatus?: "connected" | "disconnected" | "error";
+  isDeviceOffline?: boolean;
 }
 
 const SidebarComponent: React.FC<SidebarProps> = ({
@@ -49,6 +51,9 @@ const SidebarComponent: React.FC<SidebarProps> = ({
   alertCount = 0,
   mobileOpen = false,
   onCloseMobile,
+  isSimulation = false,
+  mqttStatus = "connected",
+  isDeviceOffline = false,
 }) => {
   const pathname = usePathname();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
@@ -159,30 +164,57 @@ const SidebarComponent: React.FC<SidebarProps> = ({
 
         {/* Bottom Section */}
         <div className="shrink-0 border-t border-slate-200/80 p-3 dark:border-white/[0.06] space-y-2">
-          {/* Trạng thái Hệ thống trực tuyến */}
-          {!collapsed ? (
-            <div className="flex items-center justify-between rounded-xl bg-slate-50/80 px-3 py-2 border border-slate-200/60 dark:bg-[#161822] dark:border-white/[0.07]">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span className="relative flex h-2.5 w-2.5 shrink-0">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-                </span>
-                <span className="text-[11px] font-bold text-slate-800 dark:text-white truncate">
-                  Hệ thống trực tuyến
+          {/* Trạng thái Hệ thống trực tuyến phản ánh kết nối thực tế */}
+          {(() => {
+            const isOnlineReal = !isSimulation && mqttStatus === "connected" && !isDeviceOffline;
+            const isOfflineReal = !isSimulation && (mqttStatus !== "connected" || isDeviceOffline);
+
+            const dotColor = isSimulation
+              ? "bg-purple-500 shadow-[0_0_8px_#a855f7]"
+              : isOnlineReal
+              ? "bg-emerald-500 shadow-[0_0_8px_#10b981]"
+              : "bg-rose-500 shadow-[0_0_8px_#f43f5e]";
+
+            const pingColor = isSimulation ? "bg-purple-400" : isOnlineReal ? "bg-emerald-400" : "bg-rose-400";
+
+            const labelText = isSimulation
+              ? "Chế độ mô phỏng"
+              : isOnlineReal
+              ? "Hệ thống trực tuyến"
+              : "Mất kết nối";
+
+            const badgeText = isSimulation ? "SIMULATION" : isOnlineReal ? "ONLINE" : "OFFLINE";
+
+            const badgeStyle = isSimulation
+              ? "bg-purple-500/10 text-purple-600 dark:text-purple-300 border-purple-500/20"
+              : isOnlineReal
+              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+              : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20";
+
+            return !collapsed ? (
+              <div className="flex items-center justify-between rounded-xl bg-slate-50/80 px-3 py-2 border border-slate-200/60 dark:bg-[#161822] dark:border-white/[0.07]">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="relative flex h-2.5 w-2.5 shrink-0">
+                    <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${pingColor}`} />
+                    <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${dotColor}`} />
+                  </span>
+                  <span className="text-xs font-bold text-slate-800 dark:text-white truncate">
+                    {labelText}
+                  </span>
+                </div>
+                <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-mono font-bold border shrink-0 ${badgeStyle}`}>
+                  {badgeText}
                 </span>
               </div>
-              <span className="rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
-                ONLINE
-              </span>
-            </div>
-          ) : (
-            <div className="flex justify-center py-1" title="Hệ thống trực tuyến">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-              </span>
-            </div>
-          )}
+            ) : (
+              <div className="flex justify-center py-1" title={`${labelText} (${badgeText})`}>
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${pingColor}`} />
+                  <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${dotColor}`} />
+                </span>
+              </div>
+            );
+          })()}
 
           {/* User Info & Quick Password Change */}
           {!collapsed && user && (

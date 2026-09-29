@@ -79,6 +79,8 @@ export function useConveyorPhysics({
   speedRef.current = conveyorSpeed;
   const productSeqRef = useRef<number>(0);
   const lastRenderTimeRef = useRef<number>(0);
+  const hadActiveItemsRef = useRef<boolean>(false);
+  const prevBeltMovingRef = useRef<boolean>(false);
 
   // BUG-03: Helper to schedule tracked timeouts (auto-cleaned on unmount)
   const scheduleTimeout = useCallback((fn: () => void, ms: number) => {
@@ -90,13 +92,9 @@ export function useConveyorPhysics({
     return id;
   }, []);
 
-  // Spawn visual package (Simulation mode)
+  // Spawn visual package (Simulation mode & Cảm biến quang S1 test)
   const spawnVisualPackage = useCallback(
     (brandKey?: string, productId?: string) => {
-      if (!isSimulationRef.current) {
-        console.warn("Chế độ máy thật: Các nút thả phôi ảo đã bị khóa!");
-        return;
-      }
 
       const brands = Object.keys(CATALOG_BRANDS);
       const chosenBrand = brandKey || brands[Math.floor(Math.random() * brands.length)];
@@ -120,16 +118,27 @@ export function useConveyorPhysics({
         isSim: true,
       };
       setVisualItems((prev) => [...prev, newItem]);
+      hadActiveItemsRef.current = true;
+      if (!isRunningRef.current) {
+        setIsRunning(true);
+        isRunningRef.current = true;
+        setTelemetry((prev) => ({ ...prev, conveyor_running: true }));
+        onPublishCommandRef.current?.("START");
+        void updateSyncState({ isRunning: true });
+      }
       industrialAudio.playClick();
       void syncSpawnItemToServer(newItem);
     },
-    [configRef, isSimulationRef, simRecordsRef, setVisualItems]
+    [configRef, simRecordsRef, setVisualItems, setTelemetry]
   );
 
   // Controls
   const handleToggleRun = useCallback(() => {
     industrialAudio.playClick();
     const nextState = !isRunningRef.current;
+    if (nextState && visualItemsRef.current.length > 0) {
+      hadActiveItemsRef.current = true;
+    }
     setIsRunning(nextState);
     setTelemetry((prev) => ({ ...prev, conveyor_running: nextState }));
     onPublishCommand?.(nextState ? "START" : "STOP");
@@ -188,10 +197,17 @@ export function useConveyorPhysics({
       const delta = (time - lastTime) / 1000;
       lastTime = time;
 
-      // Xác định phôi mẫu đang có mặt trên băng tải
+      // Xác định phôi mẫu đang có mặt trên mặt băng chuyền (chưa phân loại vào khay)
       const hasActiveItems = visualItemsRef.current.some(
-        (it) => !it.sorted || (it.yOffset || 0) < 45
+        (it) => !it.sorted && !it.deflected && (it.progress ?? 0) < 96
       );
+
+      // TỰ ĐỘNG KÍCH HOẠT LẠI KHI CÓ PHÔI MẪU ĐẶT LÊN BĂNG TẢI
+      if (hasActiveItems && !isRunningRef.current && !telemetryRef.current.estop_pressed) {
+        setIsRunning(true);
+        isRunningRef.current = true;
+        void updateSyncState({ isRunning: true });
+      }
 
       // Yêu cầu: Có mẫu vật thì băng chuyền mới chạy (ở cả User & Admin, cả Mô phỏng và Thực tế)
       const isSimulation = isSimulationRef.current;
@@ -205,6 +221,21 @@ export function useConveyorPhysics({
       // Đồng bộ trạng thái chuyển động của băng tải vào telemetry
       if (telemetryRef.current.conveyor_running !== isBeltMoving) {
         setTelemetry((prev) => (prev.conveyor_running === isBeltMoving ? prev : { ...prev, conveyor_running: isBeltMoving }));
+      }
+
+      // TỰ ĐỘNG CHẠY KHI ĐẶT THÊM MẪU VẬT LÊN - TỰ ĐỘNG DỪNG KHI TOÀN BỘ PHÔI VÀO KHAY HẾT
+      if (prevBeltMovingRef.current !== isBeltMoving) {
+        if (isBeltMoving) {
+          // BĂNG TẢI TỰ ĐỘNG CHẠY TIẾP KHI ĐẶT THÊM MẪU VẬT LÊN
+          onPublishCommandRef.current?.("START");
+          industrialAudio.playClick();
+          toastRef.current.info("Phát hiện mẫu vật trên băng tải • Tự động kích hoạt chạy.");
+        } else if (!telemetryRef.current.estop_pressed && !isJammedRef.current && !isBinFullRef.current) {
+          // BĂNG TẢI TỰ ĐỘNG DỪNG KHI TOÀN BỘ PHÔI MẪU ĐÃ VÀO KHAY HẾT
+          onPublishCommandRef.current?.("STOP");
+          toastRef.current.info("Toàn bộ mẫu vật đã vào khay • Băng tải tự động dừng chờ phôi.");
+        }
+        prevBeltMovingRef.current = isBeltMoving;
       }
 
       // Kiểm tra phôi bị tắc nghẽn liên tục tại Cảm biến #02 / Zone A (Chỉ chạy ở chế độ Mô phỏng ảo)
@@ -248,22 +279,27 @@ export function useConveyorPhysics({
         }
       }
 
-      if (isBeltMoving) {
-        const moveStep = delta * (speedRef.current * 0.35);
-        const currentItems = visualItemsRef.current;
-        const updatedItems: VisualItem[] = [];
+      const moveStep = isBeltMoving ? delta * (speedRef.current * 0.35) : 0;
+      const currentItems = visualItemsRef.current;
+      const updatedItems: VisualItem[] = [];
 
-        for (let i = 0; i < currentItems.length; i++) {
-          const item = { ...currentItems[i] };
+      for (let i = 0; i < currentItems.length; i++) {
+        const item = { ...currentItems[i] };
 
-          if (item.deflected) {
-            item.yOffset = (item.yOffset || 0) + delta * 120;
-            item.opacity = Math.max(0, (item.opacity ?? 1) - delta * 2.5);
-            if (item.yOffset >= 45 || item.opacity <= 0.05) continue;
-            updatedItems.push(item);
+        // 1. Phôi đã được gạt / phân loại: Luôn trượt trọng lực vào khay và biến mất (kể cả khi băng tải dừng)
+        if (item.deflected || item.sorted) {
+          item.yOffset = (item.yOffset || 0) + delta * 200;
+          item.opacity = Math.max(0, (item.opacity ?? 1) - delta * 5.0);
+          // Đã trượt sâu vào khay hoặc mờ hoàn toàn -> Loại bỏ vĩnh viễn khỏi danh sách phôi
+          if (item.yOffset >= 35 || (item.opacity ?? 1) <= 0.05) {
             continue;
           }
+          updatedItems.push(item);
+          continue;
+        }
 
+        // 2. Phôi đang di chuyển trên mặt băng tải (chỉ tiến tới khi băng tải chuyển động)
+        if (isBeltMoving) {
           item.progress += moveStep;
 
           // Sensor 1 Entry (14% - 17%)
@@ -391,17 +427,22 @@ export function useConveyorPhysics({
           }
 
           if (item.progress < 100) updatedItems.push(item);
+        } else {
+          // Băng tải đang dừng: Giữ nguyên phôi chưa phân loại trên mặt băng
+          updatedItems.push(item);
         }
-
-        // Cập nhật DOM ảo (React state) với tần số thấp hơn (30fps) để giảm overhead. 
-        // 1000 / 30fps ~ 33ms
-        if (!lastRenderTimeRef.current || time - lastRenderTimeRef.current > 33) {
-          setVisualItems(updatedItems);
-          lastRenderTimeRef.current = time;
-        }
-        // Luôn cập nhật ref ngay lập tức cho logic physics (chạy 60fps)
-        visualItemsRef.current = updatedItems;
       }
+
+      // Cập nhật DOM ảo (React state) và đồng bộ ngay lập tức khi số lượng phôi thay đổi hoặc khi rỗng
+      const countChanged = updatedItems.length !== visualItemsRef.current.length;
+      const isNowEmpty = updatedItems.length === 0 && visualItemsRef.current.length > 0;
+
+      if (isNowEmpty || countChanged || !lastRenderTimeRef.current || time - lastRenderTimeRef.current > 33) {
+        setVisualItems(updatedItems);
+        lastRenderTimeRef.current = time;
+      }
+      // Luôn cập nhật ref ngay lập tức cho logic physics (chạy 60fps)
+      visualItemsRef.current = updatedItems;
 
       animFrameRef.current = requestAnimationFrame(loop);
     };

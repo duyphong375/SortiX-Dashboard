@@ -85,7 +85,12 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
   const arm1Active = propArm1Active ?? telemetry.arm1_active;
   const arm2Active = propArm2Active ?? telemetry.arm2_active;
 
-  const hasActiveItems = items.some((it) => !it.sorted || (it.yOffset || 0) < 45);
+  const hasActiveItems = items.some(
+    (it) => !it.sorted && !it.deflected && (it.progress ?? 0) < 96
+  );
+  const activeItemsCount = items.filter(
+    (it) => !it.sorted && !it.deflected && (it.progress ?? 0) < 96
+  ).length;
   const isBeltMoving =
     isRunning &&
     (isSimulation ? hasActiveItems : hasActiveItems) &&
@@ -138,7 +143,7 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
       <ConveyorToolbar
         telemetry={telemetry}
         isRunning={isRunning}
-        itemsCount={items.length}
+        itemsCount={activeItemsCount}
         isSimulation={isSimulation}
         onToggleRun={onToggleRun}
         onEmergencyStop={onEmergencyStop}
@@ -231,22 +236,32 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
             </div>
           </div>
         ) : !isBeltMoving ? (
-          <div className="flex justify-center mt-3 mb-1">
-            <div className="rounded-full bg-slate-900/90 px-4 py-1.5 backdrop-blur border border-cyan-500/40 text-[10px] sm:text-xs font-semibold text-cyan-300 shadow-sm flex items-center gap-2 text-center w-fit mx-auto">
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-3 mb-1">
+            <div className="rounded-full bg-slate-900/90 px-4 py-1.5 backdrop-blur border border-cyan-500/40 text-[10px] sm:text-xs font-semibold text-cyan-300 shadow-sm flex items-center gap-2 text-center w-fit">
               <span className="h-2 w-2 rounded-full bg-cyan-400 shrink-0" />
               <span>
                 {isSimulation
                   ? "Băng tải chờ phôi mẫu • Nhấn nút thả phôi phía trên để nạp sản phẩm"
-                  : "Băng tải chờ phôi mẫu • Sẵn sàng nhận phôi từ Camera AI & Hệ thống thực tế"}
+                  : "Băng tải chờ phôi mẫu • Sẵn sàng nhận phôi từ Cảm biến hồng ngoại S1 & Hệ thống thực tế"}
               </span>
             </div>
+            {onSpawnPackage && (
+              <button
+                type="button"
+                onClick={() => onSpawnPackage()}
+                className="rounded-full bg-cyan-500/20 hover:bg-cyan-500/35 px-3 py-1.5 backdrop-blur border border-cyan-500/60 hover:border-cyan-300 text-[10px] sm:text-xs font-semibold text-cyan-200 hover:text-white shadow-sm flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                title="Mô phỏng đặt 1 phôi mẫu vào cảm biến hồng ngoại S1 để băng tải tự động chạy"
+              >
+                <span>📦 Đặt phôi vào cảm biến S1 (Hồng ngoại)</span>
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex justify-center mt-3 mb-1">
             <div className="rounded-full bg-slate-900/90 px-4 py-1.5 backdrop-blur border border-emerald-500/40 text-[10px] sm:text-xs font-semibold text-emerald-300 shadow-sm flex items-center gap-2 text-center w-fit mx-auto">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
               <span>
-                Băng tải đang chạy • Đang vận chuyển {items.length} phôi mẫu qua các trạm phân loại
+                Băng tải đang chạy • Đang vận chuyển {activeItemsCount} phôi mẫu qua các trạm phân loại
               </span>
             </div>
           </div>
@@ -319,7 +334,9 @@ export const ConveyorVisualizer: React.FC<ConveyorVisualizerProps> = ({
 
 
             {/* HIỂN THỊ CÁC VẬT MẪU 2D ĐANG CHẠY TRÊN BĂNG */}
-            {items.map((item) => renderPhysicalItem(item))}
+            {items
+              .filter((item) => (item.opacity ?? 1) > 0.05 && (item.yOffset ?? 0) < 36)
+              .map((item) => renderPhysicalItem(item))}
           </div>
 
           {/* Rulo Bị Động Cuối Băng (Idler Drum - Tiện CNC nhôm thép với bạc đạn đồng) */}

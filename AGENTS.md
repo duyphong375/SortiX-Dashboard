@@ -95,7 +95,7 @@ Tài liệu này quy định các tiêu chuẩn kỹ thuật, ràng buộc kiế
   - Mỗi khay cho phép tùy biến định mức từ 5 đến 50 SP. Mọi giá trị cập nhật phải được kẹp an toàn qua clamp logic [5, 50] và đồng bộ đồng thời qua `useSorterData`, Context, các máng trượt Canvas 60fps và `localStorage ('sortix_bin_capacities')`.
 - **Đồng Hồ Nhiệt Độ Bán Nguyệt 2 Chế Độ (Gauge Dial Mode Isolation)**:
   - Chế độ Mô phỏng: Cung cấp thanh trượt nhiệt độ ảo (30°C - 95°C) và nút preset phục vụ thử nghiệm cảnh báo quá nhiệt (> 75°C).
-  - Chế độ Thực tế: Ẩn tuyệt đối thanh trượt ảo, hiển thị bảng telemetry cảm biến phần cứng thật (ESP32 DS18B20) với nhãn `[PHẦN CỨNG THẬT]` và kim đo phản ánh dữ liệu cảm biến thực tế.
+  - Chế độ Thực tế: Ẩn tuyệt đối thanh trượt ảo, hiển thị bảng telemetry cảm biến phần cứng thật (Cảm biến nội vi ESP32-C5) với nhãn `[PHẦN CỨNG THẬT]` và kim đo phản ánh dữ liệu cảm biến thực tế.
 - **Mất Kết Nối MQTT Broker (`mqtt_disconnected`)**:
   - Watchdog 5 giây debounce. Khi mất kết nối quá 5s, đổi huy hiệu TopHeader sang `MQTT: DISCONNECTED (Đỏ chớp nháy)`, phát còi báo và áp dụng lịch trình tự động kết nối lại (3s -> 5s -> 10s).
 - **Chuẩn Hóa Báo Cáo 1 Ngày Làm Việc**:

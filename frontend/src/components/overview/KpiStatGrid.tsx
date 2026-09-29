@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { Boxes, Cpu, Gauge, Sparkles, TrendingUp, TrendingDown } from "lucide-react";
 import { TelemetryData } from "@/lib/types";
 import { formatUptime } from "@/lib/dataProcessor";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 // Custom Hook count-up animation
 export function useCountUp(target: number, duration = 800) {
@@ -43,50 +45,92 @@ export function StatCard({
   color: string;
   highlight?: boolean;
 }) {
-  const iconBg: Record<string, string> = {
-    cyan: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20",
-    emerald: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20",
-    purple: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20",
-    amber: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20",
-    rose: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20",
-    slate: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20",
+  const iconThemes: Record<string, { bg: string; text: string; glow: string; border: string }> = {
+    cyan: {
+      bg: "bg-cyan-500/10 dark:bg-cyan-500/15",
+      text: "text-cyan-600 dark:text-cyan-400",
+      glow: "shadow-[0_0_15px_-3px_rgba(6,182,212,0.3)]",
+      border: "border-cyan-500/30",
+    },
+    emerald: {
+      bg: "bg-emerald-500/10 dark:bg-emerald-500/15",
+      text: "text-emerald-600 dark:text-emerald-400",
+      glow: "shadow-[0_0_15px_-3px_rgba(16,185,129,0.3)]",
+      border: "border-emerald-500/30",
+    },
+    purple: {
+      bg: "bg-purple-500/10 dark:bg-purple-500/15",
+      text: "text-purple-600 dark:text-purple-400",
+      glow: "shadow-[0_0_15px_-3px_rgba(168,85,247,0.3)]",
+      border: "border-purple-500/30",
+    },
+    amber: {
+      bg: "bg-amber-500/10 dark:bg-amber-500/15",
+      text: "text-amber-600 dark:text-amber-400",
+      glow: "shadow-[0_0_15px_-3px_rgba(245,158,11,0.3)]",
+      border: "border-amber-500/30",
+    },
+    rose: {
+      bg: "bg-rose-500/10 dark:bg-rose-500/15",
+      text: "text-rose-600 dark:text-rose-400",
+      glow: "shadow-[0_0_15px_-3px_rgba(244,63,94,0.3)]",
+      border: "border-rose-500/30",
+    },
+    slate: {
+      bg: "bg-slate-500/10 dark:bg-slate-500/15",
+      text: "text-slate-600 dark:text-slate-400",
+      glow: "shadow-none",
+      border: "border-slate-500/20",
+    },
   };
 
+  const theme = iconThemes[color] || iconThemes.cyan;
+
   return (
-    <div
-      className={`relate-card group relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 ${
+    <Card
+      className={`group relative overflow-hidden transition-all duration-300 hover:translate-y-[-2px] hover:shadow-lg ${
         highlight
-          ? "border-cyan-500/30 bg-gradient-to-br from-cyan-50/60 to-white shadow-sm dark:border-cyan-500/30 dark:from-[#181A24] dark:to-[#161822]"
-          : "border-slate-200/90 bg-white shadow-sm dark:border-white/[0.07] dark:bg-[#161822]"
+          ? "border-cyan-500/40 bg-gradient-to-br from-cyan-500/[0.04] via-transparent to-transparent shadow-sm dark:shadow-cyan-500/10"
+          : "border-slate-200/90 dark:border-white/[0.08] dark:bg-[#131722]/90"
       }`}
     >
-      <div className="flex items-start justify-between">
-        <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${iconBg[color] || iconBg.cyan}`}>
-          <Icon className="h-5 w-5" />
-        </div>
-        {trend && (
+      <div className="p-5">
+        <div className="flex items-start justify-between">
           <div
-            className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold border ${
-              trend.positive
-                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400"
-                : "bg-rose-500/10 text-rose-600 border-rose-500/20 dark:text-rose-400"
-            }`}
+            className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-transform duration-300 group-hover:scale-105 ${theme.bg} ${theme.text} ${theme.border} ${theme.glow}`}
           >
-            {trend.positive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-            <span>{trend.value}</span>
+            <Icon className="h-5 w-5" />
           </div>
-        )}
+          {trend && (
+            <Badge
+              variant={trend.positive ? "success" : "destructive"}
+              className="text-[11px] font-medium tracking-tight"
+            >
+              {trend.positive ? (
+                <TrendingUp className="h-3 w-3" />
+              ) : (
+                <TrendingDown className="h-3 w-3" />
+              )}
+              <span>{trend.value}</span>
+            </Badge>
+          )}
+        </div>
+        <div className="mt-4">
+          <p className="font-mono text-2xl font-black tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+            {value}
+          </p>
+          <p className="mt-1 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            {title}
+          </p>
+          <p className="mt-1 text-xs text-slate-600 dark:text-slate-400/90 leading-relaxed truncate" title={subtitle}>
+            {subtitle}
+          </p>
+        </div>
       </div>
-      <div className="mt-4">
-        <p className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">{value}</p>
-        <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-          {title}
-        </p>
-        <p className="mt-1 text-xs font-normal text-slate-600 dark:text-slate-400 leading-relaxed truncate">
-          {subtitle}
-        </p>
-      </div>
-    </div>
+      {highlight && (
+        <div className="absolute top-0 right-0 h-1 w-full bg-gradient-to-r from-transparent via-cyan-400 to-cyan-500 opacity-80" />
+      )}
+    </Card>
   );
 }
 
@@ -102,6 +146,7 @@ interface KpiStatGridProps {
   avgConfidence: string;
   pingMs: number;
   isDeviceOffline?: boolean;
+  sampleCount?: number;
 }
 
 export function KpiStatGrid({
@@ -115,6 +160,7 @@ export function KpiStatGrid({
   visualItemsCount,
   avgConfidence,
   isDeviceOffline = false,
+  sampleCount = 0,
 }: KpiStatGridProps) {
   const animatedTotal = useCountUp(totalSorted, 800);
 
@@ -124,8 +170,8 @@ export function KpiStatGrid({
       {(() => {
         const totalInBins = (binCounts.bin1 || 0) + (binCounts.bin2 || 0) + (binCounts.bin3 || 0);
         const clearedCount = Math.max(0, totalSorted - totalInBins);
-        const trayDetail = `Hiện trong khay: K1: ${binCounts.bin1} | K2: ${binCounts.bin2} | K3: ${binCounts.bin3}${
-          clearedCount > 0 ? ` (Đã dọn: ${clearedCount} SP)` : ""
+        const trayDetail = `K1: ${binCounts.bin1} | K2: ${binCounts.bin2} | K3: ${binCounts.bin3}${
+          clearedCount > 0 ? ` (Dọn: ${clearedCount} SP)` : ""
         }`;
         return (
           <StatCard
@@ -151,27 +197,27 @@ export function KpiStatGrid({
             ? "Dừng khẩn"
             : !isRunning
             ? "Tạm dừng"
-            : visualItemsCount > 0
+            : visualItemsCount > 0 || telemetry.conveyor_running
             ? "Đang chạy"
             : "Chờ phôi"
         }
         subtitle={`Tốc độ: ${
           !isEspConnected && !isSimulation
             ? 0
-            : isRunning && !telemetry.estop_pressed
+            : isRunning && !telemetry.estop_pressed && (visualItemsCount > 0 || telemetry.conveyor_running)
             ? conveyorSpeed
             : 0
         }% PWM • Encoder: ${!isEspConnected && !isSimulation ? 0 : telemetry.encoder_count}`}
         trend={{
           value:
             !isEspConnected && !isSimulation
-              ? "Không có tín hiệu"
+              ? "Mất tín hiệu"
               : telemetry.estop_pressed
               ? "E-Stop bật"
               : isRunning
               ? "Băng tải sẵn sàng"
               : "Chế độ chờ",
-          positive: (!isEspConnected && !isSimulation) ? false : isRunning && !telemetry.estop_pressed,
+          positive: !isEspConnected && !isSimulation ? false : isRunning && !telemetry.estop_pressed,
         }}
         color={
           !isEspConnected && !isSimulation
@@ -194,7 +240,7 @@ export function KpiStatGrid({
             : isSimulation
             ? "Mô phỏng"
             : isEspConnected
-            ? "Đã kết nối"
+            ? "ESP32-C5"
             : "Ngoại tuyến"
         }
         subtitle={`Uptime: ${
@@ -202,15 +248,15 @@ export function KpiStatGrid({
         } • CPU: ${!isDeviceOffline && (isEspConnected || isSimulation) ? telemetry.cpu_temp : "--"}°C`}
         trend={{
           value: isDeviceOffline
-            ? "Thiết bị ngắt kết nối"
+            ? "Ngắt kết nối"
             : isSimulation
-            ? `${telemetry.wifi_band}`
+            ? "Dữ liệu mô phỏng"
             : isEspConnected
-            ? `${telemetry.wifi_band}`
-            : "Đang chờ kết nối...",
+            ? `${telemetry.wifi_band || "Wi-Fi 6"}`
+            : "Đang dò mạng...",
           positive: !isDeviceOffline && (isSimulation ? true : isEspConnected),
         }}
-        color={isDeviceOffline || (!isEspConnected && !isSimulation) ? "slate" : isSimulation ? "purple" : "emerald"}
+        color={isDeviceOffline || (!isEspConnected && !isSimulation) ? "rose" : isSimulation ? "purple" : "emerald"}
       />
 
       {/* KPI 4: Độ tin cậy AI */}
@@ -218,12 +264,12 @@ export function KpiStatGrid({
         icon={Sparkles}
         title="Độ tin cậy AI"
         value={avgConfidence}
-        subtitle="YOLOv8 Edge • 4 nhãn hoạt động"
+        subtitle={sampleCount > 0 ? `Đo trên ${sampleCount} mẫu phân loại` : "YOLOv8 Edge • 4 nhóm y tế"}
         trend={{
-          value: !isEspConnected && !isSimulation ? "Chưa có tín hiệu" : "Đạt tiêu chuẩn",
+          value: !isEspConnected && !isSimulation ? "Chờ tín hiệu" : sampleCount > 0 ? `Độ tin cậy cao (${sampleCount} mẫu)` : "Độ tin cậy cao",
           positive: isEspConnected || isSimulation,
         }}
-        color={!isEspConnected && !isSimulation ? "slate" : "amber"}
+        color={!isEspConnected && !isSimulation ? "slate" : "emerald"}
       />
     </div>
   );

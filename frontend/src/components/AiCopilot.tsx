@@ -78,8 +78,8 @@ export const PROMPT_TOPICS: PromptTopic[] = [
     id: "safety",
     title: "1. Báo Cáo An Toàn Phần Cứng & Telemetry",
     shortTitle: "An toàn & Telemetry",
-    subtitle: "Nhiệt độ bo mạch DS18B20, động cơ băng tải, cảm biến #02 và nút E-Stop",
-    categoryTag: "DS18B20 & E-Stop",
+    subtitle: "Nhiệt độ chip nội vi ESP32-C5, động cơ băng tải, cảm biến #02 và nút E-Stop",
+    categoryTag: "Nội vi ESP32 & E-Stop",
     categoryColor: "rose",
     icon: ShieldAlert,
     questions: [
@@ -87,11 +87,11 @@ export const PROMPT_TOPICS: PromptTopic[] = [
         id: "safety_full",
         title: "[BÁO CÁO AN TOÀN PHẦN CỨNG TOÀN DIỆN]",
         badge: "Báo cáo đầy đủ",
-        summary: "Truy vấn toàn bộ cảm biến DS18B20, động cơ, cảm biến quang #02, nút E-Stop và kết luận điều kiện vận hành.",
+        summary: "Truy vấn cảm biến nhiệt độ nội vi ESP32-C5, động cơ, cảm biến quang #02, nút E-Stop và kết luận điều kiện vận hành.",
         prompt: `[BÁO CÁO AN TOÀN PHẦN CỨNG]
 Chào bạn, tôi là Kỹ sư thiết bị y tế phụ trách ca trực. Hãy truy vấn dữ liệu từ hệ thống telemetry và các cảm biến an toàn của dây chuyền SortiX-Med để trả lời các câu hỏi sau:
 
-1. Nhiệt độ bo mạch hiện tại đo được từ cảm biến DS18B20 là bao nhiêu °C? Mức nhiệt này có nằm trong ngưỡng an toàn cho phép không (ngưỡng cảnh báo là 75°C)?
+1. Nhiệt độ chip hiện tại đo được từ cảm biến nội vi ESP32-C5 là bao nhiêu °C? Mức nhiệt này có nằm trong ngưỡng an toàn cho phép không (ngưỡng cảnh báo là 75°C)?
 2. Trạng thái động cơ băng tải hiện tại đang chạy (isRunning = true) hay đang dừng? Tốc độ vận hành được ghi nhận là bao nhiêu?
 3. Cảm biến quang học #02 tại Zone A có đang ghi nhận tín hiệu che khuất hoặc cờ cảnh báo kẹt phôi (jam_detected) nào không?
 4. Nút dừng khẩn cấp E-Stop có đang bị khóa kích hoạt không?
@@ -100,10 +100,10 @@ Dựa trên dữ liệu cảm biến thực tế, hãy đưa ra kết luận: "H
       },
       {
         id: "safety_temp",
-        title: "Kiểm tra nhiệt độ cảm biến DS18B20",
-        badge: "DS18B20",
-        summary: "Đo nhiệt độ bo mạch ESP32, so sánh với ngưỡng an toàn 75°C và kiểm tra cờ cảnh báo quá nhiệt.",
-        prompt: "Nhiệt độ bo mạch hiện tại đo được từ cảm biến DS18B20 là bao nhiêu °C? Mức nhiệt này có nằm trong ngưỡng an toàn cho phép không (ngưỡng cảnh báo là 75°C)?",
+        title: "Kiểm tra nhiệt độ cảm biến nội vi ESP32-C5",
+        badge: "Nội vi ESP32",
+        summary: "Đo nhiệt độ chip nội vi ESP32-C5, so sánh với ngưỡng an toàn 75°C và kiểm tra cờ cảnh báo quá nhiệt.",
+        prompt: "Nhiệt độ chip hiện tại đo được từ cảm biến nội vi ESP32-C5 là bao nhiêu °C? Mức nhiệt này có nằm trong ngưỡng an toàn cho phép không (ngưỡng cảnh báo là 75°C)?",
       },
       {
         id: "safety_motor",
@@ -307,9 +307,9 @@ const SUGGESTED_PROMPTS: SuggestedPrompt[] = PROMPT_TOPICS.flatMap((topic) =>
 const QUICK_SUGGESTIONS = [
   {
     id: "quick_temp",
-    label: "Nhiệt độ DS18B20",
+    label: "Nhiệt độ nội vi ESP32",
     icon: Thermometer,
-    query: "Nhiệt độ bo mạch DS18B20 hiện tại là bao nhiêu °C? Mức nhiệt này có nằm trong ngưỡng an toàn không?",
+    query: "Nhiệt độ chip nội vi ESP32-C5 hiện tại là bao nhiêu °C? Mức nhiệt này có nằm trong ngưỡng an toàn không?",
   },
   {
     id: "quick_trays",
@@ -465,7 +465,7 @@ Trợ lý kỹ thuật thông minh kết nối trực tiếp với **Next.js Das
 
 #### 🎯 Năng lực hỗ trợ:
 - 🛡️ **An toàn công nghiệp**: Giám sát nút E-Stop, kẹt phôi cảm biến quang #02.
-- 🌡️ **Cảm biến nhiệt độ DS18B20**: Cảnh báo tức thì nếu vượt ngưỡng an toàn 75°C.
+- 🌡️ **Cảm biến nhiệt độ nội vi ESP32-C5**: Đo trực tiếp nhiệt độ chip, cảnh báo tức thì nếu vượt ngưỡng an toàn 75°C.
 - 📦 **Giám sát 3 khay chứa**: Số lượng & tỷ lệ lấp đầy trực tiếp từ ca phân loại.
 - ✈️ **Đồng bộ Telegram**: Chuyển tiếp báo cáo 1-click về nhóm điều hành.`,
       timestamp: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
@@ -545,7 +545,7 @@ Trợ lý kỹ thuật thông minh kết nối trực tiếp với **Next.js Das
 
         realTimeContext = `[THÔNG TIN HỆ THỐNG THỜI GIAN THỰC SORTIX-MED]:
 - CHẾ ĐỘ HIỆN TẠI: ${modeTag}
-- NGUỒN DỮ LIỆU: ${isSimulation ? "Dữ liệu đang được sinh giả lập tự động từ môi trường mô phỏng (Simulation)." : "Dữ liệu đo trực tiếp từ vi điều khiển ESP32, cảm biến nhiệt DS18B20 và camera AI Vision thật (Real Hardware)."}
+- NGUỒN DỮ LIỆU: ${isSimulation ? "Dữ liệu đang được sinh giả lập tự động từ môi trường mô phỏng (Simulation)." : "Dữ liệu đo trực tiếp từ vi điều khiển ESP32 (cảm biến nhiệt độ nội vi trên chip), cảm biến quang học và camera AI Vision thật (Real Hardware)."}
 - QUY TẮC BẮT BUỘC: DÒNG ĐẦU TIÊN CỦA CÂU TRẢ LỜI BẠN PHẢI BẮT ĐẦU CHÍNH XÁC BẰNG: "${modeTag}" để người dùng nhận diện ngay đây là số liệu mô phỏng hay thực tế.
 ------------------------------------------------------------
 - Tổng sản lượng ca hiện tại: ${totalSorted} SP (Hiện trong 3 khay: K1: ${b1} | K2: ${b2} | K3: ${b3})
@@ -557,7 +557,7 @@ Trợ lý kỹ thuật thông minh kết nối trực tiếp với **Next.js Das
   * 🟡 Vàng cam: Từ 80% đến 99% định mức (Cảnh báo sắp đầy, chuẩn bị khay mới)
   * 🔴 Đỏ: Đạt 100% định mức (Khay đầy, dừng hoặc cần thay khay ngay)
 - Động cơ băng tải: ${isRunning ? "ĐANG CHẠY" : "ĐANG DỪNG"} (isRunning = ${isRunning}), Tốc độ: ${conveyorSpeed}% PWM, Trạng thái: ${isRunning ? (totalInBins > 0 ? "Đang chạy" : "Chờ phôi") : "Tạm dừng"}
-- Cảm biến nhiệt độ DS18B20 bo mạch ESP32: ${temp.toFixed(1)}°C (Ngưỡng cảnh báo: 75.0°C - ${temp >= 75 ? "🔴 QUÁ NHIỆT / NGUY HIỂM" : "🟢 Bình thường / An toàn"})
+- Cảm biến nhiệt độ nội vi trên chip ESP32-C5: ${temp.toFixed(1)}°C (Ngưỡng cảnh báo: 75.0°C - ${temp >= 75 ? "🔴 QUÁ NHIỆT / NGUY HIỂM" : "🟢 Bình thường / An toàn"})
 - Cảm biến quang #02 Zone A: ${jam ? "🔴 CẢNH BÁO KẸT PHÔI" : "🟢 Bình thường, không che khuất (jam_detected = false)"}
 - Nút Dừng Khẩn Cấp (E-Stop): ${estop ? "🔴 ĐANG KÍCH HOẠT / KHÓA" : "🟢 Không kích hoạt (estop_pressed = false, Hệ thống OPERATIONAL)"}
 - Kết luận an toàn: ${!estop && !jam && temp < 75 ? "Hệ thống ĐỦ ĐIỀU KIỆN an toàn để tiếp tục vận hành." : "Hệ thống KHÔNG ĐỦ ĐIỀU KIỆN an toàn để tiếp tục vận hành."}
@@ -1203,44 +1203,37 @@ Trợ lý kỹ thuật thông minh kết nối trực tiếp với **Next.js Das
         </div>
       )}
 
-      {/* Nút nổi mở Chatbot (Floating Action Button) */}
+      {/* Nút nổi mở Chatbot (Thu nhỏ thành icon tròn tinh gọn, không che bảng nhật ký hoặc nút thao tác) */}
       {!isOpen && (
-        <div className="fixed bottom-6 right-6 z-40">
+        <div className="fixed bottom-5 right-5 z-30">
           <button
+            type="button"
             onClick={() => setIsOpen(true)}
-            className="group relative flex items-center gap-3 px-4 py-3 rounded-full bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white shadow-2xl shadow-emerald-900/50 hover:shadow-emerald-600/70 hover:scale-105 active:scale-95 transition-all duration-300 border border-emerald-400/40"
-            title="Mở SortiX-Med AI Copilot"
+            className="group relative flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white shadow-lg shadow-emerald-900/40 hover:shadow-emerald-600/60 hover:scale-110 active:scale-95 transition-all duration-200 border border-emerald-400/40"
+            title="Mở SortiX-Med AI Copilot (Gemini 2.5/3.x)"
+            aria-label="Mở trợ lý ảo AI Copilot"
           >
-            {/* Vòng phát sáng chuyển động */}
-            <span className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500 opacity-70 blur group-hover:opacity-100 transition duration-300 animate-pulse" />
-
-            <div className="relative flex items-center gap-2.5">
-              <div className="relative">
-                <Bot className="w-5 h-5 text-white" />
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-slate-900 animate-ping" />
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-slate-900" />
-              </div>
-              <div className="text-left hidden sm:block">
-                <div className="text-xs font-bold tracking-wide flex items-center gap-1">
-                  <span>AI Copilot</span>
-                  <Sparkles className="w-3 h-3 text-cyan-200" />
-                </div>
-                <div className="text-[10px] text-emerald-100 font-mono">Gemini 2.5/3.x</div>
-              </div>
-            </div>
+            <Bot className="w-5 h-5 text-white transition-transform group-hover:rotate-6" />
+            <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900 animate-pulse" />
           </button>
         </div>
       )}
 
-      {/* Cửa sổ Chat Drawer (100% Solid Dark Theme - No White Background) */}
+      {/* Cửa sổ Chat Drawer: Desktop Floating Panel / Mobile Bottom Sheet */}
       {isOpen && (
         <div
-          className={`fixed z-50 transition-all duration-300 ease-in-out shadow-2xl flex flex-col ${isExpanded
-              ? "inset-3 sm:inset-8 rounded-2xl"
-              : "bottom-4 right-4 sm:bottom-6 sm:right-6 w-[95vw] sm:w-[560px] h-[760px] max-h-[94vh] rounded-2xl"
-            } bg-[#0b0f19] border border-slate-800 text-slate-100 overflow-hidden shadow-2xl shadow-black/90`}
+          className={`fixed z-50 transition-all duration-300 ease-in-out shadow-2xl flex flex-col ${
+            isExpanded
+              ? "inset-3 sm:inset-6 rounded-2xl"
+              : "max-sm:inset-x-0 max-sm:bottom-0 max-sm:w-full max-sm:h-[86vh] max-sm:max-h-[86vh] max-sm:rounded-t-3xl max-sm:rounded-b-none sm:bottom-5 sm:right-5 sm:w-[540px] sm:h-[720px] sm:max-h-[90vh] sm:rounded-2xl"
+          } bg-[#0b0f19] border border-slate-800 text-slate-100 overflow-hidden shadow-2xl shadow-black/90`}
           style={{ backgroundColor: "#0b0f19", color: "#f1f5f9" }}
         >
+          {/* Mobile Bottom Sheet Handle Bar */}
+          <div className="sm:hidden pt-2.5 pb-1 flex justify-center bg-[#0f172a]">
+            <div className="w-12 h-1 rounded-full bg-slate-600/70" />
+          </div>
+
           {/* Header */}
           <div
             className="flex items-center justify-between px-4 py-3 bg-[#0f172a] border-b border-slate-800 select-none shrink-0"
@@ -1424,7 +1417,7 @@ Trợ lý kỹ thuật thông minh kết nối trực tiếp với **Next.js Das
             </div>
 
             <div className="flex items-center gap-2 text-slate-400 shrink-0 text-[10px]">
-              <span className="flex items-center gap-1" title="Cảm biến nhiệt độ DS18B20 bo mạch ESP32">
+              <span className="flex items-center gap-1" title="Cảm biến nhiệt độ nội vi trên chip ESP32-C5">
                 <Thermometer className="w-3 h-3 text-amber-400" />
                 <span className={liveTemp >= 75 ? "text-rose-400 font-bold" : "text-slate-300"}>
                   {liveTemp.toFixed(1)}°C
