@@ -345,8 +345,8 @@ export const getTrayColorStatus = (count: number, cap: number) => {
       level: "critical" as const,
       color: "red",
       emoji: "🔴",
-      colorCode: "🔴 ĐỎ (100% ĐẦY)",
-      statusText: "100% ĐẦY - CẦN THAY NGAY",
+      colorCode: "🔴 Đỏ (100%)",
+      statusText: "Đầy - Thay ngay",
       rate,
     };
   } else if (rate >= 80) {
@@ -354,8 +354,8 @@ export const getTrayColorStatus = (count: number, cap: number) => {
       level: "warning" as const,
       color: "amber",
       emoji: "🟡",
-      colorCode: "🟡 VÀNG CAM (CẢNH BÁO >80%)",
-      statusText: "CẢNH BÁO GẦN ĐẦY (>80%) - CHUẨN BỊ THAY",
+      colorCode: "🟡 Vàng (≥80%)",
+      statusText: "Gần đầy (>80%)",
       rate,
     };
   } else {
@@ -363,8 +363,8 @@ export const getTrayColorStatus = (count: number, cap: number) => {
       level: "normal" as const,
       color: "green",
       emoji: "🟢",
-      colorCode: "🟢 XANH LÁ (BÌNH THƯỜNG)",
-      statusText: "Bình thường / An toàn",
+      colorCode: "🟢 Xanh lá",
+      statusText: "Bình thường",
       rate,
     };
   }
@@ -613,7 +613,7 @@ Trợ lý kỹ thuật thông minh kết nối trực tiếp với **Next.js Das
       const errorBotMsg: ChatMessage = {
         id: "msg_err_" + Date.now(),
         sender: "bot",
-        text: `⚠️ **Không thể kết nối tới AI Agent (n8n)**:\n\n\`${errorMsg}\`\n\n*Kiểm tra nhanh*:\n1. n8n đang chạy tại \`http://localhost:5678\`.\n2. Node **When chat message received** đã bật **Make Chat Publicly Available**.\n3. Workflow đã được bấm **Publish**.\n4. Bấm biểu tượng ⚙️ để dán URL webhook chính xác.`,
+        text: `⚠️ **Không thể kết nối AI Agent (n8n)** (\`${errorMsg}\`)\n\n*Kiểm tra nhanh*:\n• n8n đang chạy tại \`http://localhost:5678\` (Workflow đã Publish).\n• Bấm ⚙️ để dán URL Webhook chính xác.`,
         timestamp: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
       };
       saveMessages([...updated, errorBotMsg]);
@@ -1273,10 +1273,10 @@ Trợ lý kỹ thuật thông minh kết nối trực tiếp với **Next.js Das
                     ONLINE
                   </span>
                   <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[10px] font-mono text-cyan-300 bg-cyan-950/80 border border-cyan-800/60">
-                    MODEL GEMINI
+                    Gemini
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400">Trợ lý Phân loại Y tế & Giám sát IoT</p>
+                <p className="text-[11px] text-slate-400">Trợ lý Y tế & IoT</p>
               </div>
             </div>
 
@@ -1300,7 +1300,7 @@ Trợ lý kỹ thuật thông minh kết nối trực tiếp với **Next.js Das
                 title="Mở danh mục 4 chủ đề câu hỏi chuyên môn"
               >
                 <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="hidden sm:inline">Gợi ý 4 mục</span>
+                <span className="hidden sm:inline">Gợi ý</span>
                 <span className="px-1.5 py-0.2 rounded-full bg-emerald-900/80 text-[10px] font-mono text-emerald-300 font-bold">
                   4
                 </span>
@@ -1943,9 +1943,9 @@ Trợ lý kỹ thuật thông minh kết nối trực tiếp với **Next.js Das
                 title="Mở bảng 4 danh mục câu hỏi chuyên môn"
               >
                 <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                <span className="text-xs font-semibold">Gợi ý câu hỏi</span>
+                <span className="text-xs font-semibold">Gợi ý</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-900/60 text-emerald-300 font-mono font-bold">
-                  4 mục
+                  4
                 </span>
               </button>
 

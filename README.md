@@ -34,7 +34,7 @@ SortiX-Dashboard/
 ├─ data/                          # JSON runtime store
 ├─ scripts/                       # dev-all, dev, e2e, free-port, test, upgrade workflow
 ├─ tests/                         # test được nối vào script root và test bổ sung
-└─ docs/                          # architecture, api, REFACTOR_PLAN
+└─ docs/                          # architecture, api
 ```
 
 ### Lệnh chính hiện có
@@ -163,16 +163,17 @@ SortiX-Dashboard/
 │   │   │   ├── users/        # Trang Quản Trị Thành Viên & Phân Quyền (Admin Only)
 │   │   │   └── login/        # Trang Đăng Nhập, Đăng Ký & Quên Mật Khẩu
 │   │   ├── components/       # Components mô-đun hóa
-│   │   │   ├── conveyor/     # BinTrays.tsx, ConveyorControls.tsx, QuickFeedBar.tsx
-│   │   │   ├── layout/       # DashboardLayout, TopHeader (Mobile Pill), Sidebar (Drawer Switcher), Banners
-│   │   │   ├── overview/     # KpiStatGrid, LiveHealthAndBinWidget, CalendarWidget, RecentActivityList
+│   │   │   ├── conveyor/     # ActuatorTestPanel, ConveyorStations, ConveyorToolbar, VisualItemRenderer
+│   │   │   ├── layout/       # DashboardLayout, TopHeader (Light/Dark Toggle, Mobile Pill), Sidebar, Banners
+│   │   │   ├── overview/     # KpiStatGrid, LiveHealthAndBinWidget, RecentActivityList
 │   │   │   ├── ui/           # TemperatureGaugeWidget, ShiftSummaryModal, Modals & Toasts
+│   │   │   ├── AiCopilot.tsx # Trợ lý Y tế & IoT AI Copilot (Tích hợp Gemini & n8n)
 │   │   │   ├── ConfigAndDiagnostics.tsx # Chẩn đoán & cấu hình thiết bị
 │   │   │   └── ConveyorVisualizer.tsx    # Khối trực quan băng chuyền 60fps
-│   │   ├── contexts/         # React Contexts (AuthContext, Theme, DashboardContext)
+│   │   ├── contexts/         # React Contexts (AuthContext, DashboardContext)
 │   │   ├── hooks/            # useConveyorPhysics, useMQTT, useSorterData
-│   │   ├── lib/              # Client utilities, Audio Service, Data Processor, CSV Exporter
-│   │   └── services/         # API Clients (apiSafetyClient, apiConfigClient, apiHistoryClient, sseService)
+│   │   ├── lib/              # Client utilities, Audio Service, CSV Exporter
+│   │   └── services/         # API Clients (apiAuthClient, apiSafetyClient, apiSyncClient, apiUsersClient, sseService)
 │   ├── package.json
 │   └── tsconfig.json
 ├── shared/                   # Tầng dùng chung giữa Frontend và Backend
@@ -183,11 +184,9 @@ SortiX-Dashboard/
 ├── data/                     # Dữ liệu cục bộ bền vững (users.json, notifications.json)
 ├── docs/                     # Tài liệu kỹ thuật chi tiết
 │   ├── architecture.md       # Thiết kế kiến trúc phân tầng, Mobile Shell & An toàn
-│   ├── api.md                # Đặc tả API routes, aliases safety và SSE
-│   └── REFACTOR_PLAN.md      # Kế hoạch & lộ trình nâng cấp hệ thống
+│   └── api.md                # Đặc tả API routes, aliases safety và SSE
 ├── scripts/                  # Root orchestration scripts (dev-all.cjs)
-├── tests/                    # Contract/integration tests; script root hiện chạy 16 file
-├── FINAL_INTEGRATION_REPORT.md # Báo cáo tổng kết tích hợp hệ thống cuối cùng
+├── tests/                    # Contract & Integration tests (23 suites kiểm thử tự động)
 ├── CHANGELOG.md              # Nhật ký thay đổi hệ thống chi tiết qua các phiên bản
 ├── AGENTS.md                 # Quy chuẩn kỹ thuật, Mobile Rules & Bảo mật bắt buộc
 ├── .env.example              # Mẫu biến môi trường cho Frontend Next.js
@@ -268,7 +267,7 @@ flowchart TD
 ### 3.3. Luồng Phân Loại Ở Chế Độ Mô Phỏng (Simulation Physics Flow)
 
 1. **Khởi tạo dụng cụ ảo**:
-   - Người vận hành bấm nút nạp nhanh trên thanh `QuickFeedBar`:
+   - Người vận hành bấm nút nạp nhanh trên thanh điều khiển (`ConveyorToolbar` / `ActuatorTestPanel`):
      - 💉 Bơm tiêm / Dao mổ (`med_syringe`)
      - 🗜️ Kẹp phẫu thuật Pean (`med_forceps`)
      - ✂️ Kéo phẫu thuật (`med_scissors`)
@@ -283,7 +282,7 @@ flowchart TD
    - Dụng cụ nhận gia tốc theo trục $y$, đổi hướng và trượt vào lòng khay tương ứng.
    - Nếu là Khay 3 (`med_vial` hoặc độ tin cậy < 60%), dụng cụ tiếp tục chạy thẳng đến cuối băng tải và rơi vào Khay 3.
 4. **Tổng hợp số liệu & Hiệu ứng**:
-   - Bộ đếm khay trên widget `BinTrays` nhảy số, phát âm thanh công nghiệp qua Web Audio API (`playSortChime()`).
+   - Bộ đếm khay trên máng trượt Canvas và widget `LiveHealthAndBinWidget` nhảy số, phát âm thanh công nghiệp qua Web Audio API (`playSortChime()`).
    - Kiểm tra ngưỡng sức chứa định mức của khay (5 - 50 SP). Nếu đạt mức tối đa, tự động kích hoạt cảnh báo đầy khay ảo.
 
 ---

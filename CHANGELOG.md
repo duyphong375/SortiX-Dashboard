@@ -4,6 +4,36 @@ Tất cả các thay đổi về kiến trúc, tính năng, sửa lỗi và nân
 
 ---
 
+## [3.1.0] - 2026-09-29 (Tối Ưu Hóa Codebase, Chế Độ Sáng/Tối, Tinh Gọn AI Copilot & Chuẩn Hóa Tài Liệu)
+
+### 🧹 Clean Code & Refactoring (Tối Ưu & Dọn Dẹp Mã Nguồn)
+- **Loại Bỏ Mã Nguồn Dư Thừa & File Chết (Dead Code Elimination)**:
+  - Loại bỏ các component không còn sử dụng: `BinTrays.tsx`, `ConveyorControls.tsx`, `QuickFeedBar.tsx`, `JamIncidentBanner.tsx`, `CalendarWidget.tsx`.
+  - Loại bỏ các client services trùng lặp: `apiConfigClient.ts`, `apiHistoryClient.ts`, `apiStatsClient.ts`.
+  - Dọn dẹp module xử lý cũ `backend/src/utils/dataProcessor.ts` và thư mục tĩnh cũ `legacy_static/`.
+  - Dọn dẹp script phụ trợ cũ `scripts/upgrade_n8n_ai_workflow.js`.
+  - Xóa thư mục lưu trữ tạm `backups/` và các báo cáo thử nghiệm cũ, giải phóng hơn 5 MB dung lượng dự án.
+- **Sửa Lỗi Contract Test**:
+  - Đồng bộ mã màu trạng thái `shift_summary` sang chuẩn `#10b981` tại `frontend/src/app/api/email-alert/route.ts` nhằm thỏa mãn 100% hợp đồng kiểm thử `new_day_report_tele_email.test.cjs`.
+
+### 🌓 Theme & UI/UX Enhancements (Giao Diện Sáng / Tối & Tối Ưu Trải Nghiệm)
+- **Hỗ Trợ Toàn Diện Light Mode & Dark Mode**:
+  - Bổ sung breakpoint `xs: "480px"` trong `frontend/tailwind.config.ts`.
+  - Hiển thị nút chuyển đổi giao diện Mặt Trời (Light) / Mặt Trăng (Dark) luôn sẵn sàng trên `TopHeader.tsx`.
+  - Cơ chế đồng bộ và chống nhấp nháy giao diện (FOUC) khi tải trang qua inline script tại `<head>` của `layout.tsx`.
+  - Lưu trữ tùy chọn giao diện bền vững trong `localStorage ('sortix_theme')`.
+- **Tinh Gọn Giao Diện Trợ Lý AI (`AiCopilot.tsx`)**:
+  - Rút gọn badge Gemini và thông tin trạng thái mô hình thành 1 dòng nhỏ gọn.
+  - Tối ưu hóa các nút gợi ý câu hỏi nhanh (Gợi ý 1 - 4) trên cả Header và thanh nhập liệu.
+  - Tinh giản văn bản hiển thị trạng thái phân loại 3 khay y tế và thông báo kết nối Webhook.
+
+### 🛡️ Quality Gate & Documentation (Kiểm Định & Chuẩn Hóa Tài Liệu)
+- Bảo toàn **100% tỷ lệ vượt qua kiểm thử** (23/23 test suites PASS).
+- TypeScript Typecheck sạch sẽ (0 lỗi).
+- Cập nhật chuẩn hóa toàn bộ hệ thống tài liệu Markdown (`README.md`, `AGENTS.md`, `docs/architecture.md`, `docs/api.md`, `CHANGELOG.md`).
+
+---
+
 ## [3.0.0] - 2026-09-23 (Chuyển Đổi Sang SortiX-Med: Hệ Thống Phân Loại Dụng Cụ Y Tế & Chuẩn Bị Khử Trùng Phòng Mổ)
 
 ### 🏥 Medical & Biomedical Features (Tính Năng Y Tế & Y Sinh)
@@ -20,7 +50,7 @@ Tất cả các thay đổi về kiến trúc, tính năng, sửa lỗi và nân
 - **Cơ Chế An Toàn Sinh Học Fail-Safe**:
   - Khi độ tin cậy nhận diện `confidence < 60%` (0.60) hoặc vật phẩm không nhận diện được, hệ thống tự động đưa về **Khay 3** để nhân viên y tế kiểm tra lại, loại bỏ 100% rủi ro đưa nhầm vật sắc nhọn vào khay tiệt trùng.
 - **Trực Quan Hóa Băng Chuyền Vật Lý 60fps & Nạp Dụng Cụ Nhanh**:
-  - Cập nhật thanh công cụ `QuickFeedBar` với 4 nút nạp dụng cụ y tế trực quan kèm icon và mã màu y tế.
+  - Cập nhật thanh công cụ nạp mẫu với 4 nút nạp dụng cụ y tế trực quan kèm icon và mã màu y tế.
   - Cập nhật vật thể kẹt mẫu thành Bơm kim tiêm / Dao mổ (`med_syringe`).
   - Hiển thị drop-shadow phát sáng theo mã màu y tế tương ứng cho từng dụng cụ.
 
@@ -76,7 +106,7 @@ Tất cả các thay đổi về kiến trúc, tính năng, sửa lỗi và nân
   - Chuẩn hóa cơ chế ký số token xác thực phiên người dùng, kiểm tra chéo trạng thái hoạt động (`status: 'active'`) và vai trò phân quyền.
 - **API Heartbeat & Token Đồng Bộ**:
   - Bổ sung các routes `/api/auth/heartbeat`, `/api/auth/token` và `/api/auth/logout` ở frontend route handlers và backend standalone khi route tương ứng được triển khai.
-- **Báo Cáo Tích Hợp Cuối Cùng (`FINAL_INTEGRATION_REPORT.md`)**:
+- **Báo Cáo Tích Hợp Hệ Thống & Kiểm Định Chất Lượng**:
   - Tổng kết kết quả kiểm tra chất lượng và typecheck theo script tại thời điểm phát hành.
 
 ### 🛡️ Security & Quality (Bảo mật & Chất lượng)
@@ -91,7 +121,7 @@ Tất cả các thay đổi về kiến trúc, tính năng, sửa lỗi và nân
 ### 🚀 Added (Thêm mới)
 - **Thanh Trượt Điều Chỉnh Độ Rộng / Sức Chứa Khay (Dynamic Bin Capacities 5 - 50 SP)**:
   - Cho phép người dùng tùy chỉnh định mức chứa từ 5 đến 50 sản phẩm riêng biệt cho từng khay (Khay 1, Khay 2, Khay 3).
-  - Tự động đồng bộ hóa tức thời trên máng trượt Canvas 60fps (`ConveyorVisualizer.tsx`, `BinTrays.tsx`), widget giám sát (`LiveHealthAndBinWidget.tsx`), chẩn đoán (`ConfigAndDiagnostics.tsx`), `useSorterData.ts` và lưu trữ bền vững trên `localStorage ('sortix_bin_capacities')`.
+  - Tự động đồng bộ hóa tức thời trên máng trượt Canvas 60fps (`ConveyorVisualizer.tsx`), widget giám sát (`LiveHealthAndBinWidget.tsx`), chẩn đoán (`ConfigAndDiagnostics.tsx`), `useSorterData.ts` và lưu trữ bền vững trên `localStorage ('sortix_bin_capacities')`.
   - Cơ chế tự động kẹp giá trị an toàn (Clamping [5, 50] SP).
 - **Phân Định Rõ Ràng: Đầy Khay (`bin_full`) vs Kẹt Phôi (`jam_detected`)**:
   - `bin_full`: Kích hoạt khi số lượng đạt tới sức chứa định mức của khay (`current_count >= max_capacity`, ví dụ 30/30 hoặc 50/50 SP), hiển thị banner vàng cam, còi báo đầy khay và nút "Xác nhận đã thay khay mới" reset khay về 0.

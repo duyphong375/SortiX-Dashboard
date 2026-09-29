@@ -462,7 +462,7 @@ const TopHeaderComponent: React.FC<TopHeaderProps> = ({
             aria-label={themeMode === "dark" ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối"}
             onClick={onToggleTheme}
             title={themeMode === "dark" ? "Chuyển sang giao diện Sáng" : "Chuyển sang giao diện Tối"}
-            className="hidden xs:flex rounded-xl border border-slate-200/80 p-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-white/[0.07] dark:bg-[#161822] dark:text-slate-400 dark:hover:bg-[#1E212D] dark:hover:text-white shrink-0"
+            className="flex items-center justify-center rounded-xl border border-slate-200/80 p-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-white/[0.07] dark:bg-[#161822] dark:text-slate-400 dark:hover:bg-[#1E212D] dark:hover:text-white shrink-0"
           >
             {themeMode === "dark" ? (
               <Sun className="h-4 w-4 text-amber-400 hover:rotate-45 transition-transform" />
@@ -477,7 +477,7 @@ const TopHeaderComponent: React.FC<TopHeaderProps> = ({
             aria-label={isMuted ? "Bật âm thanh" : "Tắt âm thanh"}
             onClick={onToggleSound}
             title={isMuted ? "Bật âm thanh cơ khí & cảm biến" : "Tắt âm thanh"}
-            className="hidden xs:flex rounded-xl border border-slate-200/80 p-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-white/[0.07] dark:bg-[#161822] dark:text-slate-400 dark:hover:bg-[#1E212D] dark:hover:text-white shrink-0"
+            className="flex items-center justify-center rounded-xl border border-slate-200/80 p-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-white/[0.07] dark:bg-[#161822] dark:text-slate-400 dark:hover:bg-[#1E212D] dark:hover:text-white shrink-0"
           >
             {!isMuted ? (
               <Volume2 className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />

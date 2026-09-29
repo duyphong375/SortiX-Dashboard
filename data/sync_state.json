@@ -1,11 +1,11 @@
 {
   "mode": "sim",
   "isRunning": true,
-  "speed": 65,
+  "speed": 50,
   "binCounts": {
-    "bin1": 0,
-    "bin2": 1,
-    "bin3": 0
+    "bin1": 7,
+    "bin2": 16,
+    "bin3": 8
   },
   "binCapacities": {
     "bin1": 50,
@@ -13,10 +13,14 @@
     "bin3": 50
   },
   "brandCounts": {
-    "med_syringe": 0,
-    "med_forceps": 0,
-    "med_scissors": 1,
-    "med_vial": 0
+    "brand_c": 0,
+    "brand_a": 0,
+    "brand_b": 0,
+    "brand_d": 0,
+    "med_vial": 8,
+    "med_forceps": 11,
+    "med_syringe": 7,
+    "med_scissors": 6
   },
   "config": {
     "schema_version": 1,
@@ -40,7 +44,7 @@
     ],
     "default_bin": 3,
     "apply_mode": "when_line_empty",
-    "timestamp": "2026-09-29T03:56:00.000Z"
+    "timestamp": "2026-09-29T04:29:54.461Z"
   },
-  "updatedAt": "2026-09-29T03:59:46.318Z"
+  "updatedAt": "2026-09-29T04:35:46.208Z"
 }

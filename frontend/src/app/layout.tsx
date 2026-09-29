@@ -28,8 +28,13 @@ export default function RootLayout({
     <html lang="vi" className="dark" suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#070b14" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var m=localStorage.getItem("pbl3_theme_mode");if(m==="light"){document.documentElement.classList.remove("dark");document.documentElement.classList.add("light");}}catch(e){}`,
+          }}
+        />
       </head>
-      <body className="min-h-screen bg-[#070b14] text-slate-100 antialiased">
+      <body className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#070b14] dark:text-slate-100 antialiased">
         <AuthProvider>
           <ToastProvider>
             <DashboardLayout>{children}</DashboardLayout>

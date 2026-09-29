@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const transporter = nodemailer.createTransport({ host, port, secure, auth: { user, pass }, connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 15_000 });
     const isShiftSummary = event_type === "shift_summary";
     const isCritical = severity === "critical";
-    const statusColor = isShiftSummary ? "#3b82f6" : isCritical ? "#ef4444" : "#f59e0b";
+    const statusColor = isShiftSummary ? "#10b981" : isCritical ? "#ef4444" : "#f59e0b";
     const statusTitle = isShiftSummary
       ? "BÁO CÁO 1 NGÀY LÀM VIỆC - TỔNG KẾT SẢN XUẤT"
       : isCritical

@@ -113,28 +113,30 @@ Tài liệu này quy định các tiêu chuẩn kỹ thuật, ràng buộc kiế
 ## 6. Đảm Bảo Chất Lượng & Bảo Vệ Kiểm Thử (Testing Gates)
 
 - **BẢO VỆ TUYỆT ĐỐI THƯ MỤC `tests/`**:
-  - Tuyệt đối không được xóa, đổi tên hoặc sửa đổi logic để "lách" các bài test trong 15 bộ kiểm thử:
-    1. `tests/history.test.cjs` (9 tests: Bounded buffer, migration, normalization)
-    2. `tests/api_schemas.test.cjs` (3 tests: Schema validation, passthrough)
-    3. `tests/users.test.cjs` (14 tests: Bcrypt, OTP, RBAC, Privilege Escalation, Admin deletion constraints)
-    4. `tests/estop_safety.test.cjs` (5 tests: Dừng khẩn cấp, admin unlock, chống loop echo 5s)
-    5. `tests/jam_detection.test.cjs` (6 tests: Cảm biến quang kẹt phôi, broadcast SSE, MQTT topic)
-    6. `tests/jam_simulation_audio.test.cjs` (5 tests: Còi báo kẹt phôi, còi khay đầy, UI Guard)
-    7. `tests/bin_full.test.cjs` (7 tests: Đầy khay chứa, MQTT bin_status, SSE broadcast)
-    8. `tests/temperature_warning.test.cjs` (8 tests: Quá nhiệt thiết bị, MQTT temp, Edge AI label)
-    9. `tests/device_offline.test.cjs` (10 tests: ESP32 offline watchdog 6s, heartbeat ping 2s)
-    10. `tests/shift_summary.test.cjs` (8 tests: Tổng kết ca làm việc, CSV UTF-8 BOM, admin gate)
-    11. `tests/bin_sliders_sync.test.cjs` (8 tests: Thanh trượt sức chứa 5-50 SP, clamp logic, đồng bộ UI)
-    12. `tests/mqtt_disconnected.test.cjs` (12 tests: Mất kết nối MQTT 5s, auto-reconnect backoff, âm thanh báo)
-    13. `tests/temperature_gauge_simulation_vs_real.test.cjs` (4 tests: Chuyển đổi giao diện Mô phỏng vs Thực tế)
-    14. `tests/daily_report_sync.test.cjs` (6 tests: Đồng bộ số liệu live Báo Cáo 1 Ngày Làm Việc)
-    15. `tests/simulation_mode_guard.test.cjs` (3 tests: Cô lập chế độ Mô phỏng & Thực tế)
-    16. `tests/cross_device_sync.test.cjs` (7 tests: Đồng bộ trạng thái giữa các thiết bị qua API/SSE)
+  - Tuyệt đối không được xóa, đổi tên hoặc sửa đổi logic để "lách" các bài test trong các bộ kiểm thử cốt lõi:
+    1. `tests/history.test.cjs` (Bounded buffer, migration, normalization)
+    2. `tests/api_schemas.test.cjs` (Schema validation, passthrough)
+    3. `tests/users.test.cjs` (Bcrypt, OTP, RBAC, Privilege Escalation, Admin deletion constraints)
+    4. `tests/estop_safety.test.cjs` (Dừng khẩn cấp, admin unlock, chống loop echo 5s)
+    5. `tests/jam_detection.test.cjs` (Cảm biến quang kẹt phôi, broadcast SSE, MQTT topic)
+    6. `tests/jam_simulation_audio.test.cjs` (Còi báo kẹt phôi, còi khay đầy, UI Guard)
+    7. `tests/bin_full.test.cjs` (Đầy khay chứa, MQTT bin_status, SSE broadcast)
+    8. `tests/temperature_warning.test.cjs` (Quá nhiệt thiết bị, MQTT temp, Edge AI label)
+    9. `tests/device_offline.test.cjs` (ESP32 offline watchdog 6s, heartbeat ping 2s)
+    10. `tests/shift_summary.test.cjs` (Tổng kết ca làm việc, CSV UTF-8 BOM, admin gate)
+    11. `tests/bin_sliders_sync.test.cjs` (Thanh trượt sức chứa 5-50 SP, clamp logic, đồng bộ UI)
+    12. `tests/mqtt_disconnected.test.cjs` (Mất kết nối MQTT 5s, auto-reconnect backoff, âm thanh báo)
+    13. `tests/temperature_gauge_simulation_vs_real.test.cjs` (Chuyển đổi giao diện Mô phỏng vs Thực tế)
+    14. `tests/daily_report_sync.test.cjs` (Đồng bộ số liệu live Báo Cáo 1 Ngày Làm Việc)
+    15. `tests/simulation_mode_guard.test.cjs` (Cô lập chế độ Mô phỏng & Thực tế)
+    16. `tests/cross_device_sync.test.cjs` (Đồng bộ trạng thái giữa các thiết bị qua API/SSE)
+    17. `tests/http_telemetry_history.test.cjs` (Lưu trữ và hiển thị telemetry ESP32 HTTP POST)
+    18. Các bộ test mở rộng: `mute_siren_feature`, `new_day_report_tele_email`, `auto_stop_on_all_items_in_trays`, `daily_production_cumulative`, `ghost_item_prevention`, `four_user_requests_upgrade`.
 - **Lệnh thực thi kiểm thử trước khi bàn giao**:
   ```powershell
   npm test
   ```
-  Tất cả file test được nối trong script `npm test` phải đạt PASS. Không hard-code tổng số test vào tài liệu; các file test bổ sung có thể tồn tại trong `tests/` nhưng chưa được nối vào script root.
+  Tất cả các bộ kiểm thử phải đạt PASS (100%). Tuyệt đối không bàn giao code khi có test fail.
 
 ---
 

@@ -159,7 +159,7 @@ Xây dựng trên nền tảng Next.js 14 App Router với hiệu năng tối ư
   - Mô phỏng cơ cấu **Servo gạt xoay góc** (Servo 1 - PWM IO23, Servo 2 - PWM IO24) gạt dụng cụ vào đúng máng trượt Khay 1 (Sắc nhọn), Khay 2 (Tiệt trùng) hoặc trượt thẳng vào Khay 3 (Vật tư/Fail-safe).
   - Cho phép người dùng **dọn khay chủ động bất kỳ lúc nào** ngay trên giao diện mà không cần đợi đủ định mức.
 - **Độ Rộng & Sức Chứa Khay Linh Hoạt (Dynamic Bin Capacities 5 - 50 SP)**:
-  - Cung cấp 3 thanh trượt điều chỉnh độ rộng/sức chứa riêng biệt cho từng khay trên `ConveyorVisualizer.tsx`, `BinTrays.tsx`, `LiveHealthAndBinWidget.tsx` và `ConfigAndDiagnostics.tsx`.
+  - Cung cấp 3 thanh trượt điều chỉnh độ rộng/sức chứa riêng biệt cho từng khay trên `ConveyorVisualizer.tsx`, `LiveHealthAndBinWidget.tsx` và `ConfigAndDiagnostics.tsx`.
   - Tự động lưu trữ và đồng bộ hóa trạng thái qua `useSorterData.ts` và `localStorage ('sortix_bin_capacities')`.
   - Khi số lượng đạt định mức của từng khay, hệ thống kích hoạt cảnh báo đầy khay tương ứng.
 - **Đồng Hồ Nhiệt Độ Bán Nguyệt 2 Chế Độ (`TemperatureGaugeWidget.tsx`)**:
