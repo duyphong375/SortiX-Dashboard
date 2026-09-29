@@ -836,4 +836,4 @@ Xem chi tiết tại [`.env.example`](.env.example):
 - **Trần Đăng Lợi**
 - **Nguyễn Đình Anh Tuấn**
 
-*Khoa Điện tử viễn thông — Trường Đại học Bách Khoa, Đại học Đà Nẵng.*
+*Khoa Điện tử và Trí tuệ nhân tạo — Trường Đại học Bách Khoa, Đại học Đà Nẵng.*
