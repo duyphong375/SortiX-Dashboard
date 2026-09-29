@@ -1,62 +1,14 @@
 [
   {
-    "event": "mqtt_connected",
-    "severity": "info",
-    "station_id": "MQTT_BROKER",
-    "triggered_by": "AUTO_RECONNECT_SERVICE",
-    "description": "[ĐÃ PHỤC HỒI] Kết nối MQTT Broker thành công",
-    "timestamp": "2026-09-28T23:45:16.903Z",
-    "mode": "realtime",
-    "status": "resolved",
-    "id": "notif_1790639116903_8ehl6"
-  },
-  {
-    "event": "mqtt_disconnected",
-    "severity": "critical",
-    "station_id": "MQTT_BROKER",
-    "triggered_by": "TCP_SOCKET_WATCHDOG",
-    "description": "[MẤT KẾT NỐI MẠNG] Mất liên lạc với MQTT Broker! Đang thử kết nối lại lần thứ 2 (Reconnecting...)",
-    "timestamp": "2026-09-28T23:45:16.901Z",
-    "mode": "realtime",
-    "status": "resolved",
-    "id": "notif_1790639116901_bluts",
-    "resolved_at": "2026-09-28T23:45:16.903Z",
-    "resolved_by": "MQTT_RECOVERY"
-  },
-  {
-    "event": "mqtt_connected",
-    "severity": "info",
-    "station_id": "MQTT_BROKER",
-    "triggered_by": "AUTO_RECONNECT_SERVICE",
-    "description": "[ĐÃ PHỤC HỒI] Kết nối MQTT Broker thành công",
-    "timestamp": "2026-09-28T23:45:16.898Z",
-    "mode": "realtime",
-    "status": "resolved",
-    "id": "notif_1790639116898_i0ahx"
-  },
-  {
-    "event": "mqtt_disconnected",
-    "severity": "critical",
-    "station_id": "MQTT_BROKER",
-    "triggered_by": "TCP_SOCKET_WATCHDOG",
-    "description": "[MẤT KẾT NỐI MẠNG] Mất liên lạc với MQTT Broker! Đang thử kết nối lại lần thứ 3 (Reconnecting...)",
-    "timestamp": "2026-09-28T23:45:16.896Z",
-    "mode": "realtime",
-    "status": "resolved",
-    "id": "notif_1790639116897_7ggok",
-    "resolved_at": "2026-09-28T23:45:16.899Z",
-    "resolved_by": "MQTT_RECOVERY"
-  },
-  {
     "event": "temperature_warning",
     "severity": "warning",
     "station_id": "Main_Drive_Motor / Edge_AI_Box",
     "triggered_by": "TEMP_SENSOR_TELEMETRY",
     "description": "[QUÁ NHIỆT] Động cơ truyền động chính đang ở mức 79.2°C (Ngưỡng an toàn: 75°C). Khuyến nghị kiểm tra quạt tản nhiệt hoặc giảm tải",
-    "timestamp": "2026-09-28T23:44:36.158Z",
+    "timestamp": "2026-09-29T03:59:18.280Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1790639076158_u00fe"
+    "id": "notif_1790654358280_j4pvf"
   },
   {
     "event": "temperature_warning",
@@ -64,10 +16,10 @@
     "station_id": "Edge_AI_Box",
     "triggered_by": "TEMP_SENSOR_TELEMETRY",
     "description": "[QUÁ NHIỆT] CPU máy chủ Edge AI đang ở mức 82°C (Ngưỡng an toàn: 75°C). Khuyến nghị kiểm tra quạt tản nhiệt hoặc giảm tải",
-    "timestamp": "2026-09-28T23:44:36.142Z",
+    "timestamp": "2026-09-29T03:59:18.262Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1790639076142_fhh7c"
+    "id": "notif_1790654358263_rygnh"
   },
   {
     "event": "temperature_warning",
@@ -75,34 +27,10 @@
     "station_id": "Main_Drive_Motor / Edge_AI_Box",
     "triggered_by": "TEMP_SENSOR_TELEMETRY",
     "description": "[QUÁ NHIỆT] Động cơ truyền động chính đang ở mức 78.5°C (Ngưỡng an toàn: 75°C). Khuyến nghị kiểm tra quạt tản nhiệt hoặc giảm tải",
-    "timestamp": "2026-09-28T23:44:36.140Z",
+    "timestamp": "2026-09-29T03:59:18.260Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1790639076140_hp6m6"
-  },
-  {
-    "event": "mqtt_connected",
-    "severity": "info",
-    "station_id": "MQTT_BROKER",
-    "triggered_by": "AUTO_RECONNECT_SERVICE",
-    "description": "[ĐÃ PHỤC HỒI] Kết nối MQTT Broker thành công",
-    "timestamp": "2026-09-28T23:44:36.078Z",
-    "mode": "realtime",
-    "status": "resolved",
-    "id": "notif_1790639076078_61jem"
-  },
-  {
-    "event": "mqtt_disconnected",
-    "severity": "critical",
-    "station_id": "MQTT_BROKER",
-    "triggered_by": "TCP_SOCKET_WATCHDOG",
-    "description": "[MẤT KẾT NỐI MẠNG] Mất liên lạc với MQTT Broker! Đang thử kết nối lại lần thứ 3 (Reconnecting...)",
-    "timestamp": "2026-09-28T23:44:36.076Z",
-    "mode": "realtime",
-    "status": "resolved",
-    "id": "notif_1790639076076_otyd6",
-    "resolved_at": "2026-09-28T23:44:36.080Z",
-    "resolved_by": "MQTT_RECOVERY"
+    "id": "notif_1790654358260_fyt6b"
   },
   {
     "event": "jam_detected",
@@ -110,32 +38,32 @@
     "station_id": "Conveyor_Belt_Zone_A",
     "triggered_by": "OPTICAL_JAM_02",
     "description": "[CẢNH BÁO KẸT PHÔI] Phát hiện tắc nghẽn sản phẩm tại Khu vực Conveyor_Belt_Zone_A (Cảm biến OPTICAL_JAM_02 che khuất liên tục 5s). Băng tải đã tự động giảm tốc/dừng.",
-    "timestamp": "2026-09-28T23:44:35.993Z",
+    "timestamp": "2026-09-29T03:59:18.173Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1790639075996_clem7"
+    "id": "notif_1790654358174_m9gj3"
   },
   {
-    "event": "bin_full",
-    "severity": "warning",
-    "station_id": "BIN_BLUE_02",
-    "triggered_by": "STORAGE_BIN_BLUE_02",
-    "description": "[ĐẦY KHAY CHỨA] Khay phân loại sản phẩm Xanh (#02) đã đạt giới hạn 50/50 cái. Vui lòng thay thế khay rỗng mới",
-    "timestamp": "2026-09-28T23:44:35.973Z",
+    "event": "device_offline",
+    "severity": "error",
+    "station_id": "ESP32_MAIN_CONTROLLER",
+    "triggered_by": "HEARTBEAT_WATCHDOG",
+    "description": "[MẤT KẾT NỐI THIẾT BỊ] Vi điều khiển trung tâm (ESP32) đã ngoại tuyến! Dữ liệu cảm biến thời gian thực bị ngắt",
+    "timestamp": "2026-09-29T03:59:18.112Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1790639075973_a5vju"
+    "id": "notif_1790654358112_flug0"
   },
   {
-    "event": "bin_full",
-    "severity": "warning",
-    "station_id": "BIN_RED_01",
-    "triggered_by": "STORAGE_BIN_RED_01",
-    "description": "[ĐẦY KHAY CHỨA] Khay phân loại sản phẩm Đỏ (#01) đã đạt giới hạn 50/50 cái. Vui lòng thay thế khay rỗng mới",
-    "timestamp": "2026-09-28T23:44:35.927Z",
+    "event": "device_offline",
+    "severity": "error",
+    "station_id": "ESP32_MAIN_CONTROLLER",
+    "triggered_by": "HEARTBEAT_WATCHDOG",
+    "description": "[MẤT KẾT NỐI THIẾT BỊ] Vi điều khiển trung tâm (ESP32) đã ngoại tuyến! Dữ liệu cảm biến thời gian thực bị ngắt",
+    "timestamp": "2026-09-29T03:59:18.087Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1790639075927_qbxml"
+    "id": "notif_1790654358087_gg8fg"
   },
   {
     "event": "shift_summary",
@@ -146,6 +74,17 @@
     "timestamp": "2026-09-18T17:00:00.000Z",
     "mode": "realtime",
     "status": "unprocessed",
-    "id": "notif_1790639076099_ednwg"
+    "id": "notif_1790654358225_pxs05"
+  },
+  {
+    "event": "emergency_stop",
+    "severity": "critical",
+    "station_id": "STATION_01",
+    "triggered_by": "Physical E-Stop Button #1",
+    "description": "[NGUY HIỂM] NÚT DỪNG KHẨN CẤP ĐÃ ĐƯỢC KÍCH HOẠT TẠI TRẠM 01! BĂNG CHUYỀN ĐÃ NGẮT TOÀN BỘ.",
+    "timestamp": "2026-09-18T10:15:30.000Z",
+    "mode": "realtime",
+    "status": "unprocessed",
+    "id": "notif_1790654358068_10amj"
   }
 ]

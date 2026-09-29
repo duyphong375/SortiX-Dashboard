@@ -47,7 +47,7 @@
 }
 
 .page :is(button, summary, a, input):focus-visible {
-  outline: 2px solid #0f766e;
+  outline: 2px solid #1d4ed8;
   outline-offset: 2px;
 }
 
@@ -85,9 +85,9 @@
   display: grid;
   place-items: center;
   border-radius: 8px;
-  background: #f0fdfa;
-  color: #0f766e;
-  border: 1px solid #ccfbf1;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #dbeafe;
 }
 
 .brandName {
@@ -98,7 +98,7 @@
 }
 
 .brandName span {
-  color: #0f766e;
+  color: #1d4ed8;
   padding: 0 1px;
 }
 
@@ -113,9 +113,9 @@
 
 .projectBadge {
   margin-left: auto;
-  color: #0f766e;
-  background: #f0fdfa;
-  border: 1px solid #ccfbf1;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.6px;
@@ -142,7 +142,7 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1.2px;
-  color: #0f766e;
+  color: #1d4ed8;
   margin-bottom: 7px;
   text-transform: uppercase;
 }
@@ -150,7 +150,7 @@
 .eyebrow span {
   width: 6px;
   height: 6px;
-  background: #0f766e;
+  background: #1d4ed8;
   border-radius: 50%;
   display: inline-block;
 }
@@ -205,7 +205,7 @@
 }
 
 .modeSwitch button:hover:not([aria-pressed="true"]) {
-  color: #0f766e;
+  color: #1d4ed8;
 }
 
 /* Alert notifications */
@@ -235,7 +235,7 @@
 }
 
 .notice {
-  color: #166534;
+  color: #1e40af;
   background: #f0fdf4;
   border-color: #bbf7d0;
 }
@@ -296,7 +296,7 @@
 .field input:focus {
   outline: none;
   background: #ffffff;
-  border-color: #0f766e;
+  border-color: #1d4ed8;
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
 }
 
@@ -324,7 +324,7 @@
 }
 
 .reveal:hover {
-  color: #0f766e;
+  color: #1d4ed8;
 }
 
 .hint,
@@ -354,7 +354,7 @@
 .formUtilities button {
   font-size: 12.5px;
   font-weight: 700;
-  color: #0f766e;
+  color: #1d4ed8;
   border: none;
   background: transparent;
   padding: 2px 0;
@@ -363,7 +363,7 @@
 }
 
 .formUtilities button:hover {
-  color: #115e59;
+  color: #1e40af;
 }
 
 .capsHint {
@@ -382,18 +382,18 @@
   min-height: 44px;
   width: 100%;
   border-radius: 6px;
-  background: #0f766e;
+  background: #1d4ed8;
   color: #ffffff;
   font-size: 15.5px;
   font-weight: 700;
-  border: 1px solid #0d655f;
+  border: 1px solid #1e3a8a;
   box-shadow: 0 2px 6px rgba(15, 118, 110, 0.22);
   transition: background 0.15s ease, transform 0.1s ease;
   margin-top: 4px;
 }
 
 .submit:hover:not(:disabled) {
-  background: #115e59;
+  background: #1e40af;
 }
 
 .submit:active:not(:disabled) {
@@ -428,7 +428,7 @@
 }
 
 .passwordTips li[data-met="true"] {
-  color: #166534;
+  color: #1e40af;
   font-weight: 700;
 }
 
@@ -448,7 +448,7 @@
 
 .roleNote svg {
   flex-shrink: 0;
-  color: #0f766e;
+  color: #1d4ed8;
 }
 
 /* Demo box */
@@ -518,8 +518,8 @@
 
 .demo button:hover {
   background: #f1f5f9;
-  border-color: #0f766e;
-  color: #0f766e;
+  border-color: #1d4ed8;
+  color: #1d4ed8;
 }
 
 .accessNote {
@@ -596,7 +596,7 @@
 .dot {
   width: 6px;
   height: 6px;
-  background: #10b981;
+  background: #3b82f6;
   border-radius: 50%;
   box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
 }
@@ -684,7 +684,7 @@
   z-index: 60;
   padding: 10px;
   background: #ffffff;
-  color: #0f766e;
+  color: #1d4ed8;
   border-radius: 6px;
   font-weight: 700;
 }

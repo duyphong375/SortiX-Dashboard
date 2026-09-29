@@ -11,6 +11,7 @@
 
 * {
   box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
 }
 
 /* ========================================================
@@ -401,4 +402,24 @@ html.light {
 
 .scrollbar-thin::-webkit-scrollbar {
   width: 4px;
+}
+
+/* ========================================================
+   HỖ TRỢ GIẢM CHUYỂN ĐỘNG (PREFERS-REDUCED-MOTION)
+   ======================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Đảm bảo độ tương phản cao cho chữ phụ trong chế độ sáng */
+.light .text-muted-foreground,
+.light .text-slate-400 {
+  color: #64748b;
 }

@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "id": "sim_1790651266032_fc78",
+    "product_id": "#1",
+    "brand_id": "med_scissors",
+    "brand_name": "Kéo phẫu thuật",
+    "confidence": 0.983765708542908,
+    "target_bin": 2,
+    "actual_bin": 2,
+    "status": "success",
+    "timestamp": "2026-09-29T03:07:46.032Z"
+  }
+]

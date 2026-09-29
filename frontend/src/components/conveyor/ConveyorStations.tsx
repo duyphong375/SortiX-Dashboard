@@ -35,7 +35,7 @@ export const ConveyorStations: React.FC<ConveyorStationsProps> = ({
           <span
             className={`h-2 w-2 rounded-full transition-all duration-300 shrink-0 ${
               telemetry.s1_entry
-                ? "bg-emerald-400 shadow-[0_0_8px_#10b981] animate-pulse"
+                ? "bg-emerald-400 shadow-[0_0_8px_#3b82f6] animate-pulse"
                 : "bg-cyan-500/40"
             }`}
           />

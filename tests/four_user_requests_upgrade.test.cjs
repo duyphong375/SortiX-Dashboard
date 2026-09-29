@@ -54,7 +54,8 @@ describe("Four User Requests Verification (Ảnh 1, 2, 3, 4)", () => {
     const logoContent = fs.readFileSync(logoPath, "utf8");
 
     assert.match(logoContent, /SortixLogo/, "Must export SortixLogo component");
-    assert.match(logoContent, /AI PRO/, "Must include AI PRO badge");
+    assert.match(logoContent, /NHÓM 5/, "Must include NHÓM 5 badge");
+    assert.match(logoContent, /BĂNG CHUYỀN PHÂN LOẠI DỤNG CỤ Y TẾ/, "Must include BĂNG CHUYỀN PHÂN LOẠI DỤNG CỤ Y TẾ subtitle");
     assert.match(logoContent, /topFacetGrad/, "Must render 3D isometric SVG gradients");
 
     const sidebarPath = path.resolve(__dirname, "../frontend/src/components/layout/Sidebar.tsx");

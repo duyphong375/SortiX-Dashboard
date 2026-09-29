@@ -88,13 +88,13 @@ const SidebarComponent: React.FC<SidebarProps> = ({
       <aside
         aria-label="Thanh điều hướng chính"
         className={`fixed left-0 top-0 z-40 flex h-screen flex-col border-r transition-all duration-300 ${
-          collapsed ? "w-[72px]" : "w-[260px]"
+          collapsed ? "w-[72px]" : "w-[268px]"
         } ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         } border-slate-200/80 bg-white/95 dark:border-white/[0.06] dark:bg-[#111319] backdrop-blur-xl`}
       >
         {/* Logo Area */}
-        <div className="flex h-16 shrink-0 items-center border-b border-slate-200/80 px-4 dark:border-white/[0.06]">
+        <div className="flex h-16 shrink-0 items-center border-b border-slate-200/80 px-3.5 dark:border-white/[0.06]">
           <Link href="/" className="w-full flex items-center">
             <SortixLogo collapsed={collapsed} />
           </Link>
@@ -118,42 +118,81 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                 <div className="space-y-1">
                   {visibleItems.map((item) => {
                     const IconComponent = ICON_MAP[item.icon] || LayoutDashboard;
-                    const active = isActive(item.href);
+                    const hasChildren = Boolean(item.children && item.children.length > 0);
+                    const isItemActive = hasChildren
+                      ? pathname.startsWith("/settings")
+                      : isActive(item.href);
 
                     return (
-                      <Link
-                        key={item.id}
-                        href={item.href}
-                        prefetch={true}
-                        onClick={() => {
-                          setPendingHref(item.href);
-                          onCloseMobile?.();
-                        }}
-                        title={collapsed ? item.label : undefined}
-                        className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs transition-all duration-150 border ${
-                          active
-                            ? "bg-slate-100 font-bold text-slate-900 shadow-xs border-slate-200/80 dark:bg-[#1E212D] dark:text-white dark:border-white/20 dark:shadow-[0_12px_32px_-8px_rgba(0,0,0,0.65)]"
-                            : "text-slate-600 hover:bg-slate-100/70 hover:text-slate-900 border-transparent dark:text-slate-400 dark:hover:bg-[#161822] dark:hover:text-white"
-                        } ${collapsed ? "justify-center px-0" : ""}`}
-                      >
-                        {active && (
-                          <div className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-cyan-500 dark:bg-cyan-400" />
+                      <div key={item.id} className="space-y-1">
+                        <Link
+                          href={item.href}
+                          prefetch={true}
+                          onClick={() => {
+                            setPendingHref(item.href);
+                            onCloseMobile?.();
+                          }}
+                          title={collapsed ? item.label : undefined}
+                          className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs transition-all duration-150 border ${
+                            isItemActive
+                              ? "bg-slate-100 font-bold text-slate-900 shadow-xs border-slate-200/80 dark:bg-[#1E212D] dark:text-white dark:border-white/20 dark:shadow-[0_12px_32px_-8px_rgba(0,0,0,0.65)]"
+                              : "text-slate-600 hover:bg-slate-100/70 hover:text-slate-900 border-transparent dark:text-slate-400 dark:hover:bg-[#161822] dark:hover:text-white"
+                          } ${collapsed ? "justify-center px-0" : ""}`}
+                        >
+                          {isItemActive && (
+                            <div className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-cyan-500 dark:bg-cyan-400" />
+                          )}
+                          <IconComponent
+                            className={`h-[18px] w-[18px] shrink-0 transition-colors ${
+                              isItemActive ? "text-cyan-600 dark:text-cyan-400" : "text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white"
+                            }`}
+                          />
+                          {!collapsed && <span className="truncate tracking-wide">{item.label}</span>}
+                          {!collapsed && item.id === "alerts" && alertCount > 0 && (
+                            <span className="ml-auto rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 text-xs font-semibold flex items-center gap-1">
+                              {alertCount > 99 ? "99+" : alertCount}
+                            </span>
+                          )}
+                          {collapsed && item.id === "alerts" && alertCount > 0 && (
+                            <span className="absolute right-2 top-2 flex h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#111319]" />
+                          )}
+                        </Link>
+
+                        {/* Sub-items for nested routes (Settings -> Config & Devices) */}
+                        {!collapsed && hasChildren && item.children && (
+                          <div className="ml-4 space-y-1 border-l border-slate-200/80 pl-2.5 py-0.5 dark:border-white/[0.08]">
+                            {item.children
+                              .filter((sub) => permissionCheck(sub.requiredPermission))
+                              .map((sub) => {
+                                const SubIcon = ICON_MAP[sub.icon] || LayoutDashboard;
+                                const isSubActive = pathname === sub.href;
+                                return (
+                                  <Link
+                                    key={sub.id}
+                                    href={sub.href}
+                                    prefetch={true}
+                                    onClick={() => {
+                                      setPendingHref(sub.href);
+                                      onCloseMobile?.();
+                                    }}
+                                    className={`group flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] transition-all border ${
+                                      isSubActive
+                                        ? "bg-cyan-50 font-bold text-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-300 border-cyan-500/30"
+                                        : "text-slate-600 hover:bg-slate-100/70 hover:text-slate-900 border-transparent dark:text-slate-400 dark:hover:bg-[#161822] dark:hover:text-white"
+                                    }`}
+                                  >
+                                    <SubIcon
+                                      className={`h-3.5 w-3.5 shrink-0 transition-colors ${
+                                        isSubActive ? "text-cyan-600 dark:text-cyan-400" : "text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200"
+                                      }`}
+                                    />
+                                    <span className="truncate">{sub.label}</span>
+                                  </Link>
+                                );
+                              })}
+                          </div>
                         )}
-                        <IconComponent
-                          className={`h-[18px] w-[18px] shrink-0 transition-colors ${
-                            active ? "text-cyan-600 dark:text-cyan-400" : "text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white"
-                          }`}
-                        />
-                        {!collapsed && <span className="truncate tracking-wide">{item.label}</span>}
-                        {!collapsed && item.id === "alerts" && alertCount > 0 && (
-                          <span className="ml-auto rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 text-xs font-semibold flex items-center gap-1">
-                            {alertCount > 99 ? "99+" : alertCount}
-                          </span>
-                        )}
-                        {collapsed && item.id === "alerts" && alertCount > 0 && (
-                          <span className="absolute right-2 top-2 flex h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#111319]" />
-                        )}
-                      </Link>
+                      </div>
                     );
                   })}
                 </div>
@@ -172,7 +211,7 @@ const SidebarComponent: React.FC<SidebarProps> = ({
             const dotColor = isSimulation
               ? "bg-purple-500 shadow-[0_0_8px_#a855f7]"
               : isOnlineReal
-              ? "bg-emerald-500 shadow-[0_0_8px_#10b981]"
+              ? "bg-emerald-500 shadow-[0_0_8px_#3b82f6]"
               : "bg-rose-500 shadow-[0_0_8px_#f43f5e]";
 
             const pingColor = isSimulation ? "bg-purple-400" : isOnlineReal ? "bg-emerald-400" : "bg-rose-400";
@@ -224,10 +263,12 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold text-white shadow-xs ${
                     user.role === "admin"
                       ? "bg-gradient-to-br from-indigo-500 to-purple-600"
+                      : user.role === "maintenance"
+                      ? "bg-gradient-to-br from-amber-500 to-orange-600"
                       : "bg-gradient-to-br from-emerald-500 to-teal-600"
                   }`}
                 >
-                  {user.role === "admin" ? "AD" : "OP"}
+                  {user.role === "admin" ? "AD" : user.role === "maintenance" ? "MT" : "OP"}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-bold text-slate-900 dark:text-white" title={user.displayName || user.username}>
@@ -238,10 +279,16 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                       className={`inline-block rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
                         user.role === "admin"
                           ? "bg-purple-500/15 text-purple-700 dark:text-purple-300"
+                          : user.role === "maintenance"
+                          ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
                           : "bg-teal-500/15 text-teal-700 dark:text-teal-300"
                       }`}
                     >
-                      {user.role === "admin" ? "Quản trị viên" : "Người dùng"}
+                      {user.role === "admin"
+                        ? "Quản trị viên"
+                        : user.role === "maintenance"
+                        ? "Bảo trì"
+                        : "Người dùng"}
                     </span>
                   </div>
                 </div>

@@ -1,18 +1,26 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { useDashboard } from "@/components/layout/DashboardLayout";
+import { usePermission } from "@/contexts/AuthContext";
 import { LiveChart } from "@/components/LiveChart";
+import { HistoryTable } from "@/components/HistoryTable";
 import { determineTargetBin } from "@/lib/dataProcessor";
 import { CATALOG_BRANDS } from "@/lib/types";
-import { calculateDailyTotalProduction } from "@/lib/history";
+import { calculateDailyTotalProduction, getBusinessDateKey, BUSINESS_TIME_ZONE } from "@/lib/history";
 import {
   Layers,
   PackageCheck,
   Sparkles,
   BarChart3,
   PieChart as PieIcon,
+  History,
+  ShieldAlert,
+  ArrowUpRight,
 } from "lucide-react";
+
 import {
   ResponsiveContainer,
   BarChart,
@@ -24,9 +32,16 @@ import {
   Cell,
   PieChart,
   Pie,
+  LabelList,
 } from "recharts";
 
-export default function AnalyticsPage() {
+function AnalyticsPageContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const currentTab = searchParams.get("tab") === "history" ? "history" : "analytics";
+  const dateFilter = searchParams.get("date") || undefined;
+  const canDelete = usePermission("history.delete");
+
   const {
     records,
     binCounts,
@@ -35,7 +50,16 @@ export default function AnalyticsPage() {
     isRunning,
     conveyorSpeed,
     sorterConfig,
+    handleClearHistory,
   } = useDashboard();
+
+  // Tự động chuyển hướng nếu người dùng truy cập ?tab=history sang trang /history chuyên dụng
+  React.useEffect(() => {
+    if (searchParams.get("tab") === "history") {
+      router.replace("/history?tab=classification");
+    }
+  }, [searchParams, router]);
+
 
   // Tổng số sản phẩm đã phân loại tích lũy trong ngày (không bị sụt giảm khi dọn khay)
   const totalSorted = useMemo(() => {
@@ -68,22 +92,53 @@ export default function AnalyticsPage() {
 
   // 3. DỮ LIỆU BIỂU ĐỒ CỘT PHÂN BỐ THEO KHUNG GIỜ (HOURLY PRODUCTION BAR CHART)
   const hourlyData = useMemo(() => {
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayKey = getBusinessDateKey();
     const shift = sorterConfig.shift || { start: "08:00", end: "17:00" };
-    const startHour = Number(shift.start.split(":")[0]);
-    const endHour = Number(shift.end.split(":")[0]);
-    
-    // Đếm số sản phẩm thực tế phân bổ từ records (chỉ lấy hôm nay)
-    const hourMap: Record<string, number> = {};
-    records.forEach((r) => {
-      if (r.status !== "success") return;
-      const date = new Date(r.timestamp);
-      const h = date.getUTCHours();
-      if (date.toISOString().slice(0, 10) === todayStr && h >= startHour && h <= endHour) {
-        const hStr = `${String(h).padStart(2, "0")}:00`;
-        hourMap[hStr] = (hourMap[hStr] || 0) + 1;
+    const startHour = Number(shift.start.split(":")[0]) || 8;
+    const endHour = Number(shift.end.split(":")[0]) || 17;
+
+    const getHourInBusinessTz = (d: Date): number => {
+      try {
+        const parts = new Intl.DateTimeFormat("en-GB", {
+          timeZone: BUSINESS_TIME_ZONE,
+          hour: "2-digit",
+          hour12: false,
+        }).formatToParts(d);
+        const val = parts.find((p) => p.type === "hour")?.value;
+        return val !== undefined ? parseInt(val, 10) : d.getHours();
+      } catch {
+        return d.getHours();
       }
+    };
+
+    const nowHourNum = getHourInBusinessTz(new Date());
+    const nowHourStr = `${String(nowHourNum).padStart(2, "0")}:00`;
+
+    // Đếm số sản phẩm thực tế phân bổ từ records hôm nay
+    const hourMap: Record<string, number> = {};
+    let recordedCountToday = 0;
+
+    records.forEach((r) => {
+      if (!r || !r.timestamp) return;
+      if (r.status === "rejected" || r.status === "jammed") return;
+
+      const rDateKey = getBusinessDateKey(r.timestamp);
+      if (rDateKey !== todayKey) return;
+
+      const date = new Date(r.timestamp);
+      if (isNaN(date.getTime())) return;
+
+      const h = getHourInBusinessTz(date);
+      const hStr = `${String(h).padStart(2, "0")}:00`;
+      hourMap[hStr] = (hourMap[hStr] || 0) + 1;
+      recordedCountToday++;
     });
+
+    if (totalSorted > recordedCountToday) {
+      const diff = totalSorted - recordedCountToday;
+      hourMap[nowHourStr] = (hourMap[nowHourStr] || 0) + diff;
+    }
+
 
     const activeHours = Object.keys(hourMap).map(h => parseInt(h));
     const minHour = activeHours.length > 0 ? Math.min(...activeHours, startHour) : startHour;
@@ -94,11 +149,9 @@ export default function AnalyticsPage() {
       allHours.push(`${String(i).padStart(2, "0")}:00`);
     }
 
-    const nowHour = `${String(new Date().getUTCHours()).padStart(2, "0")}:00`;
-
     return allHours.map((hour) => {
       const count = hourMap[hour] || 0;
-      const isCurrentHour = hour === nowHour;
+      const isCurrentHour = hour === nowHourStr;
 
       return {
         hour,
@@ -106,12 +159,15 @@ export default function AnalyticsPage() {
         isCurrentHour,
       };
     });
-  }, [records, sorterConfig.shift]);
+  }, [records, sorterConfig.shift, totalSorted]);
 
   // Tìm khung giờ đạt đỉnh sản lượng thực tế
   const peakHour = useMemo(() => {
     if (hourlyData.length === 0) return { hour: "08:00", count: 0 };
-    return [...hourlyData].sort((a, b) => b.count - a.count)[0];
+    const sorted = [...hourlyData].sort((a, b) => b.count - a.count);
+    if (sorted[0] && sorted[0].count > 0) return sorted[0];
+    const current = hourlyData.find((h) => h.isCurrentHour);
+    return current || sorted[0] || { hour: "08:00", count: 0 };
   }, [hourlyData]);
 
   // 4. BẢNG MA TRẬN PHÂN BỐ SẢN PHẨM THEO KHAY (PRODUCT ALLOCATION MATRIX)
@@ -163,22 +219,54 @@ export default function AnalyticsPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-7.5rem)] w-full flex-col gap-6 pb-8 page-transition-enter">
-      {/* HEADER TRANG ANLYTICS CHUYÊN SÂU */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200/80 pb-4 dark:border-white/[0.06]">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
-              Thống kê
-            </h1>
+      {/* HEADER TRANG THỐNG KÊ CHUYÊN SÂU */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200/80 pb-4 dark:border-white/[0.06]">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 shadow-xs shrink-0">
+            <BarChart3 className="h-5 w-5" />
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Giám sát lưu lượng phân loại, sản lượng theo giờ và phân bổ khay chứa
-          </p>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+              <span>Thống kê</span>
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Giám sát lưu lượng phân loại, sản lượng theo giờ và phân bổ khay chứa
+            </p>
+          </div>
+        </div>
+
+        {/* Nút điều hướng sang trang Lịch sử chuyên dụng */}
+        <div className="flex items-center gap-2">
+          <Link
+            href="/history"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-white/[0.08] dark:bg-[#161822] dark:text-slate-200 dark:hover:bg-white/[0.04] transition-all shadow-xs"
+          >
+            <History className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+            <span>Xem Lịch sử hệ thống (2 Tab)</span>
+            <ArrowUpRight className="h-3.5 w-3.5 text-slate-400" />
+          </Link>
         </div>
       </div>
 
-      {/* KHỐI 1: LƯỚI BIỂU ĐỒ THỜI GIAN THỰC CHUYÊN SÂU */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+
+      {currentTab === "history" ? (
+        <div className="min-h-[calc(100vh-12rem)] w-full flex flex-col pb-4 animate-in fade-in duration-200">
+          {!canDelete && (
+            <div className="mb-3 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+              <ShieldAlert className="h-4 w-4 shrink-0" />
+              <span>Chỉ có quyền xem và xuất CSV — Xóa lịch sử yêu cầu quyền quản trị viên</span>
+            </div>
+          )}
+          <HistoryTable
+            records={records}
+            onClear={handleClearHistory}
+            initialDateFilter={dateFilter}
+          />
+        </div>
+      ) : (
+        <>
+          {/* KHỐI 1: LƯỚI BIỂU ĐỒ THỜI GIAN THỰC CHUYÊN SÂU */}
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         {/* CỘT 1 (2/3 chiều rộng): BIỂU ĐỒ LƯU LƯỢNG THỜI GIAN THỰC (AREA CHART) */}
         <div className="xl:col-span-2 min-h-[380px]">
           <LiveChart
@@ -372,7 +460,7 @@ export default function AnalyticsPage() {
                 tickLine={false}
                 axisLine={false}
                 allowDecimals={false}
-                domain={[0, (dataMax: number) => Math.max(60, dataMax + 10)]}
+                domain={[0, (dataMax: number) => Math.max(10, Math.ceil((dataMax + 2) / 5) * 5)]}
                 unit=" SP"
               />
               <RechartsTooltip
@@ -406,7 +494,13 @@ export default function AnalyticsPage() {
                   return null;
                 }}
               />
-              <Bar dataKey="count" name="Sản lượng (SP)" radius={[6, 6, 0, 0]}>
+              <Bar dataKey="count" name="Sản lượng (SP)" radius={[6, 6, 0, 0]} minPointSize={4}>
+                <LabelList
+                  dataKey="count"
+                  position="top"
+                  formatter={(val: unknown) => (typeof val === "number" && val > 0 ? `${val} SP` : "")}
+                  className="fill-slate-700 dark:fill-slate-200 text-[10px] font-bold font-mono"
+                />
                 {hourlyData.map((entry) => {
                   const isPeak = peakHour.count > 0 && entry.hour === peakHour.hour;
                   return (
@@ -653,6 +747,22 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
-    </div>
+    </>
+  )}
+</div>
+  );
+}
+
+export default function AnalyticsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[400px] flex items-center justify-center text-xs font-medium text-slate-400">
+          Đang tải dữ liệu thống kê...
+        </div>
+      }
+    >
+      <AnalyticsPageContent />
+    </Suspense>
   );
 }

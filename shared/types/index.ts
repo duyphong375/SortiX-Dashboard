@@ -186,7 +186,7 @@ export interface ThroughputPoint {
 }
 
 // User & Account Domain Types
-export type UserRole = "admin" | "user";
+export type UserRole = "admin" | "user" | "maintenance";
 export type UserStatus = "active" | "locked";
 
 export interface UserAccount {

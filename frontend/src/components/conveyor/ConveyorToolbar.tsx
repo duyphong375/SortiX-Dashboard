@@ -31,6 +31,7 @@ export interface ConveyorToolbarProps {
   isBeltMoving: boolean;
   linearSpeedCms: string;
   rollerRpm: number;
+  actuatorPanel?: React.ReactNode;
 }
 
 export const ConveyorToolbar: React.FC<ConveyorToolbarProps> = ({
@@ -48,6 +49,7 @@ export const ConveyorToolbar: React.FC<ConveyorToolbarProps> = ({
   isBeltMoving,
   linearSpeedCms,
   rollerRpm,
+  actuatorPanel,
 }) => {
   return (
     <>
@@ -63,7 +65,7 @@ export const ConveyorToolbar: React.FC<ConveyorToolbarProps> = ({
                   : !isRunning
                   ? "bg-amber-400 shadow-[0_0_6px_#f59e0b]"
                   : isBeltMoving
-                  ? "bg-emerald-400 shadow-[0_0_6px_#10b981]"
+                  ? "bg-emerald-400 shadow-[0_0_6px_#3b82f6]"
                   : "bg-slate-400"
               }`}
             />
@@ -141,7 +143,7 @@ export const ConveyorToolbar: React.FC<ConveyorToolbarProps> = ({
               isRunning
                 ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300 dark:hover:bg-amber-500/25"
                 : "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25"
-            } disabled:opacity-40`}
+            } disabled:opacity-40 cursor-pointer active:scale-95`}
           >
             {isRunning ? (
               <>
@@ -157,7 +159,7 @@ export const ConveyorToolbar: React.FC<ConveyorToolbarProps> = ({
           {/* Nút E-STOP Dừng Khẩn Cấp */}
           <button
             onClick={onEmergencyStop}
-            className={`flex items-center gap-1.5 rounded-xl border-2 px-4 py-2 text-xs font-bold tracking-wider transition-all duration-200 ${
+            className={`flex items-center gap-1.5 rounded-xl border-2 px-4 py-2 text-xs font-bold tracking-wider transition-all duration-200 cursor-pointer active:scale-95 ${
               telemetry.estop_pressed
                 ? "border-amber-500 bg-amber-500 text-slate-950 shadow-[0_0_15px_#f59e0b]"
                 : "border-rose-600 bg-rose-600 text-white shadow-md hover:bg-rose-500"
@@ -186,128 +188,156 @@ export const ConveyorToolbar: React.FC<ConveyorToolbarProps> = ({
         </div>
       )}
 
-      {/* DẢI NÚT NẠP TỪNG LOẠI VẬT MẪU TRỰC TIẾP */}
-      {isSimulation && (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 rounded-xl border border-slate-200 bg-slate-50/80 p-2.5 transition-all duration-300 dark:border-white/[0.06] dark:bg-[#111319]">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">
-            {!isSimulation ? (
-              <>
-                <Lock className="h-4 w-4 text-amber-500 shrink-0" />
-                <span className="text-amber-600 dark:text-amber-400">Khóa ở chế độ thực tế:</span>
-              </>
-            ) : (
-              <>
-                <Box className="h-4 w-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
-                <span>Nạp dụng cụ y tế (Mô phỏng):</span>
-              </>
-            )}
-          </div>
+      {/* ========================================================================= */}
+      {/* LƯỚI 2 CỘT (ẢNH 4): 1 BÊN NẠP & TỐC ĐỘ BĂNG TẢI, 1 BÊN KIỂM THỬ TẢI CHẤP HÀNH */}
+      {/* ========================================================================= */}
+      <div
+        className={`grid grid-cols-1 ${
+          actuatorPanel ? "lg:grid-cols-2" : "grid-cols-1"
+        } gap-3 items-stretch`}
+      >
+        {/* CỘT TRÁI: NẠP DỤNG CỤ Y TẾ & ĐIỀU TỐC BĂNG TẢI */}
+        <div className="flex flex-col gap-2.5 justify-between h-full">
+          {/* Nạp dụng cụ y tế (Mô phỏng) */}
+          {isSimulation ? (
+            <div className="flex flex-col justify-between flex-1 gap-2 rounded-xl border border-slate-200 bg-slate-50/80 p-2.5 transition-all dark:border-white/[0.06] dark:bg-[#111319]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <Box className="h-4 w-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
+                  <span>Nạp dụng cụ y tế (Mô phỏng):</span>
+                </div>
+                <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full font-bold">
+                  Virtual Spawner
+                </span>
+              </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => onSpawnPackage?.("med_syringe")}
-              disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
-              className="flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 transition-all hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300 dark:hover:bg-amber-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
-              title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : `Nạp Bơm kim tiêm (${getBrandTargetBinName("med_syringe")})`}
-            >
-              <span>Nạp Bơm kim tiêm</span>
-              <span className="text-[10px] font-mono font-normal opacity-75">
-                ({getBrandTargetBinName("med_syringe")})
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => onSpawnPackage?.("med_syringe")}
+                  disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
+                  className="flex items-center justify-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11px] font-bold text-amber-800 transition-all hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300 dark:hover:bg-amber-500/25 disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs active:scale-95 cursor-pointer truncate"
+                  title={`Nạp Bơm kim tiêm (${getBrandTargetBinName("med_syringe")})`}
+                >
+                  <span className="truncate">Nạp Bơm kim tiêm</span>
+                  <span className="text-[9px] font-mono font-normal opacity-75 shrink-0">
+                    ({getBrandTargetBinName("med_syringe")})
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onSpawnPackage?.("med_forceps")}
+                  disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
+                  className="flex items-center justify-center gap-1 rounded-lg border border-sky-300 bg-sky-50 px-2 py-1.5 text-[11px] font-bold text-sky-800 transition-all hover:bg-sky-100 dark:border-sky-500/40 dark:bg-sky-500/15 dark:text-sky-300 dark:hover:bg-sky-500/25 disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs active:scale-95 cursor-pointer truncate"
+                  title={`Nạp Kẹp Pean (${getBrandTargetBinName("med_forceps")})`}
+                >
+                  <span className="truncate">Nạp Kẹp Pean</span>
+                  <span className="text-[9px] font-mono font-normal opacity-75 shrink-0">
+                    ({getBrandTargetBinName("med_forceps")})
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onSpawnPackage?.("med_scissors")}
+                  disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
+                  className="flex items-center justify-center gap-1 rounded-lg border border-indigo-300 bg-indigo-50 px-2 py-1.5 text-[11px] font-bold text-indigo-800 transition-all hover:bg-indigo-100 dark:border-indigo-500/40 dark:bg-indigo-500/15 dark:text-indigo-300 dark:hover:bg-indigo-500/25 disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs active:scale-95 cursor-pointer truncate"
+                  title={`Nạp Kéo mổ (${getBrandTargetBinName("med_scissors")})`}
+                >
+                  <span className="truncate">Nạp Kéo mổ</span>
+                  <span className="text-[9px] font-mono font-normal opacity-75 shrink-0">
+                    ({getBrandTargetBinName("med_scissors")})
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onSpawnPackage?.("med_vial")}
+                  disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
+                  className="flex items-center justify-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2 py-1.5 text-[11px] font-bold text-emerald-800 transition-all hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25 disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs active:scale-95 cursor-pointer truncate"
+                  title={`Nạp Ống nghiệm (${getBrandTargetBinName("med_vial")})`}
+                >
+                  <span className="truncate">Nạp Ống nghiệm</span>
+                  <span className="text-[9px] font-mono font-normal opacity-75 shrink-0">
+                    ({getBrandTargetBinName("med_vial")})
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onSpawnPackage?.()}
+                  disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
+                  className="flex items-center justify-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-2 py-1.5 text-[11px] font-bold text-purple-700 transition-all hover:bg-purple-100 dark:border-purple-500/40 dark:bg-purple-500/15 dark:text-purple-400 dark:hover:bg-purple-500/25 disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs active:scale-95 cursor-pointer truncate"
+                  title="Nạp ngẫu nhiên một dụng cụ y tế"
+                >
+                  <Sparkles className="h-3 w-3 text-purple-500 shrink-0" />
+                  <span className="truncate">Nạp ngẫu nhiên</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onGenerateDemoData}
+                  disabled={telemetry.estop_pressed}
+                  className="flex items-center justify-center gap-1 rounded-lg border border-teal-200 bg-teal-50 px-2 py-1.5 text-[11px] font-bold text-teal-700 transition-all hover:bg-teal-100 dark:border-teal-500/40 dark:bg-teal-500/15 dark:text-teal-400 dark:hover:bg-teal-500/25 disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs active:scale-95 cursor-pointer truncate"
+                  title="Tạo dữ liệu lịch sử demo ngẫu nhiên"
+                >
+                  <span className="truncate">Tạo dữ liệu demo</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col justify-center flex-1 gap-2 rounded-xl border border-emerald-500/20 bg-emerald-50/50 p-3 dark:border-emerald-500/20 dark:bg-emerald-950/20">
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                <Lock className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>Chế độ phần cứng thực tế (ESP32):</span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                Phôi vật tư y tế được cấp tự động qua phễu thực tế. Cảm biến quang S1 (GPIO 0) và Camera AI sẽ ghi nhận và kích hoạt phân loại.
+              </p>
+            </div>
+          )}
+
+          {/* THANH ĐIỀU TỐC BĂNG TẢI (PWM MCPWM IO4) */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 dark:border-white/[0.06] dark:bg-[#111319]">
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <Sliders className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400 shrink-0" />
+              <span className="font-bold text-slate-700 dark:text-slate-300 text-xs">
+                Tốc độ băng tải:
               </span>
-            </button>
-
-            <button
-              onClick={() => onSpawnPackage?.("med_forceps")}
-              disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
-              className="flex items-center gap-1.5 rounded-xl border border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-bold text-sky-800 transition-all hover:bg-sky-100 dark:border-sky-500/40 dark:bg-sky-500/15 dark:text-sky-300 dark:hover:bg-sky-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
-              title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : `Nạp Kẹp Pean (${getBrandTargetBinName("med_forceps")})`}
-            >
-              <span>Nạp Kẹp Pean</span>
-              <span className="text-[10px] font-mono font-normal opacity-75">
-                ({getBrandTargetBinName("med_forceps")})
+              <span className="font-mono text-xs font-black text-cyan-600 dark:text-cyan-400">
+                {isBeltMoving ? `${speed}%` : "0% (Đứng yên)"}
               </span>
-            </button>
-
-            <button
-              onClick={() => onSpawnPackage?.("med_scissors")}
-              disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
-              className="flex items-center gap-1.5 rounded-xl border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-800 transition-all hover:bg-indigo-100 dark:border-indigo-500/40 dark:bg-indigo-500/15 dark:text-indigo-300 dark:hover:bg-indigo-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
-              title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : `Nạp Kéo mổ (${getBrandTargetBinName("med_scissors")})`}
-            >
-              <span>Nạp Kéo mổ</span>
-              <span className="text-[10px] font-mono font-normal opacity-75">
-                ({getBrandTargetBinName("med_scissors")})
+              <span className="font-mono text-slate-500 dark:text-slate-400 text-[10px]">
+                ({linearSpeedCms} cm/s • {rollerRpm} RPM)
               </span>
-            </button>
+            </div>
 
-            <button
-              onClick={() => onSpawnPackage?.("med_vial")}
-              disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
-              className="flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 transition-all hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
-              title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : `Nạp Ống nghiệm (${getBrandTargetBinName("med_vial")})`}
-            >
-              <span>Nạp Ống nghiệm</span>
-              <span className="text-[10px] font-mono font-normal opacity-75">
-                ({getBrandTargetBinName("med_vial")})
-              </span>
-            </button>
-
-            {/* Nút nạp ngẫu nhiên */}
-            <button
-              onClick={() => onSpawnPackage?.()}
-              disabled={!isSimulation || !isRunning || telemetry.estop_pressed}
-              className="flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-1.5 text-xs font-bold text-purple-700 transition-all hover:bg-purple-100 dark:border-purple-500/40 dark:bg-purple-500/15 dark:text-purple-400 dark:hover:bg-purple-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs active:scale-95"
-              title={!isSimulation ? "Nút bị khóa ở chế độ thực tế" : "Nạp ngẫu nhiên một dụng cụ y tế"}
-            >
-              <Sparkles className="h-3.5 w-3.5 text-purple-500" />
-              <span>Nạp ngẫu nhiên</span>
-            </button>
-
-            {isSimulation && (
-              <button
-                onClick={onGenerateDemoData}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[10px] font-bold text-slate-400">10%</span>
+              <input
+                type="range"
+                min="10"
+                max="100"
+                value={speed}
                 disabled={telemetry.estop_pressed}
-                className="flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-bold text-emerald-700 transition-all hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-400 dark:hover:bg-emerald-500/25 shadow-xs active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                title="Tạo dữ liệu lịch sử demo ngẫu nhiên"
-              >
-                <span>Tạo dữ liệu demo</span>
-              </button>
-            )}
+                onChange={(e) => onSpeedChange(Number(e.target.value))}
+                className="h-1.5 w-24 sm:w-28 cursor-pointer appearance-none rounded-lg bg-slate-200 accent-teal-600 dark:bg-slate-800 dark:accent-cyan-500 disabled:opacity-40"
+              />
+              <span className="text-[10px] font-bold text-teal-600 dark:text-cyan-400">100%</span>
+              <span className="shrink-0 rounded-md border border-teal-500/30 bg-teal-500/10 px-1.5 py-0.5 font-mono text-[11px] font-black text-teal-700 dark:text-cyan-300">
+                {speed}%
+              </span>
+            </div>
           </div>
         </div>
-      )}
 
-      {/* THANH ĐIỀU TỐC BĂNG TẢI (PWM MCPWM IO4) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-2 dark:border-white/[0.06] dark:bg-[#111319]">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <Sliders className="h-4 w-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
-          <span className="font-bold text-slate-700 dark:text-slate-300">
-            Tốc độ băng tải:
-          </span>
-          <span className="font-mono text-sm font-black text-cyan-600 dark:text-cyan-400">
-            {isBeltMoving ? `${speed}%` : "0% (Đứng yên)"}
-          </span>
-          <span className="font-mono text-slate-500 dark:text-slate-400 text-[11px]">
-            ({linearSpeedCms} cm/s • {rollerRpm} RPM)
-          </span>
-        </div>
-
-        <div className="flex w-full sm:max-w-xs md:max-w-sm items-center gap-3 shrink-0">
-          <span className="text-[11px] font-bold text-slate-500">10%</span>
-          <input
-            type="range"
-            min="10"
-            max="100"
-            value={speed}
-            disabled={telemetry.estop_pressed}
-            onChange={(e) => onSpeedChange(Number(e.target.value))}
-            className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-teal-600 dark:bg-slate-800 dark:accent-cyan-500 disabled:opacity-40 disabled:cursor-not-allowed"
-          />
-          <span className="text-[11px] font-bold text-teal-600 dark:text-cyan-400">100%</span>
-          <span className="shrink-0 rounded-lg border border-teal-500/30 bg-teal-500/10 px-2 py-1 font-mono text-xs font-black text-teal-700 dark:text-cyan-300">
-            {speed}%
-          </span>
-        </div>
+        {/* CỘT PHẢI: KIỂM THỬ 3 TẢI CHẤP HÀNH */}
+        {actuatorPanel && (
+          <div className="flex flex-col h-full min-h-[145px]">
+            {actuatorPanel}
+          </div>
+        )}
       </div>
     </>
   );

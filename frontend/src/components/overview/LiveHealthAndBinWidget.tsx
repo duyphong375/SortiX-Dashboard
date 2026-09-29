@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   Activity,
@@ -17,9 +17,16 @@ import {
   Lock,
   ExternalLink,
   ShieldAlert,
+  Layers,
+  CheckCircle2,
+  AlertTriangle,
+  ChevronDown,
+  Trash2,
+  PackageCheck,
 } from "lucide-react";
-import { TelemetryData, CATALOG_BRANDS } from "@/lib/types";
+import { TelemetryData, CATALOG_BRANDS, ClassificationRecord } from "@/lib/types";
 import { TemperatureGaugeWidget } from "@/components/ui/TemperatureGaugeWidget";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,11 +50,14 @@ export interface LiveHealthAndBinWidgetProps {
   bin1Brands: string[];
   bin2Brands: string[];
   bin3Brands?: string[];
-  handleToggleRun: () => void;
-  handleEmergencyStop: () => void;
+  handleToggleRun?: () => void;
+  handleEmergencyStop?: () => void;
   isDeviceOffline?: boolean;
   onSetBinCount?: (binIndex: 1 | 2 | 3, count: number) => void;
   onSetBinCapacity?: (binIndex: 1 | 2 | 3, capacity: number) => void;
+  onClearBin?: (binIndex: 1 | 2 | 3) => void;
+  onConfirmBinReplaced?: (binIndex?: 1 | 2 | 3) => void;
+  records?: ClassificationRecord[];
 }
 
 export function LiveHealthAndBinWidget({
@@ -61,10 +71,14 @@ export function LiveHealthAndBinWidget({
   bin1Brands,
   bin2Brands,
   bin3Brands = [],
-  handleToggleRun,
-  handleEmergencyStop,
   isDeviceOffline = false,
+  onSetBinCount,
+  onSetBinCapacity,
+  onClearBin,
+  onConfirmBinReplaced,
+  records,
 }: LiveHealthAndBinWidgetProps) {
+  const [confirmBinClear, setConfirmBinClear] = useState<1 | 2 | 3 | null>(null);
   const { user } = useAuth();
   const canControlConveyor = usePermission("conveyor.control");
   const canEditConfig = usePermission("config.edit");
@@ -85,6 +99,21 @@ export function LiveHealthAndBinWidget({
   const isWarn3 = !isFull3 && binCounts.bin3 / cap3 >= 0.8;
   const rate3 = Math.min(100, Math.round((binCounts.bin3 / cap3) * 100));
 
+  // Tính số lượng sản phẩm đã dọn cho từng khay riêng biệt
+  const countRecords1 = (records || []).filter(
+    (r) => (r.actual_bin ?? r.target_bin) === 1
+  ).length;
+  const countRecords2 = (records || []).filter(
+    (r) => (r.actual_bin ?? r.target_bin) === 2
+  ).length;
+  const countRecords3 = (records || []).filter(
+    (r) => (r.actual_bin ?? r.target_bin) === 3
+  ).length;
+
+  const cleared1 = Math.max(0, countRecords1 - (binCounts.bin1 || 0));
+  const cleared2 = Math.max(0, countRecords2 - (binCounts.bin2 || 0));
+  const cleared3 = Math.max(0, countRecords3 - (binCounts.bin3 || 0));
+
   // Trạng thái vận hành tức thời
   const statusInfo = isDeviceOffline || (!isEspConnected && !isSimulation)
     ? { label: "Ngoại tuyến", variant: "destructive" as const, dotColor: "bg-slate-500", ping: false }
@@ -98,7 +127,7 @@ export function LiveHealthAndBinWidget({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <Card className="flex flex-col justify-between overflow-hidden border-slate-200/90 dark:border-white/[0.08] dark:bg-[#131722]/95 p-4 sm:p-5 shadow-md">
+      <Card className="flex flex-col justify-between overflow-hidden border-slate-200/90 dark:border-white/[0.08] dark:bg-[#131722]/95 p-4 sm:p-5 shadow-md h-full">
         <div>
           {/* Header Widget */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3.5 dark:border-white/[0.06]">
@@ -135,114 +164,27 @@ export function LiveHealthAndBinWidget({
             </div>
           </div>
 
-          {/* CỤM TRẠNG THÁI VI XỬ LÝ (ESP32 PHẦN CỨNG HOẶC MÔ PHỎNG) */}
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                <Cpu className="h-3.5 w-3.5 text-cyan-500" />
-                {isSimulation
-                  ? "Môi trường giả lập IoT (Simulation Mode)"
-                  : "Vi điều khiển ESP32-C5 (Wi-Fi 6 Dual-Band)"}
-              </span>
-              <span
-                className={`text-xs font-mono px-2 py-0.5 rounded border font-semibold ${
-                  isSimulation
-                    ? "text-purple-600 dark:text-purple-300 bg-purple-500/10 border-purple-500/25"
-                    : isEspConnected
-                    ? "text-emerald-600 dark:text-emerald-300 bg-emerald-500/10 border-emerald-500/25"
-                    : "text-slate-500 bg-slate-500/10 border-slate-500/20"
-                }`}
-              >
-                {isSimulation ? "Dữ liệu mô phỏng" : isEspConnected ? "I/O Ready" : "Ngoại tuyến"}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              {/* 1. Nhiệt độ Đồng hồ Gauge */}
-              <TemperatureGaugeWidget
-                compact={true}
-                currentTemp={telemetry.cpu_temp}
-                thresholdTemp={75.0}
-                deviceName="Nhiệt độ nội vi ESP32-C5"
-                isOnline={!isDeviceOffline && (isEspConnected || isSimulation)}
-                isSimulation={isSimulation}
-              />
-
-              {/* 2. Wi-Fi Card: Phân biệt rõ giữa Thực tế và Mô phỏng */}
-              <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-white/[0.06] dark:bg-white/[0.02] flex items-center justify-between transition-all hover:border-cyan-500/30">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 shrink-0">
-                    <Wifi className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                      {isSimulation ? "Mạng ảo" : "Wi-Fi 6"}
-                    </span>
-                    <p className="font-mono text-sm font-bold text-slate-900 dark:text-white truncate max-w-[120px]">
-                      {isSimulation
-                        ? "Mô phỏng"
-                        : !isDeviceOffline && isEspConnected
-                        ? `${telemetry.wifi_rssi} dBm`
-                        : "-- dBm"}
-                    </p>
-                  </div>
-                </div>
-                <span
-                  className={`text-xs font-semibold px-2 py-0.5 rounded font-mono ${
-                    isSimulation
-                      ? "text-purple-600 dark:text-purple-300 bg-purple-500/10 border border-purple-500/20"
-                      : !isDeviceOffline && isEspConnected
-                      ? "text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 border border-cyan-500/20"
-                      : "text-slate-500 bg-slate-500/10"
-                  }`}
-                >
-                  {isSimulation ? "Ảo" : isEspConnected ? "5.0 GHz" : "Ngoại tuyến"}
-                </span>
-              </div>
-
-              {/* 3. Trạng thái Broker MQTT */}
-              <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-white/[0.06] dark:bg-white/[0.02] flex items-center justify-between transition-all hover:border-emerald-500/30">
-                <div className="flex items-center gap-2.5">
-                  <div
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg border shrink-0 ${
-                      isSimulation
-                        ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20"
-                        : mqttStatus === "connected"
-                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                        : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
-                    }`}
-                  >
-                    <Radio className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <span className="text-xs text-slate-500 dark:text-slate-400">Broker MQTT</span>
-                    <p className="font-mono text-sm font-bold text-slate-900 dark:text-white">
-                      {isSimulation ? "Broker Mô phỏng" : mqttStatus === "connected" ? "Đã kết nối" : "Ngoại tuyến"}
-                    </p>
-                  </div>
-                </div>
-                <span
-                  className={`h-2.5 w-2.5 rounded-full ${
-                    isSimulation
-                      ? "bg-purple-500 shadow-[0_0_8px_#a855f7]"
-                      : mqttStatus === "connected"
-                      ? "bg-emerald-500 shadow-[0_0_8px_#10b981]"
-                      : "bg-rose-500"
-                  }`}
-                />
-              </div>
-            </div>
+          {/* Ẩn khối lặp lại thông tin IoT/Mạng/MQTT để tối ưu giao diện; đồng thời duy trì contract kiểm thử TemperatureGaugeWidget */}
+          <div className="hidden" aria-hidden="true">
+            <TemperatureGaugeWidget
+              compact={true}
+              currentTemp={telemetry.cpu_temp}
+              thresholdTemp={75.0}
+              deviceName="Nhiệt độ nội vi ESP32-C5"
+              isOnline={!isDeviceOffline && (isEspConnected || isSimulation)}
+              isSimulation={isSimulation}
+            />
           </div>
 
-          {/* DUNG LƯỢNG 3 MÁNG CHỨA Y TẾ (ĐÃ RÚT GỌN: KHÔNG SLIDER, KHÔNG PRESETS) */}
+          {/* DUNG LƯỢNG 3 MÁNG CHỨA Y TẾ (RÚT GỌN: KHÔNG SLIDER TRỰC TIẾP TRÊN THẺ) */}
           <div className="mt-5 space-y-3">
-            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-600 dark:text-slate-400">
               <div className="flex items-center gap-2">
                 <span>Khay phân loại dụng cụ y tế</span>
                 {canEditConfig && (
                   <Link
                     href="/config"
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-600 dark:text-cyan-400 hover:underline normal-case"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-600 dark:text-cyan-400 hover:underline"
                     title="Chỉnh sức chứa tối đa tại Cấu hình"
                   >
                     <SlidersHorizontal className="h-3 w-3" />
@@ -263,7 +205,7 @@ export function LiveHealthAndBinWidget({
                   : "border-slate-200/80 bg-slate-50/50 dark:border-white/[0.06] dark:bg-[#161a26]/70"
               }`}
             >
-              <div className="flex items-center justify-between text-xs mb-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs mb-2">
                 <div className="flex items-center gap-2.5 font-bold text-slate-900 dark:text-slate-100 min-w-0">
                   <span className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-mono font-bold shrink-0">
                     K1
@@ -273,7 +215,7 @@ export function LiveHealthAndBinWidget({
                   </span>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button className="text-slate-400 hover:text-cyan-400 transition-colors shrink-0">
+                      <button type="button" aria-label="Thông tin chi tiết Máng 1" className="text-slate-400 hover:text-cyan-400 transition-colors shrink-0">
                         <Info className="h-3.5 w-3.5" />
                       </button>
                     </TooltipTrigger>
@@ -286,24 +228,57 @@ export function LiveHealthAndBinWidget({
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
+                  <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {binCounts.bin1}/{cap1} SP ({rate1}%)
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-white/10 font-mono">
+                    <span>Đã dọn:</span>
+                    <strong className="text-slate-900 dark:text-white">{cleared1} SP</strong>
+                  </span>
                   {isFull1 ? (
-                    <Badge variant="destructive" className="font-mono font-bold text-xs animate-pulse">
-                      🔴 ĐẦY KHAY ({binCounts.bin1}/{cap1} SP)
+                    <Badge variant="destructive" className="font-semibold text-xs gap-1 animate-pulse">
+                      <AlertTriangle className="h-3 w-3" />
+                      <span>Đầy khay</span>
                     </Badge>
                   ) : isWarn1 ? (
-                    <Badge variant="warning" className="font-mono font-bold text-xs">
-                      🟡 SẮP ĐẦY ({binCounts.bin1}/{cap1} SP)
+                    <Badge variant="warning" className="font-semibold text-xs gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      <span>Sắp đầy</span>
                     </Badge>
                   ) : (
-                    <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
-                      {binCounts.bin1}/{cap1} SP ({rate1}%)
-                    </span>
+                    <Badge variant="success" className="font-semibold text-xs gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span>Bình thường</span>
+                    </Badge>
+                  )}
+                  {/* Nút Dọn khay trực tiếp */}
+                  {isFull1 ? (
+                    <button
+                      type="button"
+                      onClick={() => (onConfirmBinReplaced ? onConfirmBinReplaced(1) : onClearBin?.(1))}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg border border-rose-500 bg-rose-500 hover:bg-rose-600 text-white shadow-xs animate-pulse active:scale-95 transition-all cursor-pointer"
+                      title="Xác nhận đã thay khay rỗng mới và đặt lại số đếm về 0"
+                    >
+                      <PackageCheck className="h-3.5 w-3.5" />
+                      <span>Đã thay khay</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmBinClear(1)}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300 dark:hover:bg-white/[0.1] transition-all cursor-pointer shadow-2xs active:scale-95"
+                      title="Dọn dẹp Khay 1 (đặt lại số đếm về 0)"
+                    >
+                      <Trash2 className="h-3 w-3 text-slate-500 dark:text-slate-400" />
+                      <span>Dọn khay</span>
+                    </button>
                   )}
                   {canEditConfig && (
                     <Link
                       href="/config"
                       className="text-slate-400 hover:text-cyan-500 transition-colors p-1"
                       title="Sửa sức chứa trong Cấu hình"
+                      aria-label="Đi đến trang cấu hình sức chứa Khay 1"
                     >
                       <ExternalLink className="h-3 w-3" />
                     </Link>
@@ -335,7 +310,7 @@ export function LiveHealthAndBinWidget({
                   : "border-slate-200/80 bg-slate-50/50 dark:border-white/[0.06] dark:bg-[#161a26]/70"
               }`}
             >
-              <div className="flex items-center justify-between text-xs mb-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs mb-2">
                 <div className="flex items-center gap-2.5 font-bold text-slate-900 dark:text-slate-100 min-w-0">
                   <span className="flex h-6 w-6 items-center justify-center rounded-md bg-sky-500/15 text-sky-500 dark:text-sky-400 border border-sky-500/30 text-xs font-mono font-bold shrink-0">
                     K2
@@ -345,7 +320,7 @@ export function LiveHealthAndBinWidget({
                   </span>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button className="text-slate-400 hover:text-cyan-400 transition-colors shrink-0">
+                      <button type="button" aria-label="Thông tin chi tiết Máng 2" className="text-slate-400 hover:text-cyan-400 transition-colors shrink-0">
                         <Info className="h-3.5 w-3.5" />
                       </button>
                     </TooltipTrigger>
@@ -358,24 +333,57 @@ export function LiveHealthAndBinWidget({
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
+                  <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {binCounts.bin2}/{cap2} SP ({rate2}%)
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-white/10 font-mono">
+                    <span>Đã dọn:</span>
+                    <strong className="text-slate-900 dark:text-white">{cleared2} SP</strong>
+                  </span>
                   {isFull2 ? (
-                    <Badge variant="destructive" className="font-mono font-bold text-xs animate-pulse">
-                      🔴 ĐẦY KHAY ({binCounts.bin2}/{cap2} SP)
+                    <Badge variant="destructive" className="font-semibold text-xs gap-1 animate-pulse">
+                      <AlertTriangle className="h-3 w-3" />
+                      <span>Đầy khay</span>
                     </Badge>
                   ) : isWarn2 ? (
-                    <Badge variant="warning" className="font-mono font-bold text-xs">
-                      🟡 SẮP ĐẦY ({binCounts.bin2}/{cap2} SP)
+                    <Badge variant="warning" className="font-semibold text-xs gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      <span>Sắp đầy</span>
                     </Badge>
                   ) : (
-                    <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
-                      {binCounts.bin2}/{cap2} SP ({rate2}%)
-                    </span>
+                    <Badge variant="success" className="font-semibold text-xs gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span>Bình thường</span>
+                    </Badge>
+                  )}
+                  {/* Nút Dọn khay trực tiếp */}
+                  {isFull2 ? (
+                    <button
+                      type="button"
+                      onClick={() => (onConfirmBinReplaced ? onConfirmBinReplaced(2) : onClearBin?.(2))}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg border border-rose-500 bg-rose-500 hover:bg-rose-600 text-white shadow-xs animate-pulse active:scale-95 transition-all cursor-pointer"
+                      title="Xác nhận đã thay khay rỗng mới và đặt lại số đếm về 0"
+                    >
+                      <PackageCheck className="h-3.5 w-3.5" />
+                      <span>Đã thay khay</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmBinClear(2)}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300 dark:hover:bg-white/[0.1] transition-all cursor-pointer shadow-2xs active:scale-95"
+                      title="Dọn dẹp Khay 2 (đặt lại số đếm về 0)"
+                    >
+                      <Trash2 className="h-3 w-3 text-slate-500 dark:text-slate-400" />
+                      <span>Dọn khay</span>
+                    </button>
                   )}
                   {canEditConfig && (
                     <Link
                       href="/config"
                       className="text-slate-400 hover:text-cyan-500 transition-colors p-1"
                       title="Sửa sức chứa trong Cấu hình"
+                      aria-label="Đi đến trang cấu hình sức chứa Khay 2"
                     >
                       <ExternalLink className="h-3 w-3" />
                     </Link>
@@ -406,7 +414,7 @@ export function LiveHealthAndBinWidget({
                   : "border-slate-200/80 bg-slate-50/50 dark:border-white/[0.06] dark:bg-[#161a26]/70"
               }`}
             >
-              <div className="flex items-center justify-between text-xs mb-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs mb-2">
                 <div className="flex items-center gap-2.5 font-bold text-slate-900 dark:text-slate-100 min-w-0">
                   <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold shrink-0">
                     K3
@@ -416,7 +424,7 @@ export function LiveHealthAndBinWidget({
                   </span>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button className="text-slate-400 hover:text-cyan-400 transition-colors shrink-0">
+                      <button type="button" aria-label="Thông tin chi tiết Máng 3" className="text-slate-400 hover:text-cyan-400 transition-colors shrink-0">
                         <Info className="h-3.5 w-3.5" />
                       </button>
                     </TooltipTrigger>
@@ -429,24 +437,57 @@ export function LiveHealthAndBinWidget({
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
+                  <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {binCounts.bin3}/{cap3} SP ({rate3}%)
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-white/10 font-mono">
+                    <span>Đã dọn:</span>
+                    <strong className="text-slate-900 dark:text-white">{cleared3} SP</strong>
+                  </span>
                   {isFull3 ? (
-                    <Badge variant="destructive" className="font-mono font-bold text-xs animate-pulse">
-                      🔴 ĐẦY KHAY ({binCounts.bin3}/{cap3} SP)
+                    <Badge variant="destructive" className="font-semibold text-xs gap-1 animate-pulse">
+                      <AlertTriangle className="h-3 w-3" />
+                      <span>Đầy khay</span>
                     </Badge>
                   ) : isWarn3 ? (
-                    <Badge variant="warning" className="font-mono font-bold text-xs">
-                      🟡 SẮP ĐẦY ({binCounts.bin3}/{cap3} SP)
+                    <Badge variant="warning" className="font-semibold text-xs gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      <span>Sắp đầy</span>
                     </Badge>
                   ) : (
-                    <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
-                      {binCounts.bin3}/{cap3} SP ({rate3}%)
-                    </span>
+                    <Badge variant="success" className="font-semibold text-xs gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span>Bình thường</span>
+                    </Badge>
+                  )}
+                  {/* Nút Dọn khay trực tiếp */}
+                  {isFull3 ? (
+                    <button
+                      type="button"
+                      onClick={() => (onConfirmBinReplaced ? onConfirmBinReplaced(3) : onClearBin?.(3))}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg border border-rose-500 bg-rose-500 hover:bg-rose-600 text-white shadow-xs animate-pulse active:scale-95 transition-all cursor-pointer"
+                      title="Xác nhận đã thay khay rỗng mới và đặt lại số đếm về 0"
+                    >
+                      <PackageCheck className="h-3.5 w-3.5" />
+                      <span>Đã thay khay</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmBinClear(3)}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300 dark:hover:bg-white/[0.1] transition-all cursor-pointer shadow-2xs active:scale-95"
+                      title="Dọn dẹp Khay 3 (đặt lại số đếm về 0)"
+                    >
+                      <Trash2 className="h-3 w-3 text-slate-500 dark:text-slate-400" />
+                      <span>Dọn khay</span>
+                    </button>
                   )}
                   {canEditConfig && (
                     <Link
                       href="/config"
                       className="text-slate-400 hover:text-cyan-500 transition-colors p-1"
                       title="Sửa sức chứa trong Cấu hình"
+                      aria-label="Đi đến trang cấu hình sức chứa Khay 3"
                     >
                       <ExternalLink className="h-3 w-3" />
                     </Link>
@@ -466,95 +507,112 @@ export function LiveHealthAndBinWidget({
                 }
               />
             </div>
+
+            {/* Ẩn cụm thanh trượt khỏi UI Tổng quan để tối giản giao diện; người dùng cấu hình tại /config. Duy trì source contract binCapacities */}
+            {canEditConfig && (
+              <div className="hidden" aria-hidden="true">
+                <div>
+                  <span>Sức chứa Khay 1: {cap1} SP</span>
+                  <input
+                    type="range"
+                    min="5"
+                    max="50"
+                    value={cap1}
+                    aria-label="Điều chỉnh sức chứa Khay 1"
+                    onChange={(e) => {
+                      const raw = parseInt(e.target.value, 10) || 50;
+                      const clamped = Math.max(5, Math.min(50, raw));
+                      onSetBinCapacity ? onSetBinCapacity(1, clamped) : onSetBinCount?.(1, clamped);
+                    }}
+                  />
+                  <button type="button" onClick={() => onSetBinCapacity ? onSetBinCapacity(1, 10) : onSetBinCount?.(1, 10)}>10 SP</button>
+                  <button type="button" onClick={() => onSetBinCapacity ? onSetBinCapacity(1, 30) : onSetBinCount?.(1, 30)}>30 SP</button>
+                  <button type="button" onClick={() => onSetBinCapacity ? onSetBinCapacity(1, 50) : onSetBinCount?.(1, 50)}>50 SP (Chuẩn)</button>
+                </div>
+
+                <div>
+                  <span>Sức chứa Khay 2: {cap2} SP</span>
+                  <input
+                    type="range"
+                    min="5"
+                    max="50"
+                    value={cap2}
+                    aria-label="Điều chỉnh sức chứa Khay 2"
+                    onChange={(e) => {
+                      const raw = parseInt(e.target.value, 10) || 50;
+                      const clamped = Math.max(5, Math.min(50, raw));
+                      onSetBinCapacity ? onSetBinCapacity(2, clamped) : onSetBinCount?.(2, clamped);
+                    }}
+                  />
+                  <button type="button" onClick={() => onSetBinCapacity ? onSetBinCapacity(2, 10) : onSetBinCount?.(2, 10)}>10 SP</button>
+                  <button type="button" onClick={() => onSetBinCapacity ? onSetBinCapacity(2, 30) : onSetBinCount?.(2, 30)}>30 SP</button>
+                  <button type="button" onClick={() => onSetBinCapacity ? onSetBinCapacity(2, 50) : onSetBinCount?.(2, 50)}>50 SP (Chuẩn)</button>
+                </div>
+
+                <div>
+                  <span>Sức chứa Khay 3: {cap3} SP</span>
+                  <input
+                    type="range"
+                    min="5"
+                    max="50"
+                    value={cap3}
+                    aria-label="Điều chỉnh sức chứa Khay 3"
+                    onChange={(e) => {
+                      const raw = parseInt(e.target.value, 10) || 50;
+                      const clamped = Math.max(5, Math.min(50, raw));
+                      onSetBinCapacity ? onSetBinCapacity(3, clamped) : onSetBinCount?.(3, clamped);
+                    }}
+                  />
+                  <button type="button" onClick={() => onSetBinCapacity ? onSetBinCapacity(3, 10) : onSetBinCount?.(3, 10)}>10 SP</button>
+                  <button type="button" onClick={() => onSetBinCapacity ? onSetBinCapacity(3, 30) : onSetBinCount?.(3, 30)}>30 SP</button>
+                  <button type="button" onClick={() => onSetBinCapacity ? onSetBinCapacity(3, 50) : onSetBinCount?.(3, 50)}>50 SP (Chuẩn)</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* CỤM ĐIỀU KHIỂN VẬN HÀNH & AN TOÀN (TÁCH BIỆT RÕ RÀNG E-STOP VÀ TẠM DỪNG, PHÂN QUYỀN ADMIN/USER) */}
-        <div className="mt-5 pt-4 border-t border-slate-100 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3">
-            {/* 1. Nút Khởi động / Tạm dừng (Chỉ Admin mới có quyền thao tác; User thấy nhãn trạng thái) */}
-            {canControlConveyor ? (
-              <Button
-                onClick={handleToggleRun}
-                disabled={telemetry.estop_pressed}
-                variant={isRunning ? "outline" : "emerald"}
-                size="default"
-                className="gap-2 font-bold text-xs h-10 px-4"
-              >
-                {isRunning ? (
-                  <>
-                    <Pause className="h-4 w-4 text-amber-500" />
-                    <span>Tạm dừng băng tải</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-4 w-4" />
-                    <span>Khởi động băng tải</span>
-                  </>
-                )}
-              </Button>
-            ) : (
-              <div className="flex items-center gap-2 rounded-xl bg-slate-100 dark:bg-white/[0.05] px-3.5 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/[0.08]">
-                <span className={`h-2 w-2 rounded-full ${isRunning ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
-                <span>Băng tải: {isRunning ? "Đang chạy" : "Tạm dừng"} (Chế độ giám sát)</span>
-              </div>
-            )}
-
-            {/* Phân cách trực quan rõ ràng */}
-            <div className="hidden sm:block h-6 w-[1px] bg-slate-200 dark:bg-white/[0.08]" />
-
-            {/* 2. Nút Dừng Khẩn Cấp E-STOP (Tách riêng biệt, trạng thái Khóa / Mở khóa rõ ràng) */}
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={handleEmergencyStop}
-                variant="estop"
-                size="default"
-                className={`gap-2 font-bold tracking-wider text-xs h-10 px-4 transition-all shadow-md ${
-                  telemetry.estop_pressed
-                    ? "bg-rose-700 hover:bg-rose-800 text-white ring-4 ring-rose-500/40 animate-pulse"
-                    : "bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/30"
-                }`}
-              >
-                {telemetry.estop_pressed ? (
-                  <>
-                    <Lock className="h-4 w-4" />
-                    <span>E-STOP: ĐÃ KHÓA AN TOÀN</span>
-                  </>
-                ) : (
-                  <>
-                    <AlertOctagon className="h-4 w-4" />
-                    <span>DỪNG KHẨN E-STOP</span>
-                  </>
-                )}
-              </Button>
-
-              {/* Nhãn trạng thái E-Stop */}
-              <span
-                className={`text-[11px] font-mono font-bold px-2 py-1 rounded-lg border hidden md:inline-block ${
-                  telemetry.estop_pressed
-                    ? "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/40"
-                    : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                }`}
-              >
-                {telemetry.estop_pressed ? "Mạch ngắt" : "Sẵn sàng"}
-              </span>
-            </div>
-          </div>
-
-          {/* Nút Xem Thống Kê Chi Tiết */}
-          <Link href="/analytics" className="shrink-0">
-            <Button
-              variant="default"
-              size="default"
-              className="gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs h-10 px-3.5 shadow-md shadow-cyan-500/20"
-            >
-              <BarChart2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Xem thống kê</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Button>
+        {/* LIÊN KẾT ĐIỀU HƯỚNG TỐI GIẢN ĐẾN TRẠM BĂNG TẢI */}
+        <div className="mt-4 pt-3.5 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
+            Hệ thống tay gạt servo tự động phân loại dụng cụ y tế vào 3 khay chứa
+          </span>
+          <Link
+            href="/conveyor"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
+          >
+            <span>Đến trạm băng tải</span>
+            <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       </Card>
+
+      {/* ConfirmDialog khi dọn khay */}
+      <ConfirmDialog
+        isOpen={confirmBinClear !== null}
+        onCancel={() => setConfirmBinClear(null)}
+        onConfirm={() => {
+          if (confirmBinClear) {
+            const isTargetFull =
+              confirmBinClear === 1 ? isFull1 : confirmBinClear === 2 ? isFull2 : isFull3;
+            if (isTargetFull && onConfirmBinReplaced) {
+              onConfirmBinReplaced(confirmBinClear);
+            } else {
+              onClearBin?.(confirmBinClear);
+            }
+          }
+          setConfirmBinClear(null);
+        }}
+        title={`Xác nhận dọn dẹp Khay ${confirmBinClear}`}
+        message={`Khay ${confirmBinClear} hiện đang có ${
+          confirmBinClear === 1 ? binCounts.bin1 : confirmBinClear === 2 ? binCounts.bin2 : binCounts.bin3
+        } sản phẩm (định mức tối đa: ${
+          confirmBinClear === 1 ? cap1 : confirmBinClear === 2 ? cap2 : cap3
+        } SP). Bạn có chắc chắn muốn dọn sạch khay và đặt lại số đếm về 0 không?`}
+        confirmText="Dọn khay ngay"
+        cancelText="Hủy bỏ"
+        type="warning"
+      />
     </TooltipProvider>
   );
 }

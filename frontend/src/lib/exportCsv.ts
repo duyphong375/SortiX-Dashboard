@@ -172,7 +172,7 @@ export function printShiftSummaryReport(summary: ShiftSummaryPayload): void {
           .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #f8fafc; }
           .card-title { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; margin-bottom: 6px; }
           .card-val { font-size: 24px; font-weight: 800; color: #0f172a; }
-          .card-val.good { color: #059669; }
+          .card-val.good { color: #2563eb; }
           .card-val.defect { color: #e11d48; }
           .card-val.rate { color: #0284c7; }
           table { width: 100%; border-collapse: collapse; margin-top: 16px; }

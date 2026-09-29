@@ -344,7 +344,7 @@ export const CalendarWidget = React.memo(function CalendarWidget({
                 {cell.day}
                 {hasData && (
                   <span
-                    className="absolute bottom-1 h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]"
+                    className="absolute bottom-1 h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#3b82f6]"
                     title={`${cell.stats?.total} sản phẩm`}
                   />
                 )}

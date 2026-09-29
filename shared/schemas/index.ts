@@ -75,7 +75,7 @@ export const HistoryQuerySchema = z.object({
 });
 
 // User Account Schemas
-export const UserRoleSchema = z.enum(["admin", "user"]);
+export const UserRoleSchema = z.enum(["admin", "user", "maintenance"]);
 export const UserStatusSchema = z.enum(["active", "locked"]);
 
 export const UpdateProfileSchema = z.object({

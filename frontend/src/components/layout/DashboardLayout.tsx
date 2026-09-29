@@ -34,6 +34,7 @@ import {
   getBusinessDateKey,
   formatVietnameseDate,
 } from "@/lib/history";
+import { logHardwareTestAction } from "@/lib/hardwareAuditService";
 import { triggerAlertDispatch, sendTelegramAlert, sendEmailAlert } from "@/lib/alertService";
 import { industrialAudio } from "@/lib/audioService";
 import { EmergencyStopBanner } from "./EmergencyStopBanner";
@@ -50,7 +51,7 @@ import { EmergencyConfirmModal } from "@/components/ui/EmergencyConfirmModal";
 import { DashboardIncidentLayer } from "./DashboardIncidentLayer";
 import { AiCopilot } from "@/components/AiCopilot";
 import { ApiSafetyClient } from "@/services/apiSafetyClient";
-import { fetchSyncData, myClientId } from "@/services/apiSyncClient";
+import { fetchSyncData, myClientId, updateSyncState } from "@/services/apiSyncClient";
 
 
 // Custom Hooks (Refactored Architecture)
@@ -180,12 +181,17 @@ export interface DashboardState {
   handleClearBin: (binIndex: 1 | 2 | 3) => void;
   handleResetConfigToDefault: () => void;
   handleResetActuatorStates: () => void;
+  handleTestActuator: (type: "servo_1" | "servo_2" | "buzzer", value?: number) => void;
 
   // Theme & Audio
   themeMode: ThemeMode;
   toggleTheme: () => void;
   isMuted: boolean;
   handleToggleSound: () => void;
+
+  // Manual sync
+  isSyncing: boolean;
+  handleManualSync: () => Promise<void>;
 }
 
 export const DashboardContext = React.createContext<DashboardState | null>(null);
@@ -264,6 +270,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [clearHistoryDialogOpen, setClearHistoryDialogOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Hook 1: Theme and Audio Management
   const { themeMode, toggleTheme, isMuted, handleToggleSound } = useThemeAudio();
@@ -1654,6 +1661,100 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     mqtt.publishCommand("reset_actuators");
   }, [conveyor, mqtt]);
 
+  const handleTestActuator = useCallback(
+    (type: "servo_1" | "servo_2" | "buzzer", value?: number) => {
+      const isSim = sorterData.isSimulationRef.current;
+      const angle = value ?? 45;
+
+      if (type === "servo_1") {
+        if (angle === 0) {
+          conveyor.setArm1Active(false);
+          setTelemetry((prev) => ({ ...prev, arm1_active: false }));
+          logHardwareTestAction("TẮT / Thu tay gạt Servo 1 (0°)", "GPIO 18 (LEDC PWM)", user?.username || "admin1", "actuator", "success");
+          if (!isSim) {
+            mqtt.publishCommand("trigger_servo_1", 0);
+            toast.info("[THỰC TẾ] Đã TẮT / trả Servo 1 (GPIO 18) về vị trí nghỉ 0°");
+          } else {
+            toast.info("[MÔ PHỎNG] Đã TẮT / trả tay gạt Máng 1 về 0°");
+          }
+          return;
+        }
+
+        // BẬT tay gạt Máng 1
+        conveyor.setArm1Active(true);
+        setTelemetry((prev) => ({ ...prev, arm1_active: true }));
+        logHardwareTestAction(`BẬT / Gạt Servo 1 góc ${angle}°`, "GPIO 18 (LEDC PWM)", user?.username || "admin1", "actuator", "success");
+        industrialAudio.playClick();
+        setTimeout(() => {
+          conveyor.setArm1Active(false);
+          setTelemetry((prev) => ({ ...prev, arm1_active: false }));
+        }, 3500);
+
+        if (!isSim) {
+          mqtt.publishCommand("trigger_servo_1", angle);
+          toast.success(`[THỰC TẾ] Đã BẬT gạt Servo 1 (GPIO 18) góc ${angle}°`);
+        } else {
+          toast.info(`[MÔ PHỎNG] Đã BẬT tay gạt Máng 1 góc ${angle}°`);
+        }
+      } else if (type === "servo_2") {
+        if (angle === 0) {
+          conveyor.setArm2Active(false);
+          setTelemetry((prev) => ({ ...prev, arm2_active: false }));
+          logHardwareTestAction("TẮT / Thu tay gạt Servo 2 (0°)", "GPIO 19 (LEDC PWM)", user?.username || "admin1", "actuator", "success");
+          if (!isSim) {
+            mqtt.publishCommand("trigger_servo_2", 0);
+            toast.info("[THỰC TẾ] Đã TẮT / trả Servo 2 (GPIO 19) về vị trí nghỉ 0°");
+          } else {
+            toast.info("[MÔ PHỎNG] Đã TẮT / trả tay gạt Máng 2 về 0°");
+          }
+          return;
+        }
+
+        // BẬT tay gạt Máng 2
+        conveyor.setArm2Active(true);
+        setTelemetry((prev) => ({ ...prev, arm2_active: true }));
+        logHardwareTestAction(`BẬT / Gạt Servo 2 góc ${angle}°`, "GPIO 19 (LEDC PWM)", user?.username || "admin1", "actuator", "success");
+        industrialAudio.playClick();
+        setTimeout(() => {
+          conveyor.setArm2Active(false);
+          setTelemetry((prev) => ({ ...prev, arm2_active: false }));
+        }, 3500);
+
+        if (!isSim) {
+          mqtt.publishCommand("trigger_servo_2", angle);
+          toast.success(`[THỰC TẾ] Đã BẬT gạt Servo 2 (GPIO 19) góc ${angle}°`);
+        } else {
+          toast.info(`[MÔ PHỎNG] Đã BẬT tay gạt Máng 2 góc ${angle}°`);
+        }
+      } else if (type === "buzzer") {
+        if (value === 0) {
+          industrialAudio.stopContinuousEmergencyAlarm();
+          industrialAudio.silenceAll();
+          logHardwareTestAction("TẮT / Ngắt Còi cảnh báo", "GPIO 21 (Buzzer Alert)", user?.username || "admin1", "alarm", "success");
+          if (!isSim) {
+            mqtt.publishCommand("trigger_buzzer", 0);
+            toast.info("[THỰC TẾ] Đã TẮT Còi cảnh báo (GPIO 21)");
+          } else {
+            toast.info("[MÔ PHỎNG] Đã TẮT Còi cảnh báo");
+          }
+          return;
+        }
+
+        // BẬT còi cảnh báo hú liên tục cho đến khi người dùng bấm TẮT
+        logHardwareTestAction("BẬT / Hú Còi cảnh báo (Liên tục)", "GPIO 21 (Buzzer Alert)", user?.username || "admin1", "alarm", "success");
+        industrialAudio.startContinuousEmergencyAlarm();
+
+        if (!isSim) {
+          mqtt.publishCommand("trigger_buzzer", 1);
+          toast.success("[THỰC TẾ] Đã BẬT Còi cảnh báo Buzzer (GPIO 21) hú liên tục tới ESP32");
+        } else {
+          toast.info("[MÔ PHỎNG] Đã BẬT Còi cảnh báo Buzzer (Hú liên tục)");
+        }
+      }
+    },
+    [conveyor, mqtt, setTelemetry, sorterData.isSimulationRef, toast, user]
+  );
+
   const handleClearHistory = useCallback(() => {
     setClearHistoryDialogOpen(true);
   }, []);
@@ -1803,6 +1904,35 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     [handleTriggerBinFull, sorterData]
   );
 
+  // Handler: Đồng bộ dữ liệu tức thời với Máy chủ và Thiết bị
+  const handleManualSync = useCallback(async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    industrialAudio.playClick();
+    try {
+      const ok = await sorterData.triggerManualSync();
+      try {
+        await updateSyncState({
+          isRunning: conveyor.isRunning,
+          speed: conveyor.conveyorSpeed,
+          binCapacities: sorterData.binCapacities,
+          config: sorterConfig,
+        });
+      } catch {
+        // non-fatal
+      }
+      if (ok) {
+        toast.success("Đồng bộ dữ liệu thành công với máy chủ và thiết bị!");
+      } else {
+        toast.info("Đã gửi yêu cầu đồng bộ. Đang làm mới dữ liệu...");
+      }
+    } catch {
+      toast.error("Lỗi khi đồng bộ dữ liệu với máy chủ.");
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [isSyncing, sorterData, conveyor.isRunning, conveyor.conveyorSpeed, sorterConfig, toast]);
+
   // Context value
   const dashboardState: DashboardState = {
     isSystemLocked,
@@ -1895,10 +2025,13 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     handleClearBin,
     handleResetConfigToDefault,
     handleResetActuatorStates,
+    handleTestActuator,
     themeMode,
     toggleTheme,
     isMuted,
     handleToggleSound,
+    isSyncing,
+    handleManualSync,
   };
 
   // Skip layout on login page
@@ -1955,7 +2088,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         {/* Main Content Area */}
         <div
           className={`flex flex-1 flex-col overflow-hidden transition-all duration-300 ${
-            sidebarCollapsed ? "lg:ml-[72px]" : "lg:ml-[260px]"
+            sidebarCollapsed ? "lg:ml-[72px]" : "lg:ml-[268px]"
           }`}
         >
           {/* Banner màu đỏ rực nhấp nháy trên đỉnh trang khi E-Stop kích hoạt */}
@@ -1989,6 +2122,8 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             onToggleSimulationMode={user?.role === "user" ? undefined : handleToggleSimulationMode}
             isDeviceOffline={isDeviceOffline}
             onTriggerShiftSummary={() => handleTriggerShiftSummary(undefined, "user_action")}
+            onManualSync={handleManualSync}
+            isSyncing={isSyncing}
             lastUpdated={lastTelemetryTime}
           />
 

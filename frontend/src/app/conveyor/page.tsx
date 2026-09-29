@@ -34,6 +34,7 @@ export default function ConveyorPage() {
     handleSetBinCount,
     binCapacities,
     handleSetBinCapacity,
+    handleTestActuator,
   } = useDashboard();
 
   const canEstop = usePermission("conveyor.estop");
@@ -81,6 +82,7 @@ export default function ConveyorPage() {
         onSetBinCount={handleSetBinCount}
         binCapacities={binCapacities}
         onSetBinCapacity={handleSetBinCapacity}
+        onTestActuator={handleTestActuator}
       />
     </div>
   );

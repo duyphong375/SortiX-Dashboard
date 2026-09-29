@@ -23,7 +23,7 @@ const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 giờ
 function isValidStoredUser(value: unknown): value is AuthUser {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<AuthUser>;
-  if (candidate.role !== "admin" && candidate.role !== "user") return false;
+  if (candidate.role !== "admin" && candidate.role !== "user" && candidate.role !== "maintenance") return false;
   if (typeof candidate.loginTime !== "string") return false;
   const loginAt = Date.parse(candidate.loginTime);
   if (!Number.isFinite(loginAt) || Date.now() - loginAt > SESSION_TTL_MS || loginAt > Date.now() + 60_000) return false;

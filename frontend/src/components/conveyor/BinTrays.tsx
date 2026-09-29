@@ -398,7 +398,7 @@ export function BinTrays({
             </div>
 
             <div className="mt-1.5 flex items-center justify-between text-[10px] font-medium text-slate-500 dark:text-slate-400 gap-2">
-              <span className="truncate">Thoát tự do 1000mm • 96%</span>
+              <span className="truncate">Thoát tự do 600mm • 96%</span>
               {isFull3 ? (
                 <span className="font-mono font-black text-rose-300 bg-rose-950/80 border border-rose-500/50 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
                   🔴 Đầy khay ({binCounts.bin3}/{cap3}) - Cần thay

@@ -9,9 +9,15 @@ import { Badge } from "@/components/ui/badge";
 
 export interface RecentActivityListProps {
   records: ClassificationRecord[];
+  isSimulation?: boolean;
+  onSimulateNewItem?: () => void;
 }
 
-export function RecentActivityList({ records }: RecentActivityListProps) {
+export function RecentActivityList({
+  records,
+  isSimulation = false,
+  onSimulateNewItem,
+}: RecentActivityListProps) {
   const recentRecords = records.slice(0, 5);
 
   return (
@@ -52,9 +58,32 @@ export function RecentActivityList({ records }: RecentActivityListProps) {
           <tbody className="divide-y divide-slate-100 dark:divide-white/[0.05]">
             {recentRecords.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-10 text-center text-slate-400">
-                  <Package className="mx-auto mb-2 h-8 w-8 text-slate-300 dark:text-slate-700" />
-                  Chưa có sản phẩm nào trong ca làm việc.
+                <td colSpan={6} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
+                  <Package className="mx-auto mb-3 h-10 w-10 text-slate-300 dark:text-slate-600" />
+                  <p className="font-semibold text-slate-700 dark:text-slate-200">
+                    Chưa có sản phẩm trong ca làm việc. Hệ thống đang chờ cảm biến đầu vào.
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Khi cảm biến quang điện S1 phát hiện phôi và camera AI phân loại, kết quả sẽ xuất hiện tức thì tại đây.
+                  </p>
+                  <div className="mt-4 flex items-center justify-center gap-3">
+                    <Link
+                      href="/history"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-cyan-600 dark:text-cyan-400 hover:underline"
+                    >
+                      <span>Xem lịch sử</span>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                    {isSimulation && onSimulateNewItem && (
+                      <button
+                        type="button"
+                        onClick={onSimulateNewItem}
+                        className="rounded-lg border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-xs font-semibold text-purple-700 hover:bg-purple-500/20 dark:text-purple-300 transition-colors"
+                      >
+                        Nạp phôi mô phỏng
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -64,7 +93,13 @@ export function RecentActivityList({ records }: RecentActivityListProps) {
                   ? rec.product_id
                   : `#${rec.product_id}`;
 
-                const confidencePct = rec.confidence ? (rec.confidence * 100).toFixed(1) : "98.5";
+                const hasValidConfidence =
+                  typeof rec.confidence === "number" &&
+                  rec.confidence > 0 &&
+                  !isNaN(rec.confidence);
+                const confidencePct = hasValidConfidence
+                  ? ((rec.confidence as number) * 100).toFixed(1)
+                  : null;
 
                 return (
                   <tr
@@ -114,15 +149,19 @@ export function RecentActivityList({ records }: RecentActivityListProps) {
                       )}
                     </td>
                     <td className="px-6 py-3.5 font-mono text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 dark:text-slate-100">{confidencePct}%</span>
-                        <div className="h-1.5 w-16 rounded-full bg-slate-200 dark:bg-slate-700/80 overflow-hidden">
-                          <div
-                            className="h-full bg-cyan-500 rounded-full"
-                            style={{ width: `${confidencePct}%` }}
-                          />
+                      {confidencePct ? (
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900 dark:text-slate-100">{confidencePct}%</span>
+                          <div className="h-1.5 w-16 rounded-full bg-slate-200 dark:bg-slate-700/80 overflow-hidden">
+                            <div
+                              className="h-full bg-cyan-500 rounded-full"
+                              style={{ width: `${confidencePct}%` }}
+                            />
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <span className="font-bold text-slate-400">--</span>
+                      )}
                     </td>
                     <td className="px-6 py-3.5 text-right font-mono text-xs text-slate-500 dark:text-slate-400">
                       {rec.timestamp

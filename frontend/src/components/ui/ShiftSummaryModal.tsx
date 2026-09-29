@@ -168,12 +168,12 @@ export const ShiftSummaryModal: React.FC<ShiftSummaryModalProps> = ({
           <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-3.5">
             <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-1">
               <Sparkles className="h-3 w-3" />
-              Độ chính xác
+              Độ tin cậy AI
             </span>
             <p className="font-mono text-2xl font-black text-cyan-600 dark:text-cyan-400 mt-1">
               {summary.accuracy_rate}
             </p>
-            <span className="text-[10px] text-cyan-500 font-semibold">Tỷ lệ chính xác</span>
+            <span className="text-[10px] text-cyan-500 font-semibold">Mô hình YOLOv8</span>
           </div>
         </div>
 

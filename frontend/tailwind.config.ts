@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import colors from "tailwindcss/colors";
 
 const config: Config = {
   content: [
@@ -14,6 +15,9 @@ const config: Config = {
         foreground: "hsl(var(--foreground))",
         card: "hsl(var(--card))",
         "card-foreground": "hsl(var(--card-foreground))",
+        emerald: colors.blue,
+        green: colors.blue,
+        teal: colors.blue,
         primary: {
           DEFAULT: "#00f2fe",
           dark: "#0891b2",
@@ -24,7 +28,7 @@ const config: Config = {
           panel: "rgba(15, 23, 42, 0.75)",
           border: "rgba(51, 65, 85, 0.6)",
           cyan: "#00f2fe",
-          emerald: "#10b981",
+          emerald: "#3b82f6",
           amber: "#f59e0b",
           rose: "#f43f5e",
           purple: "#a855f7",
@@ -33,7 +37,7 @@ const config: Config = {
       },
       boxShadow: {
         glow: "0 0 20px -5px rgba(0, 242, 254, 0.35)",
-        "glow-emerald": "0 0 20px -5px rgba(16, 185, 129, 0.35)",
+        "glow-emerald": "0 0 20px -5px rgba(59, 130, 246, 0.35)",
         "glow-rose": "0 0 20px -5px rgba(244, 63, 94, 0.35)",
         "glow-amber": "0 0 20px -5px rgba(245, 158, 11, 0.35)",
       },

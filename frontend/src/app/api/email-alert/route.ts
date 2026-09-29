@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const transporter = nodemailer.createTransport({ host, port, secure, auth: { user, pass }, connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 15_000 });
     const isShiftSummary = event_type === "shift_summary";
     const isCritical = severity === "critical";
-    const statusColor = isShiftSummary ? "#10b981" : isCritical ? "#ef4444" : "#f59e0b";
+    const statusColor = isShiftSummary ? "#3b82f6" : isCritical ? "#ef4444" : "#f59e0b";
     const statusTitle = isShiftSummary
       ? "BÁO CÁO 1 NGÀY LÀM VIỆC - TỔNG KẾT SẢN XUẤT"
       : isCritical
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     const isSim = mode === "simulation";
     const modeBadge = isSim
       ? `<span style="background:#0284c7;color:#ffffff;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:bold;display:inline-block">🧪 MÔ PHỎNG (Simulation)</span>`
-      : `<span style="background:#10b981;color:#ffffff;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:bold;display:inline-block">🏭 THỰC TẾ (Real-time IoT)</span>`;
+      : `<span style="background:#3b82f6;color:#ffffff;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:bold;display:inline-block">🏭 THỰC TẾ (Real-time IoT)</span>`;
     const modePrefix = isSim ? "[MÔ PHỎNG]" : "[THỰC TẾ]";
     const formattedTime = new Date(timestamp).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
     const safeDeviceId = escapeHtml(device_id), safeEventType = escapeHtml(event_type), safeDescription = escapeHtml(description);

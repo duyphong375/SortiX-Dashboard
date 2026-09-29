@@ -1,7 +1,7 @@
 // Ma trận phân quyền cho hệ thống IoT Dashboard
 // Admin: toàn quyền | User: giám sát + xem lịch sử + hồ sơ cá nhân
 
-export type UserRole = "admin" | "user";
+export type UserRole = "admin" | "user" | "maintenance";
 
 export interface AuthUser {
   id?: string;
@@ -33,6 +33,7 @@ export type PermissionAction =
   | "config.edit"
   | "config.publish"
   | "devices.view"
+  | "devices.control"
   | "devices.configure"
   | "users.view"
   | "users.manage"
@@ -64,6 +65,7 @@ const PERMISSION_MATRIX: Record<UserRole, Set<PermissionAction>> = {
     "config.edit",
     "config.publish",
     "devices.view",
+    "devices.control",
     "devices.configure",
     "users.view",
     "users.manage",
@@ -75,6 +77,25 @@ const PERMISSION_MATRIX: Record<UserRole, Set<PermissionAction>> = {
     "settings.mqtt",
     "settings.system",
   ]),
+  maintenance: new Set<PermissionAction>([
+    "dashboard.view",
+    "conveyor.view",
+    "conveyor.control",
+    "conveyor.spawn",
+    "conveyor.estop",
+    "conveyor.speed",
+    "analytics.view",
+    "history.view",
+    "history.export",
+    "alerts.view",
+    "devices.view",
+    "devices.control",
+    "config.view",
+    "reports.view",
+    "profile.view",
+    "profile.edit",
+    "profile.password",
+  ]),
   user: new Set<PermissionAction>([
     "dashboard.view",
     "conveyor.view",
@@ -82,6 +103,7 @@ const PERMISSION_MATRIX: Record<UserRole, Set<PermissionAction>> = {
     "history.view",
     "history.export",
     "alerts.view",
+    "devices.view",
     "profile.view",
     "profile.edit",
     "profile.password",
@@ -147,6 +169,15 @@ export const MOCK_USERS: AuthUser[] = [
     loginTime: "",
   },
   {
+    id: "usr-demo-002",
+    username: "maintenance",
+    role: "maintenance",
+    displayName: "Kỹ thuật viên bảo trì",
+    avatar: "",
+    email: "maintenance@pbl3.local",
+    loginTime: "",
+  },
+  {
     id: "usr-1789661442408-kwp0",
     username: "duyphong",
     role: "user",
@@ -184,16 +215,16 @@ export interface SidebarMenuGroup {
 
 export const SIDEBAR_MENU: SidebarMenuGroup[] = [
   {
-    groupLabel: "Tổng quan",
+    groupLabel: "Giám sát",
     items: [
       { id: "dashboard", label: "Tổng quan", icon: "LayoutDashboard", href: "/" },
-      { id: "analytics", label: "Thống kê", icon: "BarChart3", href: "/analytics" },
+      { id: "conveyor", label: "Băng tải", icon: "Layers", href: "/conveyor" },
     ],
   },
   {
-    groupLabel: "Vận hành",
+    groupLabel: "Dữ liệu",
     items: [
-      { id: "conveyor", label: "Băng tải", icon: "Layers", href: "/conveyor" },
+      { id: "analytics", label: "Thống kê", icon: "BarChart3", href: "/analytics" },
       { id: "history", label: "Lịch sử", icon: "History", href: "/history" },
       { id: "alerts", label: "Cảnh báo", icon: "Bell", href: "/alerts" },
     ],
@@ -201,8 +232,17 @@ export const SIDEBAR_MENU: SidebarMenuGroup[] = [
   {
     groupLabel: "Hệ thống",
     items: [
-      { id: "config", label: "Cấu hình", icon: "SlidersHorizontal", href: "/config", requiredPermission: "config.view" },
-      { id: "devices", label: "Thiết bị & IoT", icon: "Cpu", href: "/devices", requiredPermission: "devices.view" },
+      {
+        id: "settings",
+        label: "Cấu hình & Thiết bị",
+        icon: "SlidersHorizontal",
+        href: "/settings/config",
+        requiredPermission: "config.view",
+        children: [
+          { id: "settings-config", label: "Cấu hình phân loại", icon: "SlidersHorizontal", href: "/settings/config", requiredPermission: "config.view" },
+          { id: "settings-devices", label: "Thiết bị & Phần cứng", icon: "Cpu", href: "/settings/devices", requiredPermission: "devices.view" },
+        ],
+      },
       { id: "users", label: "Người dùng", icon: "Users", href: "/users", requiredPermission: "users.view" },
     ],
   },

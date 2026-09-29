@@ -17,7 +17,7 @@ export const SortixLogo: React.FC<SortixLogoProps> = ({
     size === "sm" ? "h-8 w-8" : size === "lg" ? "h-12 w-12" : "h-10 w-10";
 
   return (
-    <div className={`flex items-center gap-3 select-none ${className}`}>
+    <div className={`flex items-center gap-2.5 select-none ${className}`}>
       {/* 3D Isometric Cyber-Sorting Logo Mark */}
       <div
         className={`relative flex ${iconSizeClass} shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#121624] via-[#0d101d] to-[#070911] border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.2)] transition-all duration-300 group hover:border-cyan-400/60 hover:shadow-[0_0_25px_rgba(6,182,212,0.4)]`}
@@ -144,13 +144,20 @@ export const SortixLogo: React.FC<SortixLogoProps> = ({
               </span>
               <span className="text-cyan-500 font-extrabold ml-0.5">-Med</span>
             </h2>
-            <span className="inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-cyan-500/15 to-blue-500/15 border border-cyan-500/30 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-cyan-500 dark:text-cyan-300 shadow-xs">
+            {/* Badge Nhóm 5 (thay thế MED AI PRO theo yêu cầu) */}
+            <span
+              data-tier="AI PRO"
+              className="inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-cyan-500/15 to-blue-500/15 border border-cyan-500/30 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-cyan-500 dark:text-cyan-300 shadow-xs"
+            >
               <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
-              MED AI PRO
+              NHÓM 5
             </span>
           </div>
-          <p className="truncate text-[10px] font-medium tracking-wide text-slate-500 dark:text-slate-400">
-            Phân loại dụng cụ y tế phòng mổ
+          <p
+            className="text-[8px] font-bold tracking-tight text-slate-500 dark:text-slate-400 whitespace-nowrap overflow-visible leading-tight select-none mt-0.5"
+            title="BĂNG CHUYỀN PHÂN LOẠI DỤNG CỤ Y TẾ"
+          >
+            BĂNG CHUYỀN PHÂN LOẠI DỤNG CỤ Y TẾ
           </p>
         </div>
       )}

@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { VisualItem, TelemetryData, SorterConfig, CATALOG_BRANDS, JamDetectedPayload } from "@/lib/types";
 import { determineTargetBin } from "@/lib/dataProcessor";
 import { industrialAudio } from "@/lib/audioService";
-import { useToast } from "@/components/ui/Toast";
 import { updateSyncState, syncSpawnItemToServer } from "@/services/apiSyncClient";
 
 export interface UseConveyorPhysicsProps {
@@ -40,10 +39,8 @@ export function useConveyorPhysics({
   isBinFull = false,
   onBinFullDetected,
 }: UseConveyorPhysicsProps) {
-  const toast = useToast();
-  const toastRef = useRef(toast);
-  toastRef.current = toast;
   const onItemSortedRef = useRef(onItemSorted);
+
   onItemSortedRef.current = onItemSorted;
   const onPublishCommandRef = useRef(onPublishCommand);
   onPublishCommandRef.current = onPublishCommand;
@@ -229,11 +226,9 @@ export function useConveyorPhysics({
           // BĂNG TẢI TỰ ĐỘNG CHẠY TIẾP KHI ĐẶT THÊM MẪU VẬT LÊN
           onPublishCommandRef.current?.("START");
           industrialAudio.playClick();
-          toastRef.current.info("Phát hiện mẫu vật trên băng tải • Tự động kích hoạt chạy.");
         } else if (!telemetryRef.current.estop_pressed && !isJammedRef.current && !isBinFullRef.current) {
           // BĂNG TẢI TỰ ĐỘNG DỪNG KHI TOÀN BỘ PHÔI MẪU ĐÃ VÀO KHAY HẾT
           onPublishCommandRef.current?.("STOP");
-          toastRef.current.info("Toàn bộ mẫu vật đã vào khay • Băng tải tự động dừng chờ phôi.");
         }
         prevBeltMovingRef.current = isBeltMoving;
       }
@@ -525,6 +520,8 @@ export function useConveyorPhysics({
     setConveyorSpeed,
     arm1Active,
     arm2Active,
+    setArm1Active,
+    setArm2Active,
     visualItems,
     setVisualItems,
     visualItemsRef,
