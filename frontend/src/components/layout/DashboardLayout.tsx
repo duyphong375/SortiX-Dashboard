@@ -209,7 +209,12 @@ export const useDashboardSafe = () => useContext(DashboardContext);
 export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const router = useRouter();
   const pathname = usePathname();
+  const isLoginPage = pathname === "/login";
   const { isAuthenticated, user } = useAuth();
+  const isLoginPageRef = useRef(isLoginPage);
+  isLoginPageRef.current = isLoginPage;
+  const isAuthenticatedRef = useRef(isAuthenticated);
+  isAuthenticatedRef.current = isAuthenticated;
   const userRef = useRef(user);
   userRef.current = user;
   const toast = useToast();
@@ -274,6 +279,28 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Hook 1: Theme and Audio Management
   const { themeMode, toggleTheme, isMuted, handleToggleSound } = useThemeAudio();
+
+  // Khi ở trang Login hoặc chưa đăng nhập, lập tức dập tắt toàn bộ còi hú báo động và hủy các trạng thái sự cố
+  useEffect(() => {
+    if (isLoginPage || !isAuthenticated) {
+      industrialAudio.silenceAll();
+      industrialAudio.stopContinuousEmergencyAlarm();
+      industrialAudio.stopContinuousJamAlarm();
+      industrialAudio.stopContinuousBinFullAlarm();
+      industrialAudio.stopContinuousTemperatureAlarm();
+      industrialAudio.stopContinuousDeviceOfflineAlarm();
+      setIsDeviceOffline(false);
+      setDeviceOfflineIncident(null);
+      setIsSystemLocked(false);
+      setEstopIncident(null);
+      setIsJammed(false);
+      setJamIncident(null);
+      setIsBinFull(false);
+      setFullBinIncident(null);
+      setIsTempWarning(false);
+      setTempIncident(null);
+    }
+  }, [isLoginPage, isAuthenticated]);
 
   // Sorter Config state & ref
   const [sorterConfig, setSorterConfig] = useState<SorterConfig>(loadSorterConfigLocal);
@@ -394,10 +421,11 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Hook 4: MQTT WebSocket Connection
   const mqtt = useMQTT({
-    isClient: sorterData.isClient,
+    isClient: sorterData.isClient && !isLoginPage && isAuthenticated,
     isSimulation: user?.role === "user" ? false : sorterData.isSimulation,
     onVisionDetection: sorterData.handleRealHardwareDetection,
     onTelemetryPayload: (payload: any) => {
+      if (isLoginPageRef.current || !isAuthenticatedRef.current) return;
       setLastTelemetryTime(new Date().toLocaleTimeString("vi-VN", { hour12: false }));
       
       // Kích hoạt phôi mẫu chạy khi cảm biến hồng ngoại S1 từ phần cứng phát hiện vật
@@ -447,21 +475,27 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       });
     },
     onConfigStatusApplied: (version) => {
+      if (isLoginPageRef.current || !isAuthenticatedRef.current) return;
       setTelemetry((prev) => ({ ...prev, active_config_version: version }));
     },
     onEmergencyStop: (payload) => {
+      if (isLoginPageRef.current || !isAuthenticatedRef.current) return;
       triggerEmergencyStopRef.current(payload, "mqtt_in");
     },
     onJamDetected: (payload) => {
+      if (isLoginPageRef.current || !isAuthenticatedRef.current) return;
       void triggerJamRef.current(payload, "mqtt_in");
     },
     onBinFull: (payload) => {
+      if (isLoginPageRef.current || !isAuthenticatedRef.current) return;
       void triggerBinFullRef.current(payload, "mqtt_in");
     },
     onTemperatureWarning: (payload) => {
+      if (isLoginPageRef.current || !isAuthenticatedRef.current) return;
       void triggerTemperatureWarningRef.current(payload, "mqtt_in");
     },
     onHeartbeat: () => {
+      if (isLoginPageRef.current || !isAuthenticatedRef.current) return;
       lastHeartbeatTimeRef.current = Date.now();
       if (isDeviceOfflineRef.current) {
         setIsDeviceOffline(false);
@@ -470,9 +504,11 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       }
     },
     onDeviceOffline: (payload) => {
+      if (isLoginPageRef.current || !isAuthenticatedRef.current) return;
       void triggerDeviceOfflineRef.current(payload, "mqtt_in");
     },
     onMqttDisconnected: (payload) => {
+      if (isLoginPageRef.current || !isAuthenticatedRef.current) return;
       industrialAudio.playMqttDisconnectedAlarm();
       const alertItem: AlertEvent = {
         event_id: `mqtt_${Date.now()}`,
@@ -488,6 +524,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       triggerAlertDispatch(alertItem);
     },
     onMqttReconnected: () => {
+      if (isLoginPageRef.current || !isAuthenticatedRef.current) return;
       industrialAudio.playMqttReconnectedChime();
       const alertItem: AlertEvent = {
         event_id: `mqtt_restored_${Date.now()}`,
@@ -511,6 +548,9 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       customPayload?: Partial<EmergencyStopPayload>,
       source: "user_action" | "mqtt_in" | "sse_in" = "user_action"
     ) => {
+      if (isLoginPageRef.current || !isAuthenticatedRef.current) {
+        return;
+      }
       // 1. Nếu vừa mới mở khóa trong vòng 5s và nhận sự kiện từ mqtt/sse -> Bỏ qua để tránh kẹt loop echo
       if (source !== "user_action" && Date.now() - lastUnlockedTimeRef.current < 5000) {
         console.log("[E-Stop] Đang trong thời gian ân hạn 5s sau mở khóa, bỏ qua tín hiệu dừng lặp lại từ", source);
@@ -634,6 +674,10 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       customPayload?: Partial<JamDetectedPayload>,
       source: "user_action" | "mqtt_in" | "sse_in" | "physics_in" = "user_action"
     ) => {
+      if (isLoginPageRef.current || !isAuthenticatedRef.current) {
+        return;
+      }
+
       // 1. Chặn các hành vi giả lập / physics ảo khi đang ở chế độ Thực tế (Real Hardware)
       if ((source === "user_action" || source === "physics_in") && !sorterData.isSimulationRef.current) {
         toast.warning("Hệ thống đang ở chế độ Thực tế (Real Hardware). Các chức năng test giả lập bị vô hiệu hóa!");
@@ -728,6 +772,9 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       customPayload?: Partial<BinFullPayload>,
       source: "user_action" | "mqtt_in" | "sse_in" | "counter_in" = "user_action"
     ) => {
+      if (isLoginPageRef.current || !isAuthenticatedRef.current) {
+        return;
+      }
       // Chặn các hành vi giả lập khi đang ở chế độ Thực tế (Real Hardware)
       if (source === "user_action" && !sorterData.isSimulationRef.current) {
         toast.warning("Hệ thống đang ở chế độ Thực tế (Real Hardware). Các chức năng test giả lập bị vô hiệu hóa!");
@@ -849,6 +896,9 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       customPayload?: Partial<TemperatureWarningPayload>,
       source: "user_action" | "mqtt_in" | "sse_in" | "sim_slider" = "user_action"
     ) => {
+      if (isLoginPageRef.current || !isAuthenticatedRef.current) {
+        return;
+      }
       // Chặn các hành vi giả lập khi đang ở chế độ Thực tế (Real Hardware)
       if ((source === "user_action" || source === "sim_slider") && !sorterData.isSimulationRef.current) {
         toast.warning("Hệ thống đang ở chế độ Thực tế (Real Hardware). Các chức năng test giả lập bị vô hiệu hóa!");
@@ -964,6 +1014,9 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       customPayload?: Partial<DeviceOfflinePayload>,
       source: "user_action" | "mqtt_in" | "sse_in" | "watchdog" = "user_action"
     ) => {
+      if (isLoginPageRef.current || !isAuthenticatedRef.current) {
+        return;
+      }
       // Chặn các hành vi giả lập khi đang ở chế độ Thực tế (Real Hardware)
       if (source === "user_action" && !sorterData.isSimulationRef.current) {
         toast.warning("Hệ thống đang ở chế độ Thực tế (Real Hardware). Các chức năng test giả lập bị vô hiệu hóa!");
@@ -1161,7 +1214,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Khởi tạo trạng thái an toàn & Đồng bộ kênh thời gian thực SSE
   useEffect(() => {
-    if (!sorterData.isClient) return;
+    if (!sorterData.isClient || isLoginPage || !isAuthenticated) return;
 
     // 1. Kiểm tra trạng thái an toàn từ máy chủ
     ApiSafetyClient.getStatus().then((res) => {
@@ -1394,7 +1447,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     return () => {
       eventSource?.close();
     };
-  }, [sorterData.isClient, sorterData.isSimulationRef]);
+  }, [sorterData.isClient, sorterData.isSimulationRef, isLoginPage, isAuthenticated]);
 
   // Auth Redirect check
   useEffect(() => {
@@ -1420,6 +1473,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Heartbeat & Throughput Chart update (every 1s)
   useEffect(() => {
+    if (isLoginPage || !isAuthenticated) return;
     const interval = setInterval(() => {
       const isSimMode = isSimulationRef.current;
       const hasItems = conveyor.visualItemsRef.current.some(
@@ -1611,6 +1665,8 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     realBinCountsRef,
     setPingMs,
     mqtt.mqttStatus,
+    isLoginPage,
+    isAuthenticated,
   ]);
 
   // Config Actions

@@ -25,6 +25,7 @@ import {
   saveOperatingMode,
 } from "@/lib/history";
 import { ForgotPasswordModal } from "@/components/ui/ForgotPasswordModal";
+import { industrialAudio } from "@/lib/audioService";
 import styles from "./login.module.css";
 
 type Mode = "login" | "register";
@@ -106,6 +107,15 @@ export default function LoginPage() {
   useEffect(() => {
     if (isAuthenticated) router.replace("/");
   }, [isAuthenticated, router]);
+
+  useEffect(() => {
+    industrialAudio.silenceAll();
+    industrialAudio.stopContinuousEmergencyAlarm();
+    industrialAudio.stopContinuousJamAlarm();
+    industrialAudio.stopContinuousBinFullAlarm();
+    industrialAudio.stopContinuousTemperatureAlarm();
+    industrialAudio.stopContinuousDeviceOfflineAlarm();
+  }, []);
 
   useEffect(() => {
     const origOverflow = document.body.style.overflow;

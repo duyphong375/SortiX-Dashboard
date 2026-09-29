@@ -83,7 +83,7 @@ describe("Cross-Device Real-Time Synchronization (PC Web <-> iPhone Safari <-> A
   it("7. Mobile & LAN Network Configuration: Capacitor connects to central server IP and Next.js binds to 0.0.0.0", () => {
     const capPath = path.resolve(__dirname, "../frontend/capacitor.config.ts");
     const capContent = fs.readFileSync(capPath, "utf8");
-    assert.match(capContent, /url:\s*process\.env\.CAPACITOR_SERVER_URL\s*\|\|\s*'http:\/\/192\.168\.1\.4:3000'/, "Capacitor config must point to central server IP");
+    assert.match(capContent, /url:\s*process\.env\.CAPACITOR_SERVER_URL\s*\|\|\s*('http:\/\/192\.168\.1\.4:3000'|'https:\/\/sorti-x-dashboard\.vercel\.app')/, "Capacitor config must point to central server IP or production URL");
 
     const pkgPath = path.resolve(__dirname, "../frontend/package.json");
     const pkgContent = fs.readFileSync(pkgPath, "utf8");
